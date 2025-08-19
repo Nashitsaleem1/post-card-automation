@@ -810,3 +810,52 @@ header {
     font-size: 18pt;
   }
 }
+
+.custom-modal {
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(132, 133, 134, 0.7); /* semi-transparent overlay */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.custom-modal-content {
+  background: white; /* dark-blue theme */
+  color: black;
+  width: 400px;   /* fixed width */
+  height: 200px;  /* fixed height */
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.custom-modal-text {
+  margin-bottom: 20px;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.custom-modal-ok-btn {
+  background-color: #28a745; /* green success color */
+  color: white;
+  border: none;
+  padding: 10px 25px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: transform 0.2s;
+}
+
+.custom-modal-ok-btn:hover {
+  transform: scale(1.05);
+}
