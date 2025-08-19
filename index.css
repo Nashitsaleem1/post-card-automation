@@ -24,13 +24,12 @@ header {
   padding: 1.2rem 2rem;
   display: flex;
   text-align: center;
-  font-size: 1.4rem;
-  font-weight: 600;
+  font-size: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .header-text {
-  margin-top: 0.4rem;
+  margin-top: 0.3rem;
 }
 
 .taskbar-icon {
@@ -827,8 +826,8 @@ header {
 .custom-modal-content {
   background: white; /* dark-blue theme */
   color: black;
-  width: 400px;   /* fixed width */
-  height: 200px;  /* fixed height */
+  width: 400px; /* fixed width */
+  height: 200px; /* fixed height */
   padding: 20px;
   border-radius: 12px;
   text-align: center;
