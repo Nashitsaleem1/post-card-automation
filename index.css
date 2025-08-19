@@ -1,0 +1,812 @@
+* {
+  margin: 0;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #f0f0f1;
+  color: #333;
+}
+
+h2 {
+  margin-top: 2rem;
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  color: #333;
+  text-align: center;
+}
+
+header {
+  background: #1a365d;
+  color: white;
+  padding: 1.2rem 2rem;
+  display: flex;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header-text {
+  margin-top: 0.4rem;
+}
+
+.taskbar-icon {
+  border-radius: 50%;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  margin-right: 12px;
+  border-radius: 50%;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 1rem;
+}
+
+/* Upload Section */
+.upload-section {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.upload-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #007acc;
+  margin-bottom: 1rem;
+}
+
+.upload-subtitle {
+  font-size: 1.01rem;
+  color: #333;
+  margin-bottom: 2rem;
+}
+
+.sample-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 49px;
+  padding: 0.6rem 1.2rem;
+  background: rgb(44, 136, 86);
+  color: white;
+  border: 1px solid #b2baca;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 550;
+  cursor: pointer;
+  transition: all 0.5s ease;
+  text-decoration: none;
+  margin-bottom: 2rem;
+}
+
+.sample-download-btn:hover {
+  background: rgb(44, 136, 86);
+  transform: scale(1.1);
+  color: white;
+}
+
+.upload-box {
+  background: white;
+  border: 2px dashed #b2baca;
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.upload-box.dragover {
+  border-color: #007acc;
+  background: #f0f8ff;
+}
+
+.upload-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.upload-main-text {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.upload-sub-text {
+  font-size: 0.95rem;
+  color: #666;
+  margin-bottom: 1.5rem;
+}
+
+.choose-file-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.5rem;
+  background: #1a365d;
+  color: white;
+  font-weight: 600;
+  transition: all 0.5s ease;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.choose-file-btn:hover {
+  background: #2c5282;
+  transform: scale(1.1);
+}
+
+.file-size-info {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 1rem;
+}
+
+.hidden-input {
+  display: none;
+}
+
+.template {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  min-height: 400px;
+  background: linear-gradient(135deg, #ffffff, #f9f9f9);
+  border-radius: 16px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ddd;
+  padding: 1.5rem;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.template:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+.templates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  gap: 1.5rem;
+  justify-items: center;
+  align-items: stretch;
+  padding: 1rem;
+}
+
+.letter-container {
+  flex: 1;
+  padding: 1.2rem;
+  margin-bottom: 4rem;
+  margin-top: 2rem;
+  overflow-y: auto;
+  font-size: 16px;
+  line-height: 1.5;
+  color: black;
+  background: #fff;
+}
+
+.signature {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-size: 25pt;
+  font-family: "Vladimir Script";
+}
+
+.contact-info {
+  font-size: 12pt;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.contact-info a {
+  color: #007acc;
+  text-decoration: none;
+}
+
+.footer-note {
+  margin-top: 1rem;
+  font-size: 12pt;
+  font-style: italic;
+  text-align: center;
+  color: black;
+  line-height: 1.4;
+}
+
+/* Modal */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background: #fefefe;
+  margin: 2% auto;
+  padding: 0;
+  border: none;
+  border-radius: 15px;
+  width: 80%;
+  max-width: 800px;
+  height: 85vh;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  background: #1a365d;
+  color: white;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-body {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+.modal-letter-container {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  min-height: 400px;
+  background: #fff;
+  outline: none;
+}
+
+.modal-footer {
+  padding: 20px;
+  border-top: 1px solid #eee;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  margin: 0.4rem;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.btn-primary {
+  background: #007acc;
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: scale(1.1);
+}
+
+.btn-secondary {
+  background: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+.close {
+  color: white;
+  font-size: 28px;
+  font-weight: bold;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close:hover {
+  opacity: 0.7;
+}
+
+/* Send Button */
+.send-btn {
+  display: block;
+  width: 100%;
+  background: #1a365d;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 600;
+  padding: 1rem;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 2rem;
+  transition: 0.2s;
+}
+
+.send-btn:hover {
+  background: #005c99;
+  transform: translateY(-1px);
+}
+
+.Text {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.date {
+  margin-bottom: 1.5rem;
+}
+
+.savetemplate {
+  background-color: #1a365d;
+}
+
+.button-actions {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  display: flex;
+  gap: 1rem;
+  flex-direction: row;
+  align-items: center;
+}
+
+.order-design-btn {
+  background: #1a365d;
+  color: white;
+  border: none;
+  width: 130px;
+  border-radius: 15px;
+  transition: all 0.2s ease;
+  height: 45px;
+  cursor: pointer;
+  font-size: 17px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.edit-btn {
+  background: #1a365d;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  margin-right: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.edit-btn:hover {
+  background: #005c99;
+  transform: scale(1.1);
+}
+
+.order-design-btn:hover {
+  background: #005c99;
+  transform: scale(1.1);
+}
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* Dialog box */
+.modal-box {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+  z-index: 1000;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.modal-box h2 {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  color: #2c3e50;
+}
+
+.modal-box p {
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+  color: #555;
+}
+
+.modal-buttons button {
+  margin: 0 8px;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.btn-primary {
+  background: #4caf50;
+  color: white;
+}
+
+.btn-secondary {
+  background: #f1f1f1;
+  color: #333;
+}
+
+/* Input Field Styling */
+.form-input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 2px solid #ccc;
+  border-radius: 10px;
+  margin-bottom: 1.3rem;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  outline: none;
+  background: #f9f9f9;
+}
+
+.form-input:focus {
+  border-color: #1a365d;
+  box-shadow: 0 0 8px rgba(26, 54, 93, 0.3);
+  background: #fff;
+}
+
+/* Label Styling */
+.form-group label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+/* Add subtle hover effect */
+.form-input:hover {
+  border-color: #888;
+}
+
+/* MOBILE RESPONSIVE STYLES FOR SCREENS < 468px */
+@media screen and (max-width: 468px) {
+  /* Header adjustments */
+  header {
+    padding: 0.8rem 1rem;
+    font-size: 1.1rem;
+  }
+
+  .logo {
+    width: 30px;
+    height: 30px;
+    margin-right: 8px;
+  }
+
+  /* Container and spacing - ensure full width usage */
+  .container {
+    max-width: 100%;
+    margin: 0.5rem auto;
+    padding: 0.5rem;
+    width: 100%;
+  }
+
+  /* Make body and html responsive */
+  html,
+  body {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Upload section */
+  .upload-section {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .upload-title {
+    font-size: 1.5rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .upload-subtitle {
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    padding: 0 0.5rem;
+    word-wrap: break-word;
+  }
+
+  .upload-box {
+    padding: 1.5rem 1rem;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .upload-icon {
+    font-size: 2.5rem;
+  }
+
+  .upload-main-text {
+    font-size: 1rem;
+  }
+
+  .upload-sub-text {
+    font-size: 0.85rem;
+    word-wrap: break-word;
+  }
+
+  .sample-download-btn {
+    height: 45px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    max-width: 280px;
+    width: auto;
+  }
+
+  .choose-file-btn {
+    padding: 0.7rem 1.2rem;
+    font-size: 0.9rem;
+  }
+
+  .file-size-info {
+    font-size: 0.8rem;
+  }
+
+  /* Templates grid - single column on mobile with proper spacing */
+  .templates-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 0.5rem;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .template {
+    max-width: 100%;
+    width: 100%;
+    min-height: 350px;
+    padding: 1rem;
+    border-radius: 12px;
+    margin: 0;
+    box-sizing: border-box;
+  }
+
+  /* Letter container */
+  .letter-container {
+    padding: 1rem;
+    margin-bottom: 3rem;
+    margin-top: 1rem;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .signature {
+    font-size: 18pt;
+    margin-top: 1.5rem;
+  }
+
+  .contact-info {
+    font-size: 10pt;
+    word-wrap: break-word;
+  }
+
+  .footer-note {
+    font-size: 10pt;
+    word-wrap: break-word;
+  }
+
+  /* Button actions - adjust for mobile */
+  .button-actions {
+    bottom: 10px;
+    right: 10px;
+    flex-direction: row;
+    gap: 0.3rem;
+  }
+
+  .order-design-btn {
+    width: 90px;
+    height: 35px;
+    font-size: 12px;
+    border-radius: 12px;
+  }
+
+  .edit-btn {
+    width: 30px;
+    height: 30px;
+    margin-right: 0;
+    font-size: 14px;
+  }
+
+  /* Modal adjustments for mobile */
+  .modal-content {
+    width: 95%;
+    height: 90vh;
+    margin: 5vh auto;
+    border-radius: 10px;
+    max-width: 100%;
+  }
+
+  .modal-header {
+    padding: 15px;
+    font-size: 1rem;
+  }
+
+  .modal-body {
+    padding: 15px;
+  }
+
+  .modal-letter-container {
+    font-size: 14px;
+    padding: 15px;
+    min-height: 300px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .modal-footer {
+    padding: 15px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    margin: 0;
+  }
+
+  /* Modal box adjustments */
+  .modal-box {
+    max-width: 300px;
+    width: 90%;
+    padding: 1.5rem;
+  }
+
+  .modal-box h2 {
+    font-size: 1.2rem;
+  }
+
+  .modal-box p {
+    font-size: 0.9rem;
+  }
+
+  .modal-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .modal-buttons button {
+    width: 100%;
+    margin: 0;
+  }
+
+  /* Form inputs */
+  .form-input {
+    padding: 0.7rem 0.8rem;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .form-group label {
+    font-size: 0.9rem;
+  }
+
+  /* Send button */
+  .send-btn {
+    font-size: 1rem;
+    padding: 0.8rem;
+    margin-top: 1.5rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Text adjustments */
+  .Text {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .date {
+    margin-bottom: 1rem;
+  }
+
+  /* Hover effects - reduce on mobile for better touch experience */
+  .sample-download-btn:hover,
+  .choose-file-btn:hover,
+  .edit-btn:hover,
+  .order-design-btn:hover,
+  .btn-primary:hover,
+  .send-btn:hover {
+    transform: none; /* Disable scale transforms on mobile */
+  }
+
+  .template:hover {
+    transform: none; /* Disable hover lift effect on mobile */
+  }
+}
+
+/* Extra small screens < 320px */
+@media screen and (max-width: 320px) {
+  .container {
+    padding: 0.25rem;
+  }
+
+  .upload-box {
+    padding: 1.5rem 0.5rem;
+  }
+
+  .template {
+    padding: 0.8rem;
+  }
+
+  .letter-container {
+    padding: 0.8rem;
+    font-size: 13px;
+  }
+
+  .modal-content {
+    width: 98%;
+  }
+
+  .modal-body {
+    padding: 10px;
+  }
+
+  .signature {
+    font-size: 18pt;
+  }
+}
