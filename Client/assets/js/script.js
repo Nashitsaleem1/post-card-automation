@@ -8,7 +8,7 @@ let recipients = [];
 async function loadTemplates() {
   const templatesGrid = document.getElementById("templatesGrid");
   try {
-    const response = await fetch("http://127.0.0.1:8000/templates");
+    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates");
     const templates = await response.json();
 
     templatesGrid.innerHTML = ""; // Clear grid
@@ -106,7 +106,7 @@ async function saveCampaign() {
   }
 
   try {
-    const response = await fetch("http://127.0.0.1:8000/campaigns", {
+    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -161,7 +161,7 @@ async function saveAsNewTemplate() {
   console.log(typeof qrCodeId);
 
   try {
-    const response = await fetch("http://127.0.0.1:8000/templates", {
+    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -187,7 +187,7 @@ async function deleteTemplate(templateId) {
   if (!confirm("Are you sure you want to delete this template?")) return;
   try {
     const response = await fetch(
-      `http://127.0.0.1:8000/templates/${templateId}`,
+      `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`,
       { method: "DELETE" }
     );
     if (!response.ok) throw new Error("Failed to delete template");
@@ -245,7 +245,7 @@ async function confirmSchedule() {
   try {
     // --- Fetch latest campaign from backend (same as orderDesign) ---
     const latestCampaignRes = await fetch(
-      "http://127.0.0.1:8000/campaigns/latest"
+      "https://pcm-app-h8mn8.ondigitalocean.app/campaigns/latest"
     );
     if (!latestCampaignRes.ok) {
       throw new Error("Failed to fetch latest campaign");
@@ -254,7 +254,7 @@ async function confirmSchedule() {
     window.latestCampaignId = latestCampaign.id; // store globally for reuse
 
     // save to backend as scheduled
-    const res = await fetch("http://127.0.0.1:8000/campaign-data", {
+    const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -379,7 +379,7 @@ function resetUpload() {
 
 async function checkCampaignExists() {
   try {
-    const res = await fetch("http://127.0.0.1:8000/campaigns/latest");
+    const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns/latest");
     if (!res.ok) throw new Error("Failed to fetch campaigns");
     const latestCampaign = await res.json();
     return latestCampaign && latestCampaign.id; // true if exists
@@ -457,7 +457,7 @@ async function orderDesign(templateId, button) {
 
     // --- Fetch latest campaign from backend ---
     const latestCampaignRes = await fetch(
-      "http://127.0.0.1:8000/campaigns/latest"
+      "https://pcm-app-h8mn8.ondigitalocean.app/campaigns/latest"
     );
     if (!latestCampaignRes.ok) {
       throw new Error("Failed to fetch latest campaign");
@@ -472,7 +472,7 @@ async function orderDesign(templateId, button) {
       status: "sent", // ✅ mark as sent
     };
 
-    await fetch("http://127.0.0.1:8000/campaign-data", {
+    await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(campaignPayload),

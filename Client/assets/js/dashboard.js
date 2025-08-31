@@ -125,7 +125,7 @@ async function fetchScannedAddresses(qrCodeId) {
 // ----------------------
 async function loadDashboard() {
   try {
-    const res = await fetch("http://127.0.0.1:8000/dashboard/latest");
+    const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/dashboard/latest");
 
     if (res.status === 404) {
       document.getElementById("totalCampaigns").textContent = "0";
