@@ -1,0 +1,108 @@
+<!-- Hero Section -->
+<section class="hero">
+  <div class="hero-container">
+    <!-- Left: Text -->
+    <div class="hero-text">
+      <h1>Automate Your Letters Effortlessly</h1>
+      <p>
+        Streamline your communication with our smart letter automation platform. 
+        Create, send, and track letters in minutes, saving time and boosting productivity.
+      </p>
+      <a href="#get-started" class="hero-btn">Get Started</a>
+    </div>
+
+    <!-- Right: Image -->
+    <div class="hero-image">
+      <img src="./assets/images/hero-letter.png" alt="Letter Automation Illustration" />
+    </div>
+  </div>
+</section>
+
+<!-- CSS -->
+<style>
+/* Hero Section */
+.hero {
+  background: linear-gradient(to right, #f5f7fa, #ffffff);
+  padding: 80px 20px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.hero-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+  gap: 40px;
+}
+
+.hero-text {
+  flex: 1;
+  min-width: 300px;
+}
+
+.hero-text h1 {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #1a365d;
+  margin-bottom: 20px;
+  line-height: 1.2;
+}
+
+.hero-text p {
+  font-size: 1.2rem;
+  color: #34495e;
+  margin-bottom: 30px;
+}
+
+.hero-btn {
+  display: inline-block;
+  background-color: #1abc9c;
+  color: white;
+  text-decoration: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.hero-btn:hover {
+  background-color: #17a2b8;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.hero-image {
+  flex: 1;
+  min-width: 300px;
+  text-align: center;
+}
+
+.hero-image img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .hero-container {
+    flex-direction: column-reverse;
+    text-align: center;
+  }
+
+  .hero-text h1 {
+    font-size: 2rem;
+  }
+
+  .hero-text p {
+    font-size: 1rem;
+  }
+
+  .hero-btn {
+    padding: 10px 25px;
+    font-size: 0.95rem;
+  }
+}
+</style>

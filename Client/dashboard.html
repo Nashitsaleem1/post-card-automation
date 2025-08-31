@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="./assets/css/index.css" />
+    <link
+      class="taskbar-icon"
+      rel="icon"
+      type="image/png"
+      href="./assets/images/logo.png"
+    />
+  </head>
+  <body>
+    <!-- Header -->
+    <!-- header.html -->
+    <header class="header">
+      <div class="header-left">
+        <img src="./assets/images/icon.jpg" alt="Logo" class="logo" />
+        <span class="header-text">PCM Automation</span>
+      </div>
+
+      <!-- Hamburger button (only shows on mobile) -->
+      <button class="menu-toggle" id="menuToggle">☰</button>
+
+      <nav class="header-right" id="menu">
+        <a href="dashboard.html" class="create-btn">Dashboard</a>
+        <a href="index.html" class="create-btn">Template Gallery</a>
+      </nav>
+    </header>
+
+    <!-- Dashboard content -->
+    <main class="dashboard">
+      <h1>📊 Dashboard</h1>
+      <div class="cards">
+        <div class="card">
+          <h3>Total Campaigns</h3>
+          <p id="totalCampaigns">0</p>
+        </div>
+        <div class="card">
+          <h3>Latest Campaign</h3>
+          <p id="latestCampaign">Loading...</p>
+        </div>
+        <div class="card">
+          <h3>Total Recipients</h3>
+          <p id="totalRecipients">0</p>
+        </div>
+      </div>
+
+      <div id="templateModal" class="modal2">
+        <div class="modal-content2">
+          <span class="close-template">&times;</span>
+          <h2>Template Preview</h2>
+          <div
+            id="templateContent"
+            style="
+              border: 1px solid #ddd;
+              padding: 10px;
+              background: #fafafa;
+              overflow: auto;
+              max-height: 400px;
+            "
+          ></div>
+        </div>
+      </div>
+
+      <!-- Campaign data table will be injected here -->
+    </main>
+    <div id="campaignModal2" class="modal2">
+      <div class="modal-content2">
+        <span class="close">&times;</span>
+        <h2 id="modalCampaignName"></h2>
+        <p><strong>Mailer:</strong> <span id="modalMailerName"></span></p>
+
+        <div style="margin-top: 10px">
+          <label>
+            <input type="checkbox" id="filterScanned" />
+            Show only scanned addresses
+          </label>
+        </div>
+
+        <div id="modalAddresses" class="address-list"></div>
+      </div>
+    </div>
+
+    <script src="./assets/js/dashboard.js"></script>
+    <script src="./assets/js/script.js"></script>
+  </body>
+</html>
