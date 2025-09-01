@@ -13,10 +13,13 @@
     />
   </head>
   <body>
-  
     <nav class="navbar">
       <div class="logo">
-        <img src="./assets/images/Untitled design - 2025-09-01T183547.741.png" alt="Logo" class="logo-img" />
+        <img
+          src="./assets/images/Untitled design - 2025-09-01T183547.741.png"
+          alt="Logo"
+          class="logo-img"
+        />
         PCM Automation
       </div>
 
@@ -26,10 +29,10 @@
         <li><a href="templateGallery.html">Template Gallery</a></li>
       </ul>
       <div class="nav-buttons">
-   <a href="templateGallery.html" class="btn btn-started">Get Started</a>
+        <a href="templateGallery.html" class="btn btn-started">Get Started</a>
       </div>
+      <div class="hamburger" id="hamburger">☰</div>
     </nav>
-
 
     <!-- Dashboard content -->
     <main class="dashboard">
@@ -88,4 +91,25 @@
     <script src="./assets/js/dashboard.js"></script>
     <script src="./assets/js/script.js"></script>
   </body>
+  <script>
+    const hamburger = document.getElementById("hamburger");
+    const navLinks = document.querySelector(".nav-links");
+
+    // Toggle menu when hamburger clicked
+    hamburger.addEventListener("click", (e) => {
+      e.stopPropagation(); // prevent triggering document click
+      navLinks.classList.toggle("nav-active");
+    });
+
+    // Close menu if clicking outside
+    document.addEventListener("click", (e) => {
+      if (
+        navLinks.classList.contains("nav-active") &&
+        !navLinks.contains(e.target) &&
+        e.target !== hamburger
+      ) {
+        navLinks.classList.remove("nav-active");
+      }
+    });
+  </script>
 </html>

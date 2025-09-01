@@ -90,6 +90,68 @@ a {
   transform: scale(1.1);
 }
 
+/* Hamburger (hidden on desktop) */
+.hamburger {
+  display: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: #2b7fff;
+}
+
+@media (max-width: 468px) {
+  /* hide buttons on mobile */
+  .nav-buttons {
+    display: none !important;
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  /* hamburger */
+  .hamburger {
+    display: block;
+  }
+
+  /* active dropdown */
+  .nav-links.nav-active {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #fff;
+    position: absolute;
+    top: 100px; /* drop below navbar */
+    right: 10px;
+    width: 80%; /* narrower */
+    margin: 0 auto;
+    border-radius: 12px;
+    padding: 15px;
+    gap: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .nav-links li {
+    margin: 0;
+    width: 100%;
+    align-items: center;
+  }
+
+  .nav-links li a {
+    display: block;
+    width: 100%;
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    background: #f9f9f9;
+    font-weight: 500;
+  }
+
+  .nav-links li a:hover {
+    background: #2b7fff;
+    color: #fff;
+  }
+}
+
 /* Hero */
 .hero {
   display: flex;
@@ -250,6 +312,7 @@ h2 {
 .upload-section {
   text-align: center;
   margin-bottom: 2rem;
+  padding: 2rem;
 }
 
 .upload-title {
@@ -577,7 +640,7 @@ h2 {
 }
 
 .order-design-btn {
-  background:  #2b7fff;
+  background: #2b7fff;
   color: white;
   border: none;
   width: 130px;
@@ -590,7 +653,7 @@ h2 {
 }
 
 .edit-btn {
-  background:  #4caf50;
+  background: #4caf50;
   color: white;
   border: none;
   border-radius: 50%;
@@ -607,12 +670,12 @@ h2 {
 }
 
 .edit-btn:hover {
-  background:  #4caf50;
+  background: #4caf50;
   transform: scale(1.1);
 }
 
 .order-design-btn:hover {
-  background:  #2b7fff;
+  background: #2b7fff;
 
   transform: scale(1.1);
 }
@@ -774,6 +837,8 @@ h2 {
   .upload-section {
     width: 100%;
     max-width: 100%;
+    font-size: medium;
+    margin-top: 9rem;
     padding: 0;
   }
 
@@ -1411,5 +1476,33 @@ table tbody tr:nth-child(even) {
 .view-template-btn:hover,
 .view-details-btn:hover {
   background: #0056b3;
+}
+
+@media screen and (max-width: 768px) {
+  .dashboard {
+    padding: 2rem;
+    margin-top: 4rem;
+  }
+
+  #campaignDataTable table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  /* Hide Recipients + Schedule Time + Template */
+  #campaignDataTable thead th:nth-child(2), /* Recipients */
+  #campaignDataTable thead th:nth-child(3), /* Template */
+  #campaignDataTable thead th:nth-child(4), /* Schedule Time */
+  #campaignDataTable tbody td:nth-child(2),
+  #campaignDataTable tbody td:nth-child(3),
+  #campaignDataTable tbody td:nth-child(4) {
+    display: none;
+  }
+
+  #campaignDataTable th,
+  #campaignDataTable td {
+    font-size: 14px;
+    padding: 8px;
+  }
 }
 

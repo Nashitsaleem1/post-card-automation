@@ -39,6 +39,7 @@
           Create Campaign
         </button>
       </div>
+      <div class="hamburger" id="hamburger">☰</div>
     </nav>
 
     <div class="container">
@@ -292,4 +293,36 @@
     <!-- Regular JavaScript -->
     <script src="./assets/js/script.js"></script>
   </body>
+  <script>
+    const hamburger = document.getElementById("hamburger");
+    const navLinks = document.querySelector(".nav-links");
+
+    hamburger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      navLinks.classList.toggle("nav-active");
+
+      // Append button if not already in menu
+      if (!document.getElementById("createCampaignBtnMobile")) {
+        const wrapper = document.createElement("div");
+        wrapper.style.textAlign = "center"; // center without extra CSS file
+        const mobileCampaignBtn = document.createElement("button");
+        mobileCampaignBtn.id = "createCampaignBtnMobile";
+        mobileCampaignBtn.className = "btn btn-primary";
+        mobileCampaignBtn.innerText = "Create Campaign";
+
+        // 🔑 Attach the same handler as desktop button
+        mobileCampaignBtn.addEventListener("click", openCreateCampaignModal);
+
+        wrapper.appendChild(mobileCampaignBtn);
+        navLinks.appendChild(wrapper);
+      }
+    });
+
+    // Close menu if clicked outside
+    document.addEventListener("click", (e) => {
+      if (!navLinks.contains(e.target) && !hamburger.contains(e.target)) {
+        navLinks.classList.remove("nav-active");
+      }
+    });
+  </script>
 </html>
