@@ -37,6 +37,7 @@ a {
 .nav-links {
   display: flex;
   gap: 30px;
+
   list-style: none;
 }
 
@@ -57,7 +58,7 @@ a {
 }
 
 .nav-buttons .btn {
-  padding: 8px 20px;
+  padding: 10px 20px;
   border-radius: 20px;
   font-size: 0.95rem;
   font-weight: 600;
@@ -75,6 +76,7 @@ a {
 
 .btn-signin:hover {
   background: #2b7fff;
+  transform: scale(1.1);
   color: #fff;
 }
 
@@ -85,6 +87,7 @@ a {
 
 .btn-started:hover {
   background: #005be3;
+  transform: scale(1.1);
 }
 
 /* Hero */
@@ -134,6 +137,7 @@ a {
 
 .hero .btn:hover {
   background: #005be3;
+  transform: scale(1.1);
 }
 
 .hero-img {
@@ -236,10 +240,9 @@ h2 {
   border-radius: 50%;
 }
 
-
 .container {
   max-width: 1100px;
-  margin: 2rem auto;
+  margin: 12rem auto;
   padding: 1rem;
 }
 
@@ -268,11 +271,12 @@ h2 {
   gap: 0.5rem;
   height: 49px;
   padding: 0.6rem 1.2rem;
-  background: rgb(44, 136, 86);
+  background: #4caf50;
   color: white;
   border: 1px solid #b2baca;
   border-radius: 10px;
   font-size: 1rem;
+  margin-top: 4rem;
   font-weight: 550;
   cursor: pointer;
   transition: all 0.5s ease;
@@ -281,8 +285,9 @@ h2 {
 }
 
 .sample-download-btn:hover {
-  background: rgb(44, 136, 86);
+  background: #4caf50;
   transform: scale(1.1);
+
   color: white;
 }
 
@@ -325,7 +330,7 @@ h2 {
   align-items: center;
   gap: 0.5rem;
   padding: 0.8rem 1.5rem;
-  background: #1a365d;
+  background: #2b7fff;
   color: white;
   font-weight: 600;
   transition: all 0.5s ease;
@@ -336,7 +341,7 @@ h2 {
 }
 
 .choose-file-btn:hover {
-  background: #2c5282;
+  background: #2b7fff;
   transform: scale(1.1);
 }
 
@@ -447,7 +452,7 @@ h2 {
 }
 
 .modal-header {
-  background: #1a365d;
+  background: #5e636b;
   color: white;
   padding: 20px;
   display: flex;
@@ -531,7 +536,7 @@ h2 {
 .send-btn {
   display: block;
   width: 100%;
-  background: #1a365d;
+  background: black;
   color: white;
   font-size: 1.2rem;
   font-weight: 600;
@@ -544,7 +549,7 @@ h2 {
 }
 
 .send-btn:hover {
-  background: #005c99;
+  background: #0f0f0f;
   transform: translateY(-1px);
 }
 
@@ -558,7 +563,7 @@ h2 {
 }
 
 .savetemplate {
-  background-color: #1a365d;
+  background-color: #2b7fff;
 }
 
 .button-actions {
@@ -572,7 +577,7 @@ h2 {
 }
 
 .order-design-btn {
-  background: #1a365d;
+  background:  #2b7fff;
   color: white;
   border: none;
   width: 130px;
@@ -585,7 +590,7 @@ h2 {
 }
 
 .edit-btn {
-  background: #1a365d;
+  background:  #4caf50;
   color: white;
   border: none;
   border-radius: 50%;
@@ -602,12 +607,13 @@ h2 {
 }
 
 .edit-btn:hover {
-  background: #005c99;
+  background:  #4caf50;
   transform: scale(1.1);
 }
 
 .order-design-btn:hover {
-  background: #005c99;
+  background:  #2b7fff;
+
   transform: scale(1.1);
 }
 
@@ -742,7 +748,6 @@ h2 {
     padding: 0.8rem 1rem;
     font-size: 1.1rem;
   }
-
 
   /* Container and spacing - ensure full width usage */
   .container {
@@ -1204,16 +1209,15 @@ h2 {
 
 /* ==== Dashboard Layout ==== */
 .dashboard {
-  padding: 2rem;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background: #f5f7fa;
-  min-height: 100vh;
+  padding: 5rem;
+  margin-top: 4rem;
 }
 
 .dashboard h1 {
   font-size: 2rem;
   font-weight: bold;
-  margin-bottom: 1.5rem;
+  text-align: center;
+  margin-bottom: 3.4rem;
   color: #2c3e50;
 }
 
@@ -1222,7 +1226,8 @@ h2 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-top: 3rem;
+  margin-bottom: 4.7rem;
 }
 
 .card {
@@ -1269,7 +1274,7 @@ table {
 }
 
 table thead {
-  background: #1abc9c;
+  background: #2b7fff;
   color: #ffffff;
 }
 
@@ -1407,3 +1412,4 @@ table tbody tr:nth-child(even) {
 .view-details-btn:hover {
   background: #0056b3;
 }
+

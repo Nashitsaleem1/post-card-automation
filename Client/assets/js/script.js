@@ -8,7 +8,9 @@ let recipients = [];
 async function loadTemplates() {
   const templatesGrid = document.getElementById("templatesGrid");
   try {
-    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates");
+    const response = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/templates"
+    );
     const templates = await response.json();
 
     templatesGrid.innerHTML = ""; // Clear grid
@@ -88,12 +90,12 @@ function openCreateCampaignModal() {
 function closeCreateCampaignModal() {
   document.getElementById("createCampaignModal").style.display = "none";
 }
-const menuToggle = document.getElementById("menuToggle");
-const menu = document.getElementById("menu");
+// const menuToggle = document.getElementById("menuToggle");
+// const menu = document.getElementById("menu");
 
-menuToggle.addEventListener("click", () => {
-  menu.classList.toggle("active");
-});
+// menuToggle.addEventListener("click", () => {
+//   menu.classList.toggle("active");
+// });
 // ----------------------
 // Save Campaign API call
 // ----------------------
@@ -106,14 +108,17 @@ async function saveCampaign() {
   }
 
   try {
-    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        campaign_name: campaignName,
-        mailer_name: mailerName,
-      }),
-    });
+    const response = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/campaigns",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          campaign_name: campaignName,
+          mailer_name: mailerName,
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errData = await response.json();
@@ -161,14 +166,17 @@ async function saveAsNewTemplate() {
   console.log(typeof qrCodeId);
 
   try {
-    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        html_content: htmlContent,
-        qr_code_id: qrCodeId,
-      }),
-    });
+    const response = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/templates",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          html_content: htmlContent,
+          qr_code_id: qrCodeId,
+        }),
+      }
+    );
     if (!response.ok) throw new Error("Failed to create template");
 
     closeSaveAsNewModal();
@@ -254,17 +262,20 @@ async function confirmSchedule() {
     window.latestCampaignId = latestCampaign.id; // store globally for reuse
 
     // save to backend as scheduled
-    const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        campaign_id: latestCampaign.id,
-        template_id: currentSchedulingTemplate,
-        address_list: JSON.stringify(recipients),
-        schedule_time: scheduleDateTime,
-        status: "scheduled",
-      }),
-    });
+    const res = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/campaign-data",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          campaign_id: latestCampaign.id,
+          template_id: currentSchedulingTemplate,
+          address_list: JSON.stringify(recipients),
+          schedule_time: scheduleDateTime,
+          status: "scheduled",
+        }),
+      }
+    );
 
     if (!res.ok) throw new Error("Failed to save scheduled letter");
 
@@ -292,17 +303,24 @@ async function parseCSV(file) {
     header: true,
     skipEmptyLines: true,
     complete: (results) => {
-      recipients = results.data.map((r) => ({
-        company: r.company || "",
-        firstName: r.firstName || r.FirstName || "Test",
-        lastName: r.lastName || r.LastName || "Name",
-        address: r.address || r.Address || "",
-        city: r.city || r.City || "",
-        state: r.state || r.State || "",
-        zipCode: r.zipCode || r.Zipcode || "",
-      }));
+      recipients = results.data.map((r) => {
+        const row = Object.fromEntries(
+          Object.entries(r).map(([k, v]) => [k.toLowerCase(), v])
+        );
+        return {
+          company: row.company || "",
+          firstName: row.firstname || "Test",
+          lastName: row.lastname || "Name",
+          address: row.address || "",
+          city: row.city || "",
+          state: row.state || "",
+          zipCode: row.zipcode || "",
+        };
+      });
+
       console.log("Recipients loaded:", recipients);
 
+      // ✅ Update upload box with success message + reset button
       const uploadBox = document.getElementById("uploadBox");
       uploadBox.innerHTML = `
         <div class="upload-icon" style="color: #28a745;">✓</div>
@@ -319,6 +337,7 @@ async function parseCSV(file) {
     },
   });
 }
+
 
 function setupDragAndDrop() {
   const uploadBox = document.getElementById("uploadBox");
@@ -379,7 +398,9 @@ function resetUpload() {
 
 async function checkCampaignExists() {
   try {
-    const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns/latest");
+    const res = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/campaigns/latest"
+    );
     if (!res.ok) throw new Error("Failed to fetch campaigns");
     const latestCampaign = await res.json();
     return latestCampaign && latestCampaign.id; // true if exists
@@ -480,6 +501,7 @@ async function orderDesign(templateId, button) {
 
     // --- Place Order with PCM ---
     const token = await getToken();
+    console.log(token);
     const payload = {
       extRefNbr: "12345",
       designID: 0,
@@ -506,7 +528,7 @@ async function orderDesign(templateId, button) {
       },
       body: JSON.stringify(payload),
     });
-
+    console.log(res);
     const data = await res.json();
     console.log("Order Response:", data);
 
@@ -528,6 +550,7 @@ async function orderDesign(templateId, button) {
 // Page Init
 // ----------------------
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("HIII");
   loadTemplates();
   resetUpload();
 });

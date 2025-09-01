@@ -125,7 +125,9 @@ async function fetchScannedAddresses(qrCodeId) {
 // ----------------------
 async function loadDashboard() {
   try {
-    const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/dashboard/latest");
+    const res = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/dashboard/latest"
+    );
 
     if (res.status === 404) {
       document.getElementById("totalCampaigns").textContent = "0";
@@ -179,24 +181,30 @@ async function loadDashboard() {
       </p>`;
     } else {
       detailsDiv.innerHTML = `
-  <h2>📋 Campaign Data</h2>
-  <table style="margin-top:30px; width:100%; border-spacing:0 16px; border-collapse:separate; box-shadow:0 2px 8px rgba(0,0,0,0.1); border-radius:8px; overflow:hidden;">
-    <thead>
-      <tr style="background:#1a365d; color:white;">
-        <th style="padding:18px; text-align:left; width:18%;">Campaign Name</th>
-        <th style="padding:18px; text-align:left; width:15%;">Recipients</th>
-        <th style="padding:18px; text-align:left; width:18%;">Template</th>
-        <th style="padding:18px; text-align:left; width:20%;">Schedule Time</th>
-        <th style="padding:18px; text-align:left; width:11%;">Status</th>
-        <th style="padding:18px; text-align:left; width:17%;">Action</th>
-      </tr>
-    </thead>
-    <tbody>
+<table style="
+  width:100%; 
+  border-collapse: separate; 
+  border-spacing: 0 16px; 
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+  border-radius: 8px; 
+  overflow: hidden;
+">
+  <thead style="transform: translateY(-16px);">
+    <tr style="background:#2b7fff; color:white;">
+      <th style="padding:18px; text-align:left; width:18%;">Campaign Name</th>
+      <th style="padding:18px; text-align:left; width:15%;">Recipients</th>
+      <th style="padding:18px; text-align:left; width:18%;">Template</th>
+      <th style="padding:18px; text-align:left; width:20%;">Schedule Time</th>
+      <th style="padding:18px; text-align:left; width:11%;">Status</th>
+      <th style="padding:18px; text-align:left; width:17%;">Action</th>
+    </tr>
+  </thead>
+<tbody>
       ${data.data
         .map((d, i) => {
           const statusClass =
             d.status?.toLowerCase() === "sent"
-              ? "background:#5a9c69; color:white; padding:6px 10px; border-radius:20px; font-size:13px; min-width:90px; min-height:30px; display:inline-block; text-align:center;"
+              ? "background:   #4caf50;; color:white; padding:6px 10px; border-radius:20px; font-size:13px; min-width:90px; min-height:30px; display:inline-block; text-align:center;"
               : d.status?.toLowerCase() === "scheduled"
               ? "background:#17a2b8; color:white; padding:6px 10px;  border-radius:20px; font-size:13px; min-width:90px;  min-height:30px; display:inline-block; text-align:center;"
               : "background:#6c757d; color:white; padding:6px 10px;  border-radius:20px; font-size:13px; min-width:90px;  min-height:30px; display:inline-block; text-align:center;";
@@ -206,9 +214,9 @@ async function loadDashboard() {
             <td style="padding:12px; width:20%;">${
               data.campaign.campaign_name
             }</td>
-            <td style="padding:12px; width:15%;">${formatAddresses(
-              d.address_list
-            )}</td>
+            <td style="padding:12px; text-align:left; width:15%; padding-left:40px">
+              ${safeParseRecipients(d.address_list).length}
+            </td>
             <td style="padding:12px; width:15%;">
               <button class="toggle-template-btn" data-index="${i}" style="padding:7px 10px; background:#1abc9c; color:white; border:none; border-radius:5px; cursor:pointer;">
                 View Template
@@ -269,17 +277,59 @@ async function loadDashboard() {
         recipientsToShow = recipientsToShow.filter((r) => r.scanned);
       }
 
-      modalAddresses.innerHTML = recipientsToShow.length
-        ? `<ul>${recipientsToShow
-            .map(
-              (r) =>
-                `<li><strong>Address:</strong> ${r.address}<br/>
-                 <strong>Status:</strong> ${
-                   r.scanned ? "✅ Scanned" : "❌ Not Scanned"
-                 }</li>`
-            )
-            .join("")}</ul>`
-        : "<p>No addresses available.</p>";
+      if (!recipientsToShow.length) {
+        modalAddresses.innerHTML = "<p>No addresses available.</p>";
+        return;
+      }
+
+      modalAddresses.innerHTML = `
+  <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:separate; border-spacing:0 12px; font-size:14px;">
+      <thead>
+        <tr style="background:black; color:white; text-align:left;">
+          <th style="padding:10px;">Name</th>
+          <th style="padding:10px;">Address</th>
+          <th style="padding:10px;">City</th>
+          <th style="padding:10px;">State</th>
+          <th style="padding:10px;">Zip</th>
+          <th style="padding:10px;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${recipientsToShow
+          .map(
+            (r) => `
+            <tr style="background:#fafafa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); transition:background 0.2s;">
+              <td style="padding:10px; border-top-left-radius:8px; border-bottom-left-radius:8px;">
+                ${r.firstName || ""} ${r.lastName || ""}
+              </td>
+              <td style="padding:10px;">${r.address || ""}</td>
+              <td style="padding:10px;">${r.city || ""}</td>
+              <td style="padding:10px;">${r.state || ""}</td>
+              <td style="padding:10px;">${r.zipCode || ""}</td>
+              <td style="padding:10px; font-weight:bold; color:${
+                r.scanned ? "green" : "red"
+              };">
+                ${r.scanned ? "✅ Scanned" : "❌ Not Scanned"}
+              </td>
+            </tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>
+  </div>
+`;
+
+      document.querySelectorAll("tbody tr").forEach((row) => {
+        row.addEventListener(
+          "mouseenter",
+          () => (row.style.background = "#f0f0f0")
+        );
+        row.addEventListener(
+          "mouseleave",
+          () => (row.style.background = "#fafafa")
+        );
+      });
     }
 
     document.querySelectorAll(".view-details-btn").forEach((btn) => {
@@ -287,7 +337,7 @@ async function loadDashboard() {
         const index = btn.dataset.index;
         const d = data.data[index];
 
-        modalCampaignName.textContent = data.campaign.campaign_name;
+        // modalCampaignName.textContent = data.campaign.campaign_name;
         modalMailerName.textContent = data.campaign.mailer_name;
 
         currentRecipients =

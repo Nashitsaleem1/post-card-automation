@@ -9,18 +9,45 @@
       class="taskbar-icon"
       rel="icon"
       type="image/png"
-      href="./assets/images/logo.png"
+      href="./assets/images/Untitled design - 2025-09-01T183547.741.png"
     />
     <link rel="stylesheet" href="./assets/css/index.css" />
   </head>
   <body>
+    <nav class="navbar">
+      <div class="logo">
+        <img
+          src="./assets/images/Untitled design - 2025-09-01T183547.741.png"
+          alt="Logo"
+          class="logo-img"
+        />
+        PCM Automation
+      </div>
+
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="templateGallery.html">Template Gallery</a></li>
+      </ul>
+      <div class="nav-buttons">
+        <a href="templateGallery.html" class="btn btn-started">Get Started</a>
+        <button
+          id="createCampaignBtn"
+          class="btn btn-primary"
+          style="margin-left: 4px"
+        >
+          Create Campaign
+        </button>
+      </div>
+    </nav>
 
     <div class="container">
       <div class="upload-section">
-        <p class="upload-subtitle">
-          Get started easily—download our sample CSV template before uploading
-          your file.
-        </p>
+        <h1>
+          Get started easily—download our <br />sample
+          <span style="color: #2b7fff">CSV template</span> before uploading your
+          file.
+        </h1>
 
         <button class="sample-download-btn" onclick="downloadSampleCSV()">
           <svg
@@ -79,7 +106,6 @@
       <h2>Select & Edit Your Template</h2>
       <div class="templates-grid" id="templatesGrid"></div>
     </div>
-
     <!-- Schedule Modal -->
     <div id="scheduleModal" class="custom-modal-sch" style="display: none">
       <div class="custom-modal-sch-content schedule-modal">
@@ -265,6 +291,5 @@
 
     <!-- Regular JavaScript -->
     <script src="./assets/js/script.js"></script>
-
   </body>
 </html>
