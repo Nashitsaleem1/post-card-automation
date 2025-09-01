@@ -32,10 +32,16 @@ app = FastAPI(title="PCM Automation", version="1.0.0")
 origins_env = os.getenv("CORS_ORIGINS", "")
 origins = [o.strip() for o in origins_env.split(",") if o.strip()]
 
-origins.append("https://physical-mail-automation.netlify.app")
+# Allowed origins
+origins = [
+    "http://127.0.0.1:5500",        
+    "http://localhost:5500",         
+    "https://physical-mail-automation.netlify.app" # Netlify frontend
+]
 
 if not origins:
     origins = ["*"]
+
 
 app.add_middleware(
     CORSMiddleware,
