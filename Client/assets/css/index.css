@@ -1691,4 +1691,10 @@ table tbody tr:nth-child(even) {
   .upload-footer a {
     font-size: 0.95rem;
   }
+  .heading3{
+    font-size: 1.3rem;
+    font-weight: bold;
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
+  }
 }
