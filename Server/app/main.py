@@ -14,7 +14,7 @@ from .database import Base, engine, get_db
 from . import schemas
 from pytz import timezone, utc
 from .models import Template, Campaign, CampaignData, QRCodeInfo
-
+from sqlalchemy.orm import Session, joinedload
 
 API_URL = "https://v3.pcmintegrations.com/auth/login"
 API_KEY = "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0"
@@ -306,6 +306,8 @@ def get_campaign_dashboard(db: Session = Depends(get_db)):
     return campaigns
 
 
+
+
 @app.get("/dashboard/all")
 def get_dashboard_all(db: Session = Depends(get_db)):
     # Get all campaigns
@@ -314,21 +316,20 @@ def get_dashboard_all(db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No campaigns found")
 
     # Get the latest campaign
-    latest_campaign = campaigns[0]  # First one due to desc order
-    
-    # Get all campaign_data records for ALL campaigns with their templates
+    latest_campaign = campaigns[0]
+
+    # Get all campaign_data records with joined template + campaign
     all_campaign_data = (
-        db.query(CampaignData, Template, Campaign)
-        .join(Template, Template.id == CampaignData.template_id, isouter=True)
-        .join(Campaign, Campaign.id == CampaignData.campaign_id)
+        db.query(CampaignData)
+        .options(joinedload(CampaignData.template), joinedload(CampaignData.campaign))
         .order_by(desc(CampaignData.id))
         .all()
     )
-    
-    # Calculate total recipients across all campaigns
+
+    # Calculate total recipients
     total_recipients = 0
     for data_record in all_campaign_data:
-        address_list = data_record.CampaignData.address_list
+        address_list = data_record.address_list
         if address_list:
             try:
                 if isinstance(address_list, str):
@@ -358,18 +359,17 @@ def get_dashboard_all(db: Session = Depends(get_db)):
         ],
         "data": [
             {
-                "id": d.CampaignData.id,
-                "campaign_id": d.CampaignData.campaign_id,
-                "campaign_name": d.Campaign.campaign_name,
-                "mailer_name": d.Campaign.mailer_name,
-                "address_list": d.CampaignData.address_list,
-                "schedule_time": d.CampaignData.schedule_time,
-                "status": d.CampaignData.status,
-                "template_id": d.CampaignData.template_id,
-                "template_preview": d.Template.template if d.Template else None,
-                "qr_code_id": d.Template.qr_code_id if d.Template else None,
+                "id": d.id,
+                "campaign_id": d.campaign_id,
+                "campaign_name": d.campaign.campaign_name if d.campaign else None,
+                "mailer_name": d.campaign.mailer_name if d.campaign else None,
+                "address_list": d.address_list,
+                "schedule_time": d.schedule_time,
+                "status": d.status,
+                "template_id": d.template_id,
+                "template_preview": d.template.html_content if d.template else None,
+                "qr_code_id": d.template.qr_code_id if d.template else None,
             }
             for d in all_campaign_data
         ],
     }
-

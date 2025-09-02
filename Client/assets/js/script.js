@@ -4,39 +4,6 @@ let recipients = [];
 let currentCampaignId = null; // Track the selected campaign
 
 // ----------------------
-// Campaign Persistence Functions
-// ----------------------
-function saveCampaignToSession(campaignId) {
-  if (campaignId) {
-    // Use a simple approach with URL hash or a global variable
-    // Since localStorage is not available, we'll use sessionStorage alternative
-    window.selectedCampaignId = campaignId;
-    
-    // Also store in URL hash as backup
-    const url = new URL(window.location);
-    url.searchParams.set('campaign', campaignId);
-    window.history.replaceState({}, '', url);
-  }
-}
-
-function loadCampaignFromSession() {
-  // Try to get from URL first
-  const urlParams = new URLSearchParams(window.location.search);
-  const campaignFromUrl = urlParams.get('campaign');
-  
-  if (campaignFromUrl) {
-    return parseInt(campaignFromUrl);
-  }
-  
-  // Try to get from global variable
-  if (window.selectedCampaignId) {
-    return window.selectedCampaignId;
-  }
-  
-  return null;
-}
-
-// ----------------------
 // Load Templates
 // ----------------------
 async function loadTemplates() {
@@ -54,7 +21,6 @@ async function loadTemplates() {
       div.classList.add("template");
       div.dataset.templateId = tpl.id;
       div.dataset.qrCodeId = tpl.qr_code_id;
-      console.log(tpl.qr_code_id);
 
       const deleteButton =
         tpl.id > 4
@@ -99,43 +65,71 @@ async function loadTemplates() {
   }
 }
 
+window.addEventListener("DOMContentLoaded", () => {
+  // Restore campaign
+  const savedCampaignId = localStorage.getItem("currentCampaignId");
+  if (savedCampaignId) {
+    currentCampaignId = savedCampaignId;
+    const campaignSelect = document.getElementById("existingCampaign");
+    if (campaignSelect) {
+      campaignSelect.value = savedCampaignId;
+    }
+    console.log("🔄 Restored campaign:", currentCampaignId);
+  }
+
+  // Restore recipients
+  const savedRecipients = localStorage.getItem("recipients");
+  if (savedRecipients) {
+    recipients = JSON.parse(savedRecipients);
+    console.log("🔄 Restored recipients:", recipients);
+
+    // Optionally re-render in UI if you have a table/list
+    if (typeof renderRecipients === "function") {
+      renderRecipients(recipients);
+    }
+  }
+});
+
 // ----------------------
-// Load Campaigns
+// Load Campaigns (always, but keep selection)
 // ----------------------
 async function loadCampaigns() {
   try {
     const response = await fetch(
       "https://pcm-app-h8mn8.ondigitalocean.app/campaigns"
     );
+    if (!response.ok) throw new Error("Failed to fetch campaigns");
     const campaigns = await response.json();
-    
+
     const campaignSelect = document.getElementById("existingCampaign");
     if (!campaignSelect) return;
-    
-    // Clear existing options except the first one (placeholder)
-    campaignSelect.innerHTML = '<option value="">Select an existing campaign</option>';
-    
+
+    // ✅ Always use the same key
+    const savedCampaignId = localStorage.getItem("currentCampaignId");
+
+    // Clear and repopulate
+    campaignSelect.innerHTML =
+      '<option value="">Select an existing campaign</option>';
+
     campaigns.forEach((campaign) => {
       const option = document.createElement("option");
       option.value = campaign.id;
       option.textContent = `${campaign.campaign_name} (${campaign.mailer_name})`;
       campaignSelect.appendChild(option);
     });
-    
-    // Try to restore previously selected campaign
-    const savedCampaignId = loadCampaignFromSession();
-    
-    if (savedCampaignId && campaigns.find(c => c.id === savedCampaignId)) {
-      currentCampaignId = savedCampaignId;
-      campaignSelect.value = savedCampaignId;
-    } else if (campaigns.length > 0 && !currentCampaignId) {
-      // Auto-select the first campaign if available and none is selected
-      currentCampaignId = campaigns[0].id;
+
+    // ✅ Restore saved campaign if valid
+    if (savedCampaignId && campaigns.some((c) => c.id == savedCampaignId)) {
+      currentCampaignId = parseInt(savedCampaignId, 10);
       campaignSelect.value = currentCampaignId;
-      saveCampaignToSession(currentCampaignId);
+    } else if (campaigns.length > 0) {
+      // fallback: first campaign
+      currentCampaignId = campaigns[0].id;
+      campaignSelect.value = campaigns[0].id;
+      localStorage.setItem("currentCampaignId", currentCampaignId);
     }
-    
-    console.log("Loaded campaign:", currentCampaignId);
+
+    console.log("✅ Current campaign set:", currentCampaignId);
   } catch (err) {
     console.error("Error loading campaigns:", err);
   }
@@ -143,15 +137,18 @@ async function loadCampaigns() {
 
 // ----------------------
 // Campaign Selection Change
-// ----------------------
 function onCampaignChange() {
   const campaignSelect = document.getElementById("existingCampaign");
-  currentCampaignId = campaignSelect.value ? parseInt(campaignSelect.value) : null;
-  
-  // Save the selection for persistence across pages
-  saveCampaignToSession(currentCampaignId);
-  
-  console.log("Selected campaign:", currentCampaignId);
+  const selectedCampaignId = campaignSelect.value;
+
+  if (selectedCampaignId) {
+    // Save universally
+    localStorage.setItem("currentCampaignId", selectedCampaignId);
+
+    console.log("🔄 Campaign set globally:", selectedCampaignId);
+  } else {
+    localStorage.removeItem("currentCampaignId");
+  }
 }
 
 // ----------------------
@@ -211,21 +208,21 @@ async function saveCampaign() {
     }
 
     const newCampaign = await response.json();
-    
-    // Clear form
+
+    // Clear form + close modal
     document.getElementById("campaignName").value = "";
     document.getElementById("mailerName").value = "";
-    
     closeCreateCampaignModal();
-    
-    // Reload campaigns and select the new one
+
+    // Reload campaigns only now
     await loadCampaigns();
+
+    // Select and save new campaign
+    // Select and save new campaign
     currentCampaignId = newCampaign.id;
+    localStorage.setItem("currentCampaignId", currentCampaignId);
     document.getElementById("existingCampaign").value = newCampaign.id;
-    
-    // Save the new campaign selection
-    saveCampaignToSession(newCampaign.id);
-    
+
     showAlert(`Campaign "${newCampaign.campaign_name}" created successfully!`);
   } catch (err) {
     console.error("Create Campaign Error:", err);
@@ -263,9 +260,8 @@ async function saveAsNewTemplate() {
       `.template[data-template-id='${currentEditingTemplateId}']`
     );
     const qrIdStr = templateDiv.dataset.qrCodeId;
-    qrCodeId = qrIdStr ? parseInt(qrIdStr) : null; // convert to int if exists
+    qrCodeId = qrIdStr ? parseInt(qrIdStr) : null;
   }
-  console.log(typeof qrCodeId);
 
   try {
     const response = await fetch(
@@ -314,12 +310,23 @@ async function deleteTemplate(templateId) {
 // ----------------------
 function showAlert(message) {
   const modal = document.getElementById("alertModal");
-  document.getElementById("alertMessage").innerText = message;
-  modal.style.display = "flex";
+  const messageEl = document.getElementById("alertMessage");
+
+  if (modal && messageEl) {
+    messageEl.innerText = message;
+    modal.style.display = "flex";
+  }
 }
-document.getElementById("alertOkBtn").onclick = () => {
-  document.getElementById("alertModal").style.display = "none";
-};
+
+const alertOkBtn = document.getElementById("alertOkBtn");
+if (alertOkBtn) {
+  alertOkBtn.onclick = () => {
+    const modal = document.getElementById("alertModal");
+    if (modal) {
+      modal.style.display = "none";
+    }
+  };
+}
 
 // ----------------------
 // Schedule Modal
@@ -347,17 +354,15 @@ async function confirmSchedule() {
     );
   }
 
-  const date = document.getElementById("scheduleDate").value; // yyyy-mm-dd
-  const time = document.getElementById("scheduleTime").value; // hh:mm
+  const date = document.getElementById("scheduleDate").value;
+  const time = document.getElementById("scheduleTime").value;
 
   if (!date || !time) {
     return showAlert("Please select both date and time.");
   }
-  // Combine into "2025-08-30 06:50:00" (local time string)
   const scheduleDateTime = `${date} ${time}:00`;
 
   try {
-    // Use the selected campaign instead of fetching latest
     const res = await fetch(
       "https://pcm-app-h8mn8.ondigitalocean.app/campaign-data",
       {
@@ -411,9 +416,11 @@ async function parseCSV(file) {
         };
       });
 
+      // ✅ Save globally for persistence
+      localStorage.setItem("recipients", JSON.stringify(recipients));
+
       console.log("Recipients loaded:", recipients);
 
-      // ✅ Update upload box with success message + reset button
       const uploadBox = document.getElementById("uploadBox");
       uploadBox.innerHTML = `
         <div class="upload-icon" style="color: #28a745;">✓</div>
@@ -430,6 +437,7 @@ async function parseCSV(file) {
     },
   });
 }
+
 
 function setupDragAndDrop() {
   const uploadBox = document.getElementById("uploadBox");
@@ -477,7 +485,7 @@ function setupDragAndDrop() {
 
 function resetUpload() {
   const uploadBox = document.getElementById("uploadBox");
-  if (!uploadBox) return; // Exit if element doesn't exist on this page
+  if (!uploadBox) return;
 
   uploadBox.innerHTML = `
     <div class="upload-icon"><img src="./assets/images/icon.png" alt="Upload" width="52" height="52" /></div>
@@ -489,8 +497,10 @@ function resetUpload() {
   `;
 
   recipients = [];
+  localStorage.removeItem("recipients"); // ✅ clear from persistence too
   setupDragAndDrop();
 }
+
 
 // ----------------------
 // Sample CSV
@@ -510,7 +520,6 @@ PCM Integrations,Alex,Doe,2145 Sunnydale Blvd,Clearwater,FL,33765`;
 // ----------------------
 // PCM API
 // ----------------------
-
 async function getToken() {
   const payload = {
     apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
@@ -537,6 +546,8 @@ window.closeModal = function () {
 };
 
 async function orderDesign(templateId, button) {
+  // const campaignSelect = document.getElementById("existingCampaign");
+  // currentCampaignId = campaignSelect.value;
   if (!currentCampaignId) {
     showAlert("Please select a campaign first!");
     return;
@@ -567,8 +578,8 @@ async function orderDesign(templateId, button) {
       campaign_id: currentCampaignId,
       template_id: parseInt(templateId.replace(/\D/g, "")) || null,
       address_list: JSON.stringify(recipients),
-      schedule_time: null, // sending immediately
-      status: "sent", // ✅ mark as sent
+      schedule_time: null,
+      status: "sent",
     };
 
     await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
@@ -627,19 +638,12 @@ async function orderDesign(templateId, button) {
 // ----------------------
 // Page Init
 // ----------------------
-document.addEventListener("DOMContentLoaded", () => {
-  console.log("Page loading...");
-  
-  // Initialize campaign from session first
-  currentCampaignId = loadCampaignFromSession();
-  
+document.addEventListener("DOMContentLoaded", async () => {
+  console.log("App started");
+
   loadTemplates();
-  loadCampaigns(); // This will restore the saved campaign
   resetUpload();
-  
-  // Make sure campaign change handler is attached
-  const campaignSelect = document.getElementById("existingCampaign");
-  if (campaignSelect) {
-    campaignSelect.addEventListener('change', onCampaignChange);
-  }
+
+  // ✅ Always load campaigns on init (dropdown fresh every time)
+  await loadCampaigns();
 });
