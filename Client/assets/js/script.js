@@ -1,12 +1,14 @@
 let currentEditingTemplateId = null;
 let currentSchedulingTemplate = null;
 let recipients = [];
+let currentCampaignId = null; // Track the selected campaign
 
 // ----------------------
 // Load Templates
 // ----------------------
 async function loadTemplates() {
   const templatesGrid = document.getElementById("templatesGrid");
+  if (!templatesGrid) return;
   try {
     const response = await fetch(
       "https://pcm-app-h8mn8.ondigitalocean.app/templates"
@@ -65,6 +67,48 @@ async function loadTemplates() {
 }
 
 // ----------------------
+// Load Campaigns
+// ----------------------
+async function loadCampaigns() {
+  try {
+    const response = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/campaigns"
+    );
+    const campaigns = await response.json();
+    
+    const campaignSelect = document.getElementById("existingCampaign");
+    if (!campaignSelect) return;
+    
+    // Clear existing options except the first one (placeholder)
+    campaignSelect.innerHTML = '<option value="">Select an existing campaign</option>';
+    
+    campaigns.forEach((campaign) => {
+      const option = document.createElement("option");
+      option.value = campaign.id;
+      option.textContent = `${campaign.campaign_name} (${campaign.mailer_name})`;
+      campaignSelect.appendChild(option);
+    });
+    
+    // Auto-select the first campaign if available and none is selected
+    if (campaigns.length > 0 && !currentCampaignId) {
+      currentCampaignId = campaigns[0].id;
+      campaignSelect.value = currentCampaignId;
+    }
+  } catch (err) {
+    console.error("Error loading campaigns:", err);
+  }
+}
+
+// ----------------------
+// Campaign Selection Change
+// ----------------------
+function onCampaignChange() {
+  const campaignSelect = document.getElementById("existingCampaign");
+  currentCampaignId = campaignSelect.value ? parseInt(campaignSelect.value) : null;
+  console.log("Selected campaign:", currentCampaignId);
+}
+
+// ----------------------
 // Edit Modal
 // ----------------------
 function openEditModal(templateId) {
@@ -90,12 +134,7 @@ function openCreateCampaignModal() {
 function closeCreateCampaignModal() {
   document.getElementById("createCampaignModal").style.display = "none";
 }
-// const menuToggle = document.getElementById("menuToggle");
-// const menu = document.getElementById("menu");
 
-// menuToggle.addEventListener("click", () => {
-//   menu.classList.toggle("active");
-// });
 // ----------------------
 // Save Campaign API call
 // ----------------------
@@ -126,7 +165,18 @@ async function saveCampaign() {
     }
 
     const newCampaign = await response.json();
+    
+    // Clear form
+    document.getElementById("campaignName").value = "";
+    document.getElementById("mailerName").value = "";
+    
     closeCreateCampaignModal();
+    
+    // Reload campaigns and select the new one
+    await loadCampaigns();
+    currentCampaignId = newCampaign.id;
+    document.getElementById("existingCampaign").value = newCampaign.id;
+    
     showAlert(`Campaign "${newCampaign.campaign_name}" created successfully!`);
   } catch (err) {
     console.error("Create Campaign Error:", err);
@@ -137,7 +187,10 @@ async function saveCampaign() {
 // ----------------------
 // Hook the header button
 // ----------------------
-document.getElementById("createCampaignBtn").onclick = openCreateCampaignModal;
+const createCampaignBtn = document.getElementById("createCampaignBtn");
+if (createCampaignBtn) {
+  createCampaignBtn.onclick = openCreateCampaignModal;
+}
 
 // ----------------------
 // Save As New Template
@@ -235,6 +288,10 @@ function closeScheduleModal() {
 }
 
 async function confirmSchedule() {
+  if (!currentCampaignId) {
+    return showAlert("⚠️ Please select a campaign first.");
+  }
+
   if (!recipients.length) {
     return showAlert(
       "⚠️ Please upload a CSV file with recipients before scheduling a letter."
@@ -251,24 +308,14 @@ async function confirmSchedule() {
   const scheduleDateTime = `${date} ${time}:00`;
 
   try {
-    // --- Fetch latest campaign from backend (same as orderDesign) ---
-    const latestCampaignRes = await fetch(
-      "https://pcm-app-h8mn8.ondigitalocean.app/campaigns/latest"
-    );
-    if (!latestCampaignRes.ok) {
-      throw new Error("Failed to fetch latest campaign");
-    }
-    const latestCampaign = await latestCampaignRes.json();
-    window.latestCampaignId = latestCampaign.id; // store globally for reuse
-
-    // save to backend as scheduled
+    // Use the selected campaign instead of fetching latest
     const res = await fetch(
       "https://pcm-app-h8mn8.ondigitalocean.app/campaign-data",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          campaign_id: latestCampaign.id,
+          campaign_id: currentCampaignId,
           template_id: currentSchedulingTemplate,
           address_list: JSON.stringify(recipients),
           schedule_time: scheduleDateTime,
@@ -279,7 +326,7 @@ async function confirmSchedule() {
 
     if (!res.ok) throw new Error("Failed to save scheduled letter");
 
-    showAlert(`📅 Letter scheduled for ${scheduleDateTime.toLocaleString()}`);
+    showAlert(`📅 Letter scheduled for ${scheduleDateTime}`);
     closeScheduleModal();
   } catch (err) {
     console.error("Schedule save error:", err);
@@ -291,11 +338,8 @@ async function confirmSchedule() {
 // CSV Upload
 // ----------------------
 async function parseCSV(file) {
-  const campaignExists = await checkCampaignExists();
-  if (!campaignExists) {
-    showAlert(
-      "⚠️ No campaign exists yet. Please create a campaign first before uploading recipients."
-    );
+  if (!currentCampaignId) {
+    showAlert("⚠️ Please select a campaign first before uploading recipients.");
     return;
   }
 
@@ -338,7 +382,6 @@ async function parseCSV(file) {
   });
 }
 
-
 function setupDragAndDrop() {
   const uploadBox = document.getElementById("uploadBox");
   const csvFileInput = document.getElementById("csvFile");
@@ -366,14 +409,14 @@ function setupDragAndDrop() {
     const dt = e.dataTransfer;
     const file = dt.files[0];
     if (file) {
-      await parseCSV(file); // ✅ only parse if campaign exists
+      await parseCSV(file);
     }
   });
 
   csvFileInput.addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (file) {
-      await parseCSV(file); // ✅ only parse if campaign exists
+      await parseCSV(file);
     }
   });
 
@@ -384,7 +427,10 @@ function setupDragAndDrop() {
 }
 
 function resetUpload() {
-  document.getElementById("uploadBox").innerHTML = `
+  const uploadBox = document.getElementById("uploadBox");
+  if (!uploadBox) return; // Exit if element doesn't exist on this page
+
+  uploadBox.innerHTML = `
     <div class="upload-icon"><img src="./assets/images/icon.png" alt="Upload" width="52" height="52" /></div>
     <div class="upload-main-text">Drag & drop your CSV file here</div>
     <div class="upload-sub-text">or click to browse your files</div>
@@ -392,22 +438,9 @@ function resetUpload() {
     <button class="choose-file-btn" onclick="document.getElementById('csvFile').click()">Choose File</button>
     <div class="file-size-info">Max file size: 10MB</div>
   `;
+
   recipients = [];
   setupDragAndDrop();
-}
-
-async function checkCampaignExists() {
-  try {
-    const res = await fetch(
-      "https://pcm-app-h8mn8.ondigitalocean.app/campaigns/latest"
-    );
-    if (!res.ok) throw new Error("Failed to fetch campaigns");
-    const latestCampaign = await res.json();
-    return latestCampaign && latestCampaign.id; // true if exists
-  } catch (err) {
-    console.error("Error checking campaign:", err);
-    return false;
-  }
 }
 
 // ----------------------
@@ -455,6 +488,11 @@ window.closeModal = function () {
 };
 
 async function orderDesign(templateId, button) {
+  if (!currentCampaignId) {
+    showAlert("Please select a campaign first!");
+    return;
+  }
+
   if (!recipients.length) {
     showAlert("Please upload a CSV file with recipients first!");
     return;
@@ -476,17 +514,8 @@ async function orderDesign(templateId, button) {
     let finalHtml = document.getElementById(templateId).innerHTML;
     finalHtml = finalHtml.replace(/DATE/g, formattedDate);
 
-    // --- Fetch latest campaign from backend ---
-    const latestCampaignRes = await fetch(
-      "https://pcm-app-h8mn8.ondigitalocean.app/campaigns/latest"
-    );
-    if (!latestCampaignRes.ok) {
-      throw new Error("Failed to fetch latest campaign");
-    }
-    const latestCampaign = await latestCampaignRes.json();
-
     const campaignPayload = {
-      campaign_id: latestCampaign.id,
+      campaign_id: currentCampaignId,
       template_id: parseInt(templateId.replace(/\D/g, "")) || null,
       address_list: JSON.stringify(recipients),
       schedule_time: null, // sending immediately
@@ -552,5 +581,6 @@ async function orderDesign(templateId, button) {
 document.addEventListener("DOMContentLoaded", () => {
   console.log("HIII");
   loadTemplates();
+  loadCampaigns();
   resetUpload();
 });

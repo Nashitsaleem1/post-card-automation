@@ -1,6 +1,6 @@
 import os
 import json
-import httpx
+from typing import List
 import requests
 from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -290,6 +290,14 @@ def get_latest_campaign(db: Session = Depends(get_db)):
     if not latest_campaign:
         raise HTTPException(status_code=404, detail="No campaigns found")
     return latest_campaign
+
+# Replace the existing endpoint with this one
+@app.get("/campaigns", response_model=List[schemas.CampaignRead])
+def get_all_campaigns(db: Session = Depends(get_db)):
+    campaigns = db.query(Campaign).order_by(desc(Campaign.id)).all()
+    if not campaigns:
+        raise HTTPException(status_code=404, detail="No campaigns found")
+    return campaigns
 
 
 @app.get("/campaigns/dashboard", response_model=list[schemas.CampaignRead])
