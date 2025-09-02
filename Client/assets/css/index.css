@@ -359,13 +359,15 @@ h2 {
   background: white;
   border: 2px dashed #b2baca;
   border-radius: 12px;
-  padding: 3rem 2rem;
+  padding: 3rem 3rem;
   text-align: center;
-  min-width: 400px;
+  width: 100%;
+  max-width: 400px; /* cap width for desktop */
+  margin: 1.5rem auto 0 auto; /* center horizontally */
   cursor: pointer;
-  margin-top: 2rem;
   transition: all 0.2s;
   position: relative;
+  box-sizing: border-box;
 }
 
 .upload-box.dragover {
@@ -819,7 +821,7 @@ h2 {
   .container {
     max-width: 100%;
     margin: 0.5rem auto;
-    padding: 0.5rem;
+    padding: 1rem;
     margin-top: 7rem;
     width: 100%;
   }
@@ -861,8 +863,9 @@ h2 {
   .upload-box {
     padding: 1.5rem 1rem;
     border-radius: 8px;
-    min-width: 344px;
-    box-sizing: border-box;
+    min-width: unset; /* remove fixed min-width */
+    max-width: 90%; /* take most of screen width */
+    margin: 1.5rem auto 0 auto; /* keep centered */
   }
 
   .upload-icon {
@@ -1076,10 +1079,6 @@ h2 {
 @media screen and (max-width: 320px) {
   .container {
     padding: 0.25rem;
-  }
-
-  .upload-box {
-    padding: 1.5rem 0.5rem;
   }
 
   .template {
@@ -1571,12 +1570,13 @@ table tbody tr:nth-child(even) {
   }
 
   .campaign-top select {
+    width: 75%;
     font-size: 1rem;
     padding: 0.5rem 1rem;
     background-position: center 15px center;
   }
   .campaign-top button {
-    width: 70%; /* match dropdown width */
+    width: 75%; /* match dropdown width */
     padding: 0.6rem;
     font-size: 1rem;
   }
@@ -1687,7 +1687,7 @@ table tbody tr:nth-child(even) {
     text-align: center;
     margin-bottom: 4rem;
   }
-  
+
   .upload-footer a {
     font-size: 0.95rem;
   }
