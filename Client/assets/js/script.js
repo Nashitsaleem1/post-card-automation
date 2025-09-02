@@ -4,6 +4,39 @@ let recipients = [];
 let currentCampaignId = null; // Track the selected campaign
 
 // ----------------------
+// Campaign Persistence Functions
+// ----------------------
+function saveCampaignToSession(campaignId) {
+  if (campaignId) {
+    // Use a simple approach with URL hash or a global variable
+    // Since localStorage is not available, we'll use sessionStorage alternative
+    window.selectedCampaignId = campaignId;
+    
+    // Also store in URL hash as backup
+    const url = new URL(window.location);
+    url.searchParams.set('campaign', campaignId);
+    window.history.replaceState({}, '', url);
+  }
+}
+
+function loadCampaignFromSession() {
+  // Try to get from URL first
+  const urlParams = new URLSearchParams(window.location.search);
+  const campaignFromUrl = urlParams.get('campaign');
+  
+  if (campaignFromUrl) {
+    return parseInt(campaignFromUrl);
+  }
+  
+  // Try to get from global variable
+  if (window.selectedCampaignId) {
+    return window.selectedCampaignId;
+  }
+  
+  return null;
+}
+
+// ----------------------
 // Load Templates
 // ----------------------
 async function loadTemplates() {
@@ -89,11 +122,20 @@ async function loadCampaigns() {
       campaignSelect.appendChild(option);
     });
     
-    // Auto-select the first campaign if available and none is selected
-    if (campaigns.length > 0 && !currentCampaignId) {
+    // Try to restore previously selected campaign
+    const savedCampaignId = loadCampaignFromSession();
+    
+    if (savedCampaignId && campaigns.find(c => c.id === savedCampaignId)) {
+      currentCampaignId = savedCampaignId;
+      campaignSelect.value = savedCampaignId;
+    } else if (campaigns.length > 0 && !currentCampaignId) {
+      // Auto-select the first campaign if available and none is selected
       currentCampaignId = campaigns[0].id;
       campaignSelect.value = currentCampaignId;
+      saveCampaignToSession(currentCampaignId);
     }
+    
+    console.log("Loaded campaign:", currentCampaignId);
   } catch (err) {
     console.error("Error loading campaigns:", err);
   }
@@ -105,6 +147,10 @@ async function loadCampaigns() {
 function onCampaignChange() {
   const campaignSelect = document.getElementById("existingCampaign");
   currentCampaignId = campaignSelect.value ? parseInt(campaignSelect.value) : null;
+  
+  // Save the selection for persistence across pages
+  saveCampaignToSession(currentCampaignId);
+  
   console.log("Selected campaign:", currentCampaignId);
 }
 
@@ -176,6 +222,9 @@ async function saveCampaign() {
     await loadCampaigns();
     currentCampaignId = newCampaign.id;
     document.getElementById("existingCampaign").value = newCampaign.id;
+    
+    // Save the new campaign selection
+    saveCampaignToSession(newCampaign.id);
     
     showAlert(`Campaign "${newCampaign.campaign_name}" created successfully!`);
   } catch (err) {
@@ -579,8 +628,18 @@ async function orderDesign(templateId, button) {
 // Page Init
 // ----------------------
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("HIII");
+  console.log("Page loading...");
+  
+  // Initialize campaign from session first
+  currentCampaignId = loadCampaignFromSession();
+  
   loadTemplates();
-  loadCampaigns();
+  loadCampaigns(); // This will restore the saved campaign
   resetUpload();
+  
+  // Make sure campaign change handler is attached
+  const campaignSelect = document.getElementById("existingCampaign");
+  if (campaignSelect) {
+    campaignSelect.addEventListener('change', onCampaignChange);
+  }
 });

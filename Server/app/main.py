@@ -291,7 +291,7 @@ def get_latest_campaign(db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No campaigns found")
     return latest_campaign
 
-# Replace the existing endpoint with this one
+
 @app.get("/campaigns", response_model=List[schemas.CampaignRead])
 def get_all_campaigns(db: Session = Depends(get_db)):
     campaigns = db.query(Campaign).order_by(desc(Campaign.id)).all()
@@ -306,37 +306,70 @@ def get_campaign_dashboard(db: Session = Depends(get_db)):
     return campaigns
 
 
-@app.get("/dashboard/latest")
-def get_dashboard_latest(db: Session = Depends(get_db)):
-    # Get the latest campaign
-    campaign = db.query(Campaign).order_by(desc(Campaign.id)).first()
-    if not campaign:
+@app.get("/dashboard/all")
+def get_dashboard_all(db: Session = Depends(get_db)):
+    # Get all campaigns
+    campaigns = db.query(Campaign).order_by(desc(Campaign.id)).all()
+    if not campaigns:
         raise HTTPException(status_code=404, detail="No campaigns found")
 
-    # Get all campaign_data records linked to this campaign
-    campaign_data = (
-        db.query(CampaignData, Template)
+    # Get the latest campaign
+    latest_campaign = campaigns[0]  # First one due to desc order
+    
+    # Get all campaign_data records for ALL campaigns with their templates
+    all_campaign_data = (
+        db.query(CampaignData, Template, Campaign)
         .join(Template, Template.id == CampaignData.template_id, isouter=True)
-        .filter(CampaignData.campaign_id == campaign.id)
+        .join(Campaign, Campaign.id == CampaignData.campaign_id)
+        .order_by(desc(CampaignData.id))
         .all()
     )
+    
+    # Calculate total recipients across all campaigns
+    total_recipients = 0
+    for data_record in all_campaign_data:
+        address_list = data_record.CampaignData.address_list
+        if address_list:
+            try:
+                if isinstance(address_list, str):
+                    recipients = json.loads(address_list)
+                else:
+                    recipients = address_list
+                if isinstance(recipients, list):
+                    total_recipients += len(recipients)
+            except (json.JSONDecodeError, TypeError):
+                continue
 
     return {
-        "campaign": {
-            "id": campaign.id,
-            "campaign_name": campaign.campaign_name,
-            "mailer_name": campaign.mailer_name,
+        "total_campaigns": len(campaigns),
+        "latest_campaign": {
+            "id": latest_campaign.id,
+            "campaign_name": latest_campaign.campaign_name,
+            "mailer_name": latest_campaign.mailer_name,
         },
+        "total_recipients": total_recipients,
+        "all_campaigns": [
+            {
+                "id": campaign.id,
+                "campaign_name": campaign.campaign_name,
+                "mailer_name": campaign.mailer_name,
+            }
+            for campaign in campaigns
+        ],
         "data": [
             {
                 "id": d.CampaignData.id,
+                "campaign_id": d.CampaignData.campaign_id,
+                "campaign_name": d.Campaign.campaign_name,
+                "mailer_name": d.Campaign.mailer_name,
                 "address_list": d.CampaignData.address_list,
                 "schedule_time": d.CampaignData.schedule_time,
                 "status": d.CampaignData.status,
                 "template_id": d.CampaignData.template_id,
                 "template_preview": d.Template.template if d.Template else None,
-                "qr_code_id": d.Template.qr_code_id if d.Template else None,  
+                "qr_code_id": d.Template.qr_code_id if d.Template else None,
             }
-            for d in campaign_data
+            for d in all_campaign_data
         ],
     }
+
