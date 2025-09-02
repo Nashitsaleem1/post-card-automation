@@ -367,7 +367,7 @@ def get_dashboard_all(db: Session = Depends(get_db)):
                 "schedule_time": d.schedule_time,
                 "status": d.status,
                 "template_id": d.template_id,
-                "template_preview": d.template.html_content if d.template else None,
+                "template_preview": d.template.template if d.template else None,
                 "qr_code_id": d.template.qr_code_id if d.template else None,
             }
             for d in all_campaign_data
