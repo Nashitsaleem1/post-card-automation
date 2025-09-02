@@ -128,6 +128,7 @@ async function loadDashboard() {
     const res = await fetch(
       "https://pcm-app-h8mn8.ondigitalocean.app/dashboard/all"
     );
+    console.log(res);
 
     if (res.status === 404) {
       document.getElementById("totalCampaigns").textContent = "0";
@@ -151,21 +152,19 @@ async function loadDashboard() {
     if (!res.ok) throw new Error("Failed to load dashboard");
 
     const data = await res.json();
-
+    console.log(data);
     // --- Fill summary cards ---
     const totalCampaigns = data.campaign ? 1 : 0;
-    document.getElementById("totalCampaigns").textContent = totalCampaigns;
+    // --- Fill summary cards ---
+    document.getElementById("totalCampaigns").textContent =
+      data.total_campaigns;
 
-    document.getElementById("latestCampaign").textContent = data.campaign
-      ? `${data.campaign.campaign_name} (Mailer: ${data.campaign.mailer_name})`
+    document.getElementById("latestCampaign").textContent = data.latest_campaign
+      ? `${data.latest_campaign.campaign_name} (Mailer: ${data.latest_campaign.mailer_name})`
       : "No campaigns";
 
-    document.getElementById("totalRecipients").textContent = data.data
-      ? data.data.reduce(
-          (sum, d) => sum + (safeParseRecipients(d.address_list).length || 0),
-          0
-        )
-      : "0";
+    document.getElementById("totalRecipients").textContent =
+      data.total_recipients;
 
     // --- Show campaign data table ---
     const dashboardEl = document.querySelector(".dashboard");
@@ -211,9 +210,7 @@ async function loadDashboard() {
 
           return `
           <tr style="background:white; box-shadow:0 1px 4px rgba(0,0,0,0.05); border-radius:6px;">
-            <td style="padding:12px; width:20%;">${
-              data.campaign.campaign_name
-            }</td>
+            <td style="padding:12px; width:20%;">${d.campaign_name}</td>
             <td style="padding:12px; text-align:left; width:15%; padding-left:40px">
               ${safeParseRecipients(d.address_list).length}
             </td>
@@ -338,7 +335,7 @@ async function loadDashboard() {
         const d = data.data[index];
 
         // modalCampaignName.textContent = data.campaign.campaign_name;
-        modalMailerName.textContent = data.campaign.mailer_name;
+        modalMailerName.textContent = data.mailer_name;
 
         currentRecipients =
           typeof d.address_list === "string"

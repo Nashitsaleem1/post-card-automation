@@ -104,13 +104,11 @@ async function loadCampaigns() {
     const campaignSelect = document.getElementById("existingCampaign");
     if (!campaignSelect) return;
 
-    // ✅ Always use the same key
-    const savedCampaignId = localStorage.getItem("currentCampaignId");
-
-    // Clear and repopulate
+    // ✅ Always clear the dropdown and add placeholder first
     campaignSelect.innerHTML =
       '<option value="">Select an existing campaign</option>';
 
+    // Populate the dropdown with campaigns
     campaigns.forEach((campaign) => {
       const option = document.createElement("option");
       option.value = campaign.id;
@@ -118,15 +116,17 @@ async function loadCampaigns() {
       campaignSelect.appendChild(option);
     });
 
-    // ✅ Restore saved campaign if valid
+    // ✅ Restore saved campaign if valid, else keep the placeholder
+    const savedCampaignId = localStorage.getItem("currentCampaignId");
+
     if (savedCampaignId && campaigns.some((c) => c.id == savedCampaignId)) {
+      // If a valid campaign is saved in localStorage, select it
       currentCampaignId = parseInt(savedCampaignId, 10);
       campaignSelect.value = currentCampaignId;
-    } else if (campaigns.length > 0) {
-      // fallback: first campaign
-      currentCampaignId = campaigns[0].id;
-      campaignSelect.value = campaigns[0].id;
-      localStorage.setItem("currentCampaignId", currentCampaignId);
+    } else {
+      // Otherwise, leave the dropdown as "Select an existing campaign"
+      currentCampaignId = null;
+      campaignSelect.value = "";
     }
 
     console.log("✅ Current campaign set:", currentCampaignId);
@@ -590,7 +590,7 @@ async function orderDesign(templateId, button) {
 
     // --- Place Order with PCM ---
     const token = await getToken();
-    console.log(token);
+    // console.log(token);
     const payload = {
       extRefNbr: "12345",
       designID: 0,
