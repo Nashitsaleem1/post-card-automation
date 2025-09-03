@@ -15,8 +15,13 @@ class TemplateRead(TemplateBase):
     qr_code_id: int | None  # add this
     model_config = ConfigDict(from_attributes=True)
 
-# ---------- CampaignData ----------
 
+# ---------- CampaignData ----------
+class CampaignDataUpdate(BaseModel):
+    template_id: Optional[int] = None
+    status: Optional[str] = None   
+    schedule_time: Optional[datetime] = None
+    
 class CampaignDataBase(BaseModel):
     address_list: str
     template_id: Optional[int] = None

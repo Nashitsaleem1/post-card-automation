@@ -220,6 +220,20 @@ def delete_template(template_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"detail": "Template deleted successfully."}
 
+# Get single template
+@app.get("/templates/{template_id}", response_model=schemas.TemplateRead)
+def get_template(template_id: int, db: Session = Depends(get_db)):
+    template = db.query(Template).filter(Template.id == template_id).first()
+    if not template:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Template not found."
+        )
+    return {
+        "id": template.id,
+        "html_content": template.template,
+        "qr_code_id": template.qr_code_id,
+    }
 
 # ---------- Campaigns ----------
 @app.post("/campaigns", response_model=schemas.CampaignRead)
@@ -260,7 +274,7 @@ def create_campaign_data(
         template_id=data.template_id,
         address_list=data.address_list,
         schedule_time=run_time,
-        status=data.status,
+        status=data.status or "pending"
     )
     db.add(new_data)
     db.commit()
@@ -306,6 +320,13 @@ def get_campaign_dashboard(db: Session = Depends(get_db)):
     return campaigns
 
 
+@app.get("/campaign-data/{campaign_data_id}", response_model=schemas.CampaignDataRead)
+def get_campaign_data(campaign_data_id: int, db: Session = Depends(get_db)):
+    campaign_data = db.query(CampaignData).filter(CampaignData.id == campaign_data_id).first()
+    if not campaign_data:
+        raise HTTPException(status_code=404, detail="CampaignData not found")
+    
+    return campaign_data
 
 
 @app.get("/dashboard/all")
@@ -373,3 +394,26 @@ def get_dashboard_all(db: Session = Depends(get_db)):
             for d in all_campaign_data
         ],
     }
+
+
+@app.put("/campaign-data/{campaign_data_id}")
+def update_campaign_data(
+    campaign_data_id: int,
+    payload: schemas.CampaignDataUpdate,
+    db: Session = Depends(get_db)
+):
+    campaign_data = db.query(CampaignData).filter(CampaignData.id == campaign_data_id).first()
+    if not campaign_data:
+        raise HTTPException(status_code=404, detail="CampaignData not found")
+
+    # Update only provided fields
+    if payload.template_id is not None:
+        campaign_data.template_id = payload.template_id
+    if payload.status is not None:
+        campaign_data.status = payload.status
+    if payload.schedule_time is not None:
+        campaign_data.schedule_time = payload.schedule_time
+
+    db.commit()
+    db.refresh(campaign_data)
+    return campaign_data
