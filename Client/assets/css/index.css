@@ -243,9 +243,9 @@ a {
     margin-top: 30px;
     transform: rotate(0);
   }
-  .logo{
+  .logo {
     margin-left: -1.5rem;
-    gap:2px;
+    gap: 2px;
   }
 }
 
@@ -457,6 +457,25 @@ h2 {
   font-family: "Vladimir Script";
 }
 
+.create-campaign-btn {
+  padding: 0.7rem;
+  border-radius: 10px;
+  border: none;
+  float: right;
+  background-color: #4caf50;
+  color: white;
+  font-size: 1rem;  
+  cursor: pointer;
+  transition: all 0.5s ease;
+  outline: none;
+}
+.create-campaign-btn:hover {
+  background: #4caf50;
+  transform: scale(1.1);
+
+  color: white;
+}
+
 .contact-info {
   font-size: 12pt;
   line-height: 1.5;
@@ -482,12 +501,12 @@ h2 {
 }
 
 .template-card:hover {
-  border-color:  #7ada7d;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  border-color: #7ada7d;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .template-card.selected {
-  border-color:    #7ada7d;
+  border-color: #7ada7d;
   background: #f0f7ff;
 }
 
@@ -499,7 +518,7 @@ h2 {
 
 .template-content.collapsed {
   max-height: 300px; /* collapsed view */
-  overflow: hidden;  /* hide extra content */
+  overflow: hidden; /* hide extra content */
 }
 
 .show-more-btn {
@@ -1107,7 +1126,6 @@ h2 {
 
 /* Extra small screens < 320px */
 @media screen and (max-width: 320px) {
-
   .template {
     padding: 0.8rem;
   }
@@ -1320,7 +1338,7 @@ h2 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1.5rem;
-  margin-top: 3rem;
+  margin-top: 4rem;
   margin-bottom: 4.7rem;
 }
 
@@ -1616,8 +1634,6 @@ table tbody tr:nth-child(even) {
   flex-shrink: 0;
 }
 
-
-
 .heading3 {
   margin-top: 3rem;
   line-height: 3rem;
@@ -1675,7 +1691,7 @@ table tbody tr:nth-child(even) {
   font-size: 0.95rem;
 }
 
-.audience_heading{
+.audience_heading {
   text-align: left;
   margin-top: 6rem;
 }
@@ -1700,8 +1716,6 @@ table tbody tr:nth-child(even) {
   transform: translateY(-2px); /* slight upward movement */
 }
 
-
-
 /* 📱 Mobile styles */
 @media screen and (max-width: 768px) {
   .upload-flex {
@@ -1721,22 +1735,22 @@ table tbody tr:nth-child(even) {
     width: 100%;
     text-align: center; /* center button on mobile */
   }
-  .heading3{
+  .heading3 {
     font-size: 1.5rem;
     text-align: center;
     line-height: 2.3rem;
   }
   .campaign-btn {
-  padding: 0.4rem 0.6rem;
-}
-.create-campaign-section {
-  margin-top: 3.5rem;
-  padding: 1.4rem;
-}
-.audience_heading{
-  text-align: center;
-  margin-top: 5rem;
-}
+    padding: 0.4rem 0.6rem;
+  }
+  .create-campaign-section {
+    margin-top: 3.5rem;
+    padding: 1.4rem;
+  }
+  .audience_heading {
+    text-align: center;
+    margin-top: 5rem;
+  }
 }
 
 .template-actions {
@@ -1760,25 +1774,25 @@ table tbody tr:nth-child(even) {
 }
 
 #campaignModal2 {
-  display: none; 
+  display: none;
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.6); /* dark overlay */
+  background: rgba(0, 0, 0, 0.6); /* dark overlay */
   z-index: 1000;
 }
 
 #campaignModal2 .modal-content {
   background: #fff;
-  width: 85%;          /* ⬅️ wider */
-  max-width: 1200px;   /* ⬅️ prevent too large on big screens */
-  height: 85%;         /* ⬅️ taller */
-  max-height: 90vh;    /* ⬅️ stay inside viewport */
+  width: 85%; /* ⬅️ wider */
+  max-width: 1200px; /* ⬅️ prevent too large on big screens */
+  height: 85%; /* ⬅️ taller */
+  max-height: 90vh; /* ⬅️ stay inside viewport */
   margin: 40px auto;
   padding: 20px;
   border-radius: 12px;
-  overflow-y: auto;    /* scroll inside modal */
-  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  overflow-y: auto; /* scroll inside modal */
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
 }
