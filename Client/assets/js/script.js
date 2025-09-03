@@ -639,7 +639,7 @@ async function orderDesign(templateId, button) {
     // ✅ Always create a new campaign_data row (no update)
     const newDataPayload = {
       campaign_id: currentCampaignId,
-      template_id: currentEditingTemplateId,
+      template_id: templateId,
       address_list: JSON.stringify(recipients),
       status: "sent",
       schedule_time: null,
