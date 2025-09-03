@@ -101,7 +101,9 @@ async function orderDesign(templateId, button, campaignId) {
     });
 
     // Fetch template HTML by id (don't assume it's in the DOM)
-    const tplRes = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`);
+    const tplRes = await fetch(
+      `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
+    );
     if (!tplRes.ok) throw new Error("Failed to load template content");
     const tpl = await tplRes.json();
     let finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
@@ -146,11 +148,14 @@ async function orderDesign(templateId, button, campaignId) {
       status: "sent",
       schedule_time: null,
     };
-    const resData = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newDataPayload),
-    });
+    const resData = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/campaign-data",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newDataPayload),
+      }
+    );
     if (!resData.ok)
       throw new Error("Failed to create new campaign_data entry");
     const newCampaignData = await resData.json();
@@ -360,13 +365,12 @@ async function openCampaignDetailModal(campaignData) {
   modalMailerName.textContent = campaignData.mailer_name;
   filterCheckbox.checked = false;
 
-  // ✅ Render only recipients table
+  // Render addresses table
   function renderAddresses() {
     let recipientsToShow = currentRecipients;
     if (filterCheckbox.checked) {
       recipientsToShow = recipientsToShow.filter((r) => r.scanned);
     }
-
     if (!recipientsToShow.length) {
       modalAddresses.innerHTML = "<p>No addresses available.</p>";
       return;
@@ -389,20 +393,18 @@ async function openCampaignDetailModal(campaignData) {
             ${recipientsToShow
               .map(
                 (r) => `
-                <tr style="background:#fafafa; border-radius:8px;">
-                  <td style="padding:10px;">${r.firstName || ""} ${
+              <tr style="background:#fafafa; border-radius:8px;">
+                <td style="padding:10px;">${r.firstName || ""} ${
                   r.lastName || ""
                 }</td>
-                  <td style="padding:10px;">${r.address || ""}</td>
-                  <td style="padding:10px;">${r.city || ""}</td>
-                  <td style="padding:10px;">${r.state || ""}</td>
-                  <td style="padding:10px;">${r.zipCode || ""}</td>
-                  <td style="padding:10px; font-weight:bold; color:${
-                    r.scanned ? "green" : "red"
-                  };">
-                    ${r.scanned ? "✅ Scanned" : "❌ Not Scanned"}
-                  </td>
-                </tr>`
+                <td style="padding:10px;">${r.address || ""}</td>
+                <td style="padding:10px;">${r.city || ""}</td>
+                <td style="padding:10px;">${r.state || ""}</td>
+                <td style="padding:10px;">${r.zipCode || ""}</td>
+                <td style="padding:10px; font-weight:bold; color:${
+                  r.scanned ? "green" : "red"
+                };">${r.scanned ? "✅ Scanned" : "❌ Not Scanned"}</td>
+              </tr>`
               )
               .join("")}
           </tbody>
@@ -410,53 +412,96 @@ async function openCampaignDetailModal(campaignData) {
       </div>
     `;
   }
-
-  filterCheckbox.onchange = renderAddresses;
   renderAddresses();
-// Remove old footer if it exists
-const oldFooter = modal.querySelector("#modalFooter");
-if (oldFooter) oldFooter.remove();
 
-// Create footer with template grid
-const footerDiv = document.createElement("div");
-footerDiv.id = "modalFooter";
-footerDiv.style.marginTop = "20px";
-footerDiv.innerHTML = `
-  <h3 style="margin-bottom:10px">Select a Template to Send Letter</h3>
-  <div id="templatesGrid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;"></div>
-  <button id="sendLetterBtn" style="margin-top:20px; padding:10px 20px; background:#2b7fff; color:white; border:none; border-radius:6px; cursor:pointer;">
-    Send Letter
-  </button>
+  // Remove old footer if exists
+  const oldFooter = modal.querySelector("#modalFooter");
+  if (oldFooter) oldFooter.remove();
+
+  // Footer container
+  const footerDiv = document.createElement("div");
+  footerDiv.id = "modalFooter";
+  footerDiv.style.marginTop = "20px";
+  // Add confirmation buttons inside modal
+  footerDiv.innerHTML = `
+  <p style="margin-bottom:15px; font-size:16px; font-weight:500; color:#333;">
+    Do you want to send the letter again to this audience?
+  </p>
+  <div style="display:flex; gap:10px; margin-bottom:20px;">
+    <button id="confirmResendBtn" style="
+      padding:10px 25px;
+      background:#2b7fff;
+      color:white;
+      border:none;
+      border-radius:6px;
+      font-size:14px;
+      font-weight:500;
+      cursor:pointer;
+      transition: background 0.2s;
+    " onmouseover="this.style.background='#1a5fcc'" onmouseout="this.style.background='#2b7fff'">
+      Yes
+    </button>
+    <button id="cancelResendBtn" style="
+      padding:10px 25px;
+      background:#e0e0e0;
+      color:#333;
+      border:none;
+      border-radius:6px;
+      font-size:14px;
+      font-weight:500;
+      cursor:pointer;
+      transition: background 0.2s;
+    " onmouseover="this.style.background='#ccc'" onmouseout="this.style.background='#e0e0e0'">
+      No
+    </button>
+  </div>
 `;
 
-// Append to modal content
-const modalContent = modal.querySelector(".modal-content2");
-modalContent.appendChild(footerDiv);
+  modal.querySelector(".modal-content2").appendChild(footerDiv);
 
-// Then load templates
-await loadTemplates();
+  const confirmBtn = document.getElementById("confirmResendBtn");
+  const cancelBtn = document.getElementById("cancelResendBtn");
 
+  confirmBtn.onclick = async () => {
+    // Capture the current recipients (apply scanned filter if checked)
+    recipientsToResend = filterCheckbox.checked
+      ? currentRecipients.filter((r) => r.scanned)
+      : [...currentRecipients]; // copy
 
-  // ✅ Attach send button
-  const sendBtn = document.getElementById("sendLetterBtn");
-  sendBtn.onclick = async () => {
-    if (!window.currentEditingTemplateId) {
-      return alert("⚠️ Please select a template first.");
-    }
+    // Replace footer with template grid + send button
+    footerDiv.innerHTML = `
+    <h3 style="margin-bottom:10px">Select a Template to Send Letter</h3>
+    <div id="templatesGrid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;"></div>
+    <button id="sendLetterBtn" style="margin-top:20px; padding:10px 20px; background:#2b7fff; color:white; border:none; border-radius:6px; cursor:pointer;">
+      Send Letter
+    </button>
+  `;
+    await loadTemplates();
 
-    try {
-      await orderDesign(
-        window.currentEditingTemplateId,
-        sendBtn,
-        campaignData.campaign_id || campaignData.id
-      );
+    const sendBtn = document.getElementById("sendLetterBtn");
+    sendBtn.onclick = async () => {
+      if (!window.currentEditingTemplateId) {
+        return alert("⚠️ Please select a template first.");
+      }
+      try {
+        // Pass the exact recipients to orderDesign
+        await orderDesign(
+          window.currentEditingTemplateId,
+          sendBtn,
+          campaignData.campaign_id || campaignData.id,
+          recipientsToResend // <- new argument
+        );
+        await loadDashboard();
+        modal.style.display = "none"; // close modal
+      } catch (err) {
+        console.error("Send Letter failed:", err);
+        showAlert("❌ Failed to send letter. Please try again.");
+      }
+    };
+  };
 
-      await loadDashboard();
-      modal.style.display = "none"; // close on success
-    } catch (err) {
-      console.error("Send Letter failed:", err);
-      showAlert("❌ Failed to send letter. Please try again.");
-    }
+  cancelBtn.onclick = () => {
+    footerDiv.innerHTML = ""; // Remove the resend confirmation buttons
   };
 
   modal.style.display = "block";
@@ -573,7 +618,7 @@ async function loadDashboard() {
               ${
                 d.schedule_time
                   ? formatScheduleInfo(d.schedule_time)
-                  : `<button class="schedule-btn" data-id="${d.id}" style="background:grey; border:none;border-radius:5px; width:110px; height:28px; cursor:pointer;" title="Set Schedule">
+                  : `<button class="schedule-btn" data-id="${d.id}" style="background:grey;color:white; border:none;border-radius:5px; width:110px; height:28px; cursor:pointer;" title="Set Schedule">
                       Set Schedule
                     </button>`
               }

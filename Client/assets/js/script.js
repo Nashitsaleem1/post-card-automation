@@ -449,7 +449,7 @@ async function parseCSV(file) {
           Object.entries(r).map(([k, v]) => [k.toLowerCase(), v])
         );
         return {
-          company: row.company || "",
+          company: row.company,
           firstName: row.firstname || "Test",
           lastName: row.lastname || "Name",
           address: row.address || "",
@@ -460,7 +460,7 @@ async function parseCSV(file) {
       });
 
       localStorage.setItem("recipients", JSON.stringify(recipients));
-
+      console.log(recipients)
       const uploadBox = document.getElementById("uploadBox");
       uploadBox.innerHTML = `
         <div class="upload-icon" style="color: #28a745;">✓</div>
