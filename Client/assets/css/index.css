@@ -243,6 +243,10 @@ a {
     margin-top: 30px;
     transform: rotate(0);
   }
+  .logo{
+    margin-left: -1.5rem;
+    gap:2px;
+  }
 }
 
 h2 {
@@ -279,22 +283,6 @@ h2 {
   gap: 10px;
 }
 
-.create-btn {
-  background: #f4f5f7;
-  color: black;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  display: inline-block;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.create-btn:hover {
-  transform: translateY(-2px);
-}
-
 .header-text {
   margin-top: 0.1rem;
 }
@@ -313,7 +301,6 @@ h2 {
 .upload-section {
   text-align: center;
   margin-bottom: 2rem;
-  padding: 2rem;
 }
 
 .upload-title {
@@ -446,10 +433,9 @@ h2 {
 .templates-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-  gap: 1.5rem;
-  justify-items: center;
+  gap: 2rem;
+  margin-top: 3rem;
   align-items: stretch;
-  padding: 1rem;
 }
 
 .letter-container {
@@ -480,6 +466,50 @@ h2 {
 .contact-info a {
   color: #007acc;
   text-decoration: none;
+}
+
+.template-card {
+  border: 2px solid #ccc;
+  border-radius: 10px;
+  padding: 1rem;
+  overflow-y: auto;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  height: 400px; /* fixed card size */
+  display: flex;
+  flex-direction: column;
+}
+
+.template-card:hover {
+  border-color:  #7ada7d;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.template-card.selected {
+  border-color:    #7ada7d;
+  background: #f0f7ff;
+}
+
+.template-content {
+  flex: 1;
+  overflow-y: auto; /* ✅ scrollable content */
+  margin-bottom: 0.5rem;
+}
+
+.template-content.collapsed {
+  max-height: 300px; /* collapsed view */
+  overflow: hidden;  /* hide extra content */
+}
+
+.show-more-btn {
+  background: none;
+  border: none;
+  color: #2b7fff;
+  margin-top: 0.6rem;
+  font-size: 14px;
+  cursor: pointer;
+  align-self: flex-start;
 }
 
 .footer-note {
@@ -821,7 +851,7 @@ h2 {
   .container {
     max-width: 100%;
     margin: 0.5rem auto;
-    padding: 1rem;
+    padding: 2rem;
     margin-top: 7rem;
     width: 100%;
   }
@@ -1077,9 +1107,6 @@ h2 {
 
 /* Extra small screens < 320px */
 @media screen and (max-width: 320px) {
-  .container {
-    padding: 0.25rem;
-  }
 
   .template {
     padding: 0.8rem;
@@ -1376,7 +1403,7 @@ table tbody tr:nth-child(even) {
   padding: 20px;
   border-radius: 10px;
   width: 80%;
-  max-width: 700px;
+  max-width: 900px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
@@ -1480,29 +1507,6 @@ table tbody tr:nth-child(even) {
   background: #0056b3;
 }
 
-/* Top row: dropdown + create button */
-.campaign-top {
-  display: flex;
-  align-items: center;
-  margin-bottom: 3rem;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.campaign-top select {
-  padding: 0.6rem 1rem; /* top right bottom left */
-  font-size: 1rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  min-width: 250px;
-  appearance: none; /* hides default arrow for custom styling if needed */
-  background: url('data:image/svg+xml;utf8,<svg fill="black" height="10" viewBox="0 0 24 24" width="10" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>')
-    no-repeat right 10px center;
-  background-color: white;
-  background-size: 10px;
-}
-
 .hero-container {
   display: flex;
   align-items: center;
@@ -1561,28 +1565,6 @@ table tbody tr:nth-child(even) {
   background-color: white;
 }
 
-/* Mobile adjustments */
-@media (max-width: 768px) {
-  .campaign-top {
-    justify-content: center; /* center items */
-    flex-direction: column; /* stack dropdown and button */
-    gap: 1rem;
-    margin-top: 2.5rem;
-  }
-
-  .campaign-top select {
-    width: 75%;
-    font-size: 1rem;
-    padding: 0.5rem 1rem;
-    background-position: center 15px center;
-  }
-  .campaign-top button {
-    width: 75%; /* match dropdown width */
-    padding: 0.6rem;
-    font-size: 1rem;
-  }
-}
-
 @media screen and (max-width: 768px) {
   .dashboard {
     padding: 2rem;
@@ -1615,7 +1597,6 @@ table tbody tr:nth-child(even) {
   justify-content: space-between;
   align-items: flex-start;
   gap: 4rem;
-  margin-top: 8rem;
 }
 
 .info_download {
@@ -1635,13 +1616,98 @@ table tbody tr:nth-child(even) {
   flex-shrink: 0;
 }
 
+
+
+.heading3 {
+  margin-top: 3rem;
+  line-height: 3rem;
+}
+
+.create-campaign-section {
+  margin-top: 5rem;
+  padding: 3rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.create-campaign-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.create-campaign-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #333;
+}
+
+.campaign-btn {
+  background: #4caf50;
+  color: white;
+  padding: 0.7rem 1rem;
+  border: none;
+  font-size: 1rem;
+  margin-bottom: 0.7rem;
+  border-radius: 6px;
+  transition: transform 0.2s ease;
+  cursor: pointer;
+}
+
+.campaign-btn:hover {
+  background: #4caf50;
+  transform: scale(1.1);
+}
+
+.create-campaign-form {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.campaign-input {
+  flex: 1;
+  padding: 0.7rem;
+  border: 1px solid #ccc;
+  outline: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.audience_heading{
+  text-align: left;
+  margin-top: 6rem;
+}
+
+.template-options {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 5rem;
+}
+.template-link {
+  color: #2b7fff;
+  text-decoration: underline;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-block; /* needed for transform to work */
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.template-link:hover {
+  color: #2b7fff;
+  transform: translateY(-2px); /* slight upward movement */
+}
+
+
+
 /* 📱 Mobile styles */
 @media screen and (max-width: 768px) {
   .upload-flex {
     flex-direction: column; /* stack vertically */
     gap: 2rem;
     align-content: center;
-    padding: 1rem;
     margin-top: 4rem; /* smaller spacing */
   }
 
@@ -1655,47 +1721,64 @@ table tbody tr:nth-child(even) {
     width: 100%;
     text-align: center; /* center button on mobile */
   }
-}
-
-.upload-footer {
-  display: flex;
-  justify-content: center;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.3rem; /* Add gap between links */
-  margin-top: 5rem;
-  flex-wrap: wrap; /* Allow wrapping on small screens */
-}
-
-.upload-footer a {
-  text-decoration: underline;
-  color: black; /* Blue color for links */
-  font-size: 1rem;
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.upload-footer a:hover {
-  color: #2563eb; /* Darker blue on hover */
-  text-decoration: underline;
-}
-
-/* Mobile adjustments */
-@media (max-width: 768px) {
-  .upload-footer {
-    flex-direction: column; /* Stack vertically on mobile */
-    gap: 1rem;
-    text-align: center;
-    margin-bottom: 4rem;
-  }
-
-  .upload-footer a {
-    font-size: 0.95rem;
-  }
   .heading3{
-    font-size: 1.3rem;
-    font-weight: bold;
-    padding-left: 0.6rem;
-    padding-right: 0.6rem;
+    font-size: 1.5rem;
+    text-align: center;
+    line-height: 2.3rem;
   }
+  .campaign-btn {
+  padding: 0.4rem 0.6rem;
+}
+.create-campaign-section {
+  margin-top: 3.5rem;
+  padding: 1.4rem;
+}
+.audience_heading{
+  text-align: center;
+  margin-top: 5rem;
+}
+}
+
+.template-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 7rem;
+}
+.template-actions .btn-primary {
+  background: #4caf50;
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: transform 0.2s ease;
+}
+.template-actions .btn-primary:hover {
+  background: #4caf50;
+}
+
+#campaignModal2 {
+  display: none; 
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6); /* dark overlay */
+  z-index: 1000;
+}
+
+#campaignModal2 .modal-content {
+  background: #fff;
+  width: 85%;          /* ⬅️ wider */
+  max-width: 1200px;   /* ⬅️ prevent too large on big screens */
+  height: 85%;         /* ⬅️ taller */
+  max-height: 90vh;    /* ⬅️ stay inside viewport */
+  margin: 40px auto;
+  padding: 20px;
+  border-radius: 12px;
+  overflow-y: auto;    /* scroll inside modal */
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
 }

@@ -1,18 +1,79 @@
 let currentEditingTemplateId = null;
 let currentSchedulingTemplate = null;
 let recipients = [];
-let currentCampaignId = null; // Track the selected campaign
+let currentCampaignId = null; // campaign id
+let currentCampaignDataId = null;
+window.currentEditingTemplateId = null;
 
-// ----------------------
-// Load Templates
-// ----------------------
+// ======================
+// Campaign Management (limit to 6 templates)
+// ======================
 async function loadTemplates() {
   const templatesGrid = document.getElementById("templatesGrid");
   if (!templatesGrid) return;
+
   try {
-    const response = await fetch(
-      "https://pcm-app-h8mn8.ondigitalocean.app/templates"
-    );
+    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates");
+    const templates = await response.json();
+
+    templatesGrid.innerHTML = "";
+    templatesGrid.style.display = "grid";
+    templatesGrid.style.gridTemplateColumns = "repeat(3, 1fr)";
+    templatesGrid.style.gap = "1.5rem";
+
+    // Only first 6 templates
+    templates.slice(0, 6).forEach((tpl) => {
+      const div = document.createElement("div");
+      div.classList.add("template-card");
+      div.dataset.templateId = tpl.id;
+
+      div.innerHTML = `
+        <div class="template-preview">
+          <div class="template-content collapsed">
+            ${tpl.html_content}
+          </div>
+          <button class="show-more-btn" onclick="toggleShowMore(this, event)">Show More</button>
+
+        </div>
+      `;
+
+      div.addEventListener("click", () => {
+        document
+          .querySelectorAll(".template-card")
+          .forEach((el) => el.classList.remove("selected"));
+        div.classList.add("selected");
+        window.currentEditingTemplateId = tpl.id;
+        console.log("✅ Template selected:", tpl.id);
+      });
+
+      templatesGrid.appendChild(div);
+    });
+  } catch (err) {
+    console.error("Error loading templates:", err);
+    templatesGrid.innerHTML = "<p>Failed to load templates.</p>";
+  }
+}
+
+function toggleShowMore(button, event) {
+  event.stopPropagation(); // Prevent parent div click
+  const contentDiv = button.previousElementSibling; // .template-content
+  if (!contentDiv) return;
+
+  contentDiv.classList.toggle("collapsed");
+  button.textContent = contentDiv.classList.contains("collapsed")
+    ? "Show More"
+    : "Show Less";
+}
+
+// ======================
+// Template Gallery (all templates with edit + select button)
+// ======================
+async function loadGalleryTemplates() {
+  const templatesGrid = document.getElementById("templatesGrid");
+  if (!templatesGrid) return;
+
+  try {
+    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates");
     const templates = await response.json();
 
     templatesGrid.innerHTML = ""; // Clear grid
@@ -22,30 +83,13 @@ async function loadTemplates() {
       div.dataset.templateId = tpl.id;
       div.dataset.qrCodeId = tpl.qr_code_id;
 
-      const deleteButton =
-        tpl.id > 4
-          ? `<button class="delete-btn" onclick="deleteTemplate(${tpl.id})" title="Delete">
-             <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" 
-                  fill="none" stroke="red" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-               <path d="M3 6h18"/>
-               <path d="M19 6V19a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
-               <path d="M10 11v6"/>
-               <path d="M14 11v6"/>
-               <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-             </svg>
-           </button>`
-          : "";
-
       div.innerHTML = `
         <div class="letter-container" id="letterPreview${tpl.id}">
           ${tpl.html_content}
         </div>
         <div class="button-actions">
-          <button class="order-design-btn" onclick="orderDesign('letterPreview${tpl.id}', this)">
-            Send Letter
-          </button>
-          <button class="order-design-btn" onclick="openScheduleModal(${tpl.id})">
-            Schedule
+          <button class="order-design-btn" onclick="selectTemplate(${tpl.id}, this)">
+            Select Letter
           </button>
           <button class="edit-btn" onclick="openEditModal(${tpl.id})">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" 
@@ -54,9 +98,9 @@ async function loadTemplates() {
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
             </svg>
           </button>
-          ${deleteButton}
         </div>
       `;
+
       templatesGrid.appendChild(div);
     });
   } catch (err) {
@@ -65,97 +109,47 @@ async function loadTemplates() {
   }
 }
 
-window.addEventListener("DOMContentLoaded", () => {
-  // Restore campaign
-  const savedCampaignId = localStorage.getItem("currentCampaignId");
-  if (savedCampaignId) {
-    currentCampaignId = savedCampaignId;
-    const campaignSelect = document.getElementById("existingCampaign");
-    if (campaignSelect) {
-      campaignSelect.value = savedCampaignId;
-    }
-    console.log("🔄 Restored campaign:", currentCampaignId);
-  }
+function selectTemplate(templateId, btn) {
+  // Unselect if same template clicked again
+  if (window.currentEditingTemplateId === templateId) {
+    window.currentEditingTemplateId = null;
+    localStorage.removeItem("currentEditingTemplateId");
+    if (btn) btn.textContent = "Select Letter";
 
-  // Restore recipients
-  const savedRecipients = localStorage.getItem("recipients");
-  if (savedRecipients) {
-    recipients = JSON.parse(savedRecipients);
-    console.log("🔄 Restored recipients:", recipients);
-
-    // Optionally re-render in UI if you have a table/list
-    if (typeof renderRecipients === "function") {
-      renderRecipients(recipients);
-    }
-  }
-});
-
-// ----------------------
-// Load Campaigns (always, but keep selection)
-// ----------------------
-async function loadCampaigns() {
-  try {
-    const response = await fetch(
-      "https://pcm-app-h8mn8.ondigitalocean.app/campaigns"
+    const selectedDiv = document.querySelector(
+      `.template[data-template-id='${templateId}']`
     );
-    if (!response.ok) throw new Error("Failed to fetch campaigns");
-    const campaigns = await response.json();
+    if (selectedDiv) selectedDiv.classList.remove("selected");
 
-    const campaignSelect = document.getElementById("existingCampaign");
-    if (!campaignSelect) return;
-
-    // ✅ Always clear the dropdown and add placeholder first
-    campaignSelect.innerHTML =
-      '<option value="">Select an existing campaign</option>';
-
-    // Populate the dropdown with campaigns
-    campaigns.forEach((campaign) => {
-      const option = document.createElement("option");
-      option.value = campaign.id;
-      option.textContent = `${campaign.campaign_name} (${campaign.mailer_name})`;
-      campaignSelect.appendChild(option);
-    });
-
-    // ✅ Restore saved campaign if valid, else keep the placeholder
-    const savedCampaignId = localStorage.getItem("currentCampaignId");
-
-    if (savedCampaignId && campaigns.some((c) => c.id == savedCampaignId)) {
-      // If a valid campaign is saved in localStorage, select it
-      currentCampaignId = parseInt(savedCampaignId, 10);
-      campaignSelect.value = currentCampaignId;
-    } else {
-      // Otherwise, leave the dropdown as "Select an existing campaign"
-      currentCampaignId = null;
-      campaignSelect.value = "";
-    }
-
-    console.log("✅ Current campaign set:", currentCampaignId);
-  } catch (err) {
-    console.error("Error loading campaigns:", err);
+    console.log("❌ Template unselected");
+    return;
   }
+
+  // Clear previous selections
+  const allTemplates = document.querySelectorAll(".template");
+  allTemplates.forEach((el) => {
+    el.classList.remove("selected");
+    const selectBtn = el.querySelector(".order-design-btn");
+    if (selectBtn) selectBtn.textContent = "Select Letter";
+  });
+
+  // Mark new selection
+  const selectedDiv = document.querySelector(
+    `.template[data-template-id='${templateId}']`
+  );
+  if (selectedDiv) selectedDiv.classList.add("selected");
+
+  if (btn) btn.textContent = "✅ Selected";
+
+  // Save globally + persist
+  window.currentEditingTemplateId = templateId;
+  localStorage.setItem("currentEditingTemplateId", templateId);
+
+  console.log("✅ Template selected:", templateId);
 }
 
-// ----------------------
-// Campaign Selection Change
-function onCampaignChange() {
-  const campaignSelect = document.getElementById("existingCampaign");
-  const selectedCampaignId = campaignSelect.value;
-
-  if (selectedCampaignId) {
-    // Save universally
-    localStorage.setItem("currentCampaignId", selectedCampaignId);
-
-    console.log("🔄 Campaign set globally:", selectedCampaignId);
-  } else {
-    localStorage.removeItem("currentCampaignId");
-  }
-}
-
-// ----------------------
-// Edit Modal
-// ----------------------
 function openEditModal(templateId) {
-  currentEditingTemplateId = templateId;
+  window.currentEditingTemplateId = templateId; // ✅ update global
   const templateDiv = document.querySelector(
     `.template[data-template-id='${templateId}'] .letter-container`
   );
@@ -167,80 +161,6 @@ function closeEditModal() {
   document.getElementById("editModal").style.display = "none";
 }
 
-// ----------------------
-// Open/Close Create Campaign Modal
-// ----------------------
-function openCreateCampaignModal() {
-  document.getElementById("createCampaignModal").style.display = "block";
-}
-
-function closeCreateCampaignModal() {
-  document.getElementById("createCampaignModal").style.display = "none";
-}
-
-// ----------------------
-// Save Campaign API call
-// ----------------------
-async function saveCampaign() {
-  const campaignName = document.getElementById("campaignName").value.trim();
-  const mailerName = document.getElementById("mailerName").value.trim();
-
-  if (!campaignName || !mailerName) {
-    return showAlert("Please enter both Campaign Name and Mailer Name.");
-  }
-
-  try {
-    const response = await fetch(
-      "https://pcm-app-h8mn8.ondigitalocean.app/campaigns",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          campaign_name: campaignName,
-          mailer_name: mailerName,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errData = await response.json();
-      throw new Error(errData.detail || "Failed to create campaign");
-    }
-
-    const newCampaign = await response.json();
-
-    // Clear form + close modal
-    document.getElementById("campaignName").value = "";
-    document.getElementById("mailerName").value = "";
-    closeCreateCampaignModal();
-
-    // Reload campaigns only now
-    await loadCampaigns();
-
-    // Select and save new campaign
-    // Select and save new campaign
-    currentCampaignId = newCampaign.id;
-    localStorage.setItem("currentCampaignId", currentCampaignId);
-    document.getElementById("existingCampaign").value = newCampaign.id;
-
-    showAlert(`Campaign "${newCampaign.campaign_name}" created successfully!`);
-  } catch (err) {
-    console.error("Create Campaign Error:", err);
-    showAlert("Error creating campaign: " + err.message);
-  }
-}
-
-// ----------------------
-// Hook the header button
-// ----------------------
-const createCampaignBtn = document.getElementById("createCampaignBtn");
-if (createCampaignBtn) {
-  createCampaignBtn.onclick = openCreateCampaignModal;
-}
-
-// ----------------------
-// Save As New Template
-// ----------------------
 function openSaveAsNewModal() {
   document.getElementById("saveAsNewModal").style.display = "block";
 }
@@ -264,21 +184,18 @@ async function saveAsNewTemplate() {
   }
 
   try {
-    const response = await fetch(
-      "https://pcm-app-h8mn8.ondigitalocean.app/templates",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          html_content: htmlContent,
-          qr_code_id: qrCodeId,
-        }),
-      }
-    );
+    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        html_content: htmlContent,
+        qr_code_id: qrCodeId,
+      }),
+    });
     if (!response.ok) throw new Error("Failed to create template");
 
     closeSaveAsNewModal();
-    loadTemplates();
+    loadGalleryTemplates();
     showAlert("Template created successfully!");
   } catch (err) {
     console.error(err);
@@ -286,52 +203,144 @@ async function saveAsNewTemplate() {
   }
 }
 
-// ----------------------
-// Delete Template
-// ----------------------
-async function deleteTemplate(templateId) {
-  if (!confirm("Are you sure you want to delete this template?")) return;
-  try {
-    const response = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`,
-      { method: "DELETE" }
-    );
-    if (!response.ok) throw new Error("Failed to delete template");
-    loadTemplates();
-    showAlert("Template deleted successfully!");
-  } catch (err) {
-    console.error(err);
-    showAlert("Error deleting template.");
-  }
+function closeTemplateCreatedModal() {
+  const modal = document.getElementById("templateCreatedModal");
+  if (modal) modal.style.display = "none";
 }
 
-// ----------------------
-// Alert Modal
-// ----------------------
+// ======================
+// Helpers / Guards
+// ======================
 function showAlert(message) {
   const modal = document.getElementById("alertModal");
   const messageEl = document.getElementById("alertMessage");
-
   if (modal && messageEl) {
     messageEl.innerText = message;
     modal.style.display = "flex";
   }
 }
-
 const alertOkBtn = document.getElementById("alertOkBtn");
 if (alertOkBtn) {
   alertOkBtn.onclick = () => {
     const modal = document.getElementById("alertModal");
-    if (modal) {
-      modal.style.display = "none";
+    if (modal) modal.style.display = "none";
+  };
+}
+function ensureTemplateSelected() {
+  const tplId = window.currentEditingTemplateId;
+  if (!tplId) {
+    showAlert("⚠️ Please select a template first.");
+    return false;
+  }
+  return true;
+}
+
+function ensureCampaignReadyForAction() {
+  if (!currentCampaignId || !currentCampaignDataId) {
+    showAlert(
+      "⚠️ Please create a campaign first (Campaign Name, Mailer Name, and CSV upload are required)."
+    );
+    return false;
+  }
+  if (!recipients.length) {
+    showAlert("⚠️ Please upload a CSV file with recipients.");
+    return false;
+  }
+  return true;
+}
+
+// ======================
+// Create Campaign (NO MODAL) -> uses the inline form inside #createcampaign
+// ======================
+async function CreateCampaign() {
+  // grab the two inputs inside the create-campaign section
+  const section = document.querySelector(
+    "#createcampaign .create-campaign-form"
+  );
+  const inputs = section ? section.querySelectorAll(".campaign-input") : [];
+  const campaignName = inputs[0]?.value.trim() || "";
+  const mailerName = inputs[1]?.value.trim() || "";
+
+  if (!campaignName || !mailerName) {
+    showAlert("⚠️ Campaign Name and Mailer Name are required.");
+    return false; // ⛔ stop
+  }
+  if (!recipients.length) {
+    showAlert("⚠️ Please upload your CSV before creating a campaign.");
+    return false; // ⛔ stop
+  }
+
+  try {
+    // 1) Create the campaign only
+    const resCampaign = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        campaign_name: campaignName,
+        mailer_name: mailerName,
+      }),
+    });
+
+    if (!resCampaign.ok) {
+      const err = await resCampaign.json().catch(() => ({}));
+      throw new Error(err.detail || "Failed to create campaign");
     }
+
+    const newCampaign = await resCampaign.json();
+    currentCampaignId = newCampaign.id;
+    localStorage.setItem("currentCampaignId", currentCampaignId);
+
+    console.log("✅ Campaign created:", newCampaign);
+    return true; // ✅ success
+  } catch (err) {
+    console.error("CreateCampaign Error:", err);
+    showAlert("❌ " + err.message);
+    return false; // ❌ failure
+  }
+}
+
+async function createAndSend() {
+  if (!ensureTemplateSelected()) return;
+
+  // Always force brand new campaign
+  currentCampaignId = null;
+  currentCampaignDataId = null;
+  localStorage.removeItem("currentCampaignId");
+  localStorage.removeItem("currentCampaignDataId");
+
+  const ok = await CreateCampaign();
+  if (!ok) return; // ⛔ stop if campaign creation failed
+
+  const btn = document.querySelector("button[onclick='createAndSend()']");
+  orderDesign(window.currentEditingTemplateId, btn);
+}
+
+function showCampaignSuccessModal() {
+  const modal = document.getElementById("campaignSuccessModal");
+  if (!modal) return;
+  modal.style.display = "flex";
+
+  const okBtn = document.getElementById("successOkBtn");
+  const viewBtn = document.getElementById("viewCampaignBtn");
+
+  okBtn.onclick = () => {
+    modal.style.display = "none";
+    window.location.href = "dashboard.html";
+  };
+
+  viewBtn.onclick = () => {
+    modal.style.display = "none";
+    // Save campaignId for dashboard to pick up
+    localStorage.setItem("viewCampaignId", currentCampaignId);
+    window.location.href = "dashboard.html";
   };
 }
 
-// ----------------------
+// ======================
 // Schedule Modal
-// ----------------------
+// ======================
 function openScheduleModal(templateId) {
+  window.currentEditingTemplateId = templateId; // ✅ sync with global
   currentSchedulingTemplate = templateId;
   document.getElementById("scheduleDate").value = "";
   document.getElementById("scheduleTime").value = "";
@@ -344,59 +353,80 @@ function closeScheduleModal() {
 }
 
 async function confirmSchedule() {
-  if (!currentCampaignId) {
-    return showAlert("⚠️ Please select a campaign first.");
-  }
-
-  if (!recipients.length) {
-    return showAlert(
-      "⚠️ Please upload a CSV file with recipients before scheduling a letter."
-    );
-  }
+  // requires campaign + recipients + template
+  if (!ensureCampaignReadyForAction()) return;
+  if (!ensureTemplateSelected()) return;
 
   const date = document.getElementById("scheduleDate").value;
   const time = document.getElementById("scheduleTime").value;
+  if (!date || !time) return showAlert("Please select both date and time.");
 
-  if (!date || !time) {
-    return showAlert("Please select both date and time.");
-  }
-  const scheduleDateTime = `${date} ${time}:00`;
+  const scheduleDateTime = `${date}T${time}:00`;
 
   try {
-    const res = await fetch(
-      "https://pcm-app-h8mn8.ondigitalocean.app/campaign-data",
-      {
+    let createNewRow = true;
+
+    if (currentCampaignDataId) {
+      // Fetch current campaign_data to check template
+      const res = await fetch(
+        `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${currentCampaignDataId}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch current campaign_data");
+      const currentData = await res.json();
+
+      if (currentData.template_id === currentEditingTemplateId) {
+        createNewRow = false; // same template → update existing
+      }
+    }
+
+    if (createNewRow) {
+      // Create new campaign_data row
+      const payload = {
+        campaign_id: currentCampaignId,
+        template_id: currentEditingTemplateId,
+        address_list: JSON.stringify(recipients),
+        schedule_time: scheduleDateTime,
+        status: "scheduled",
+      };
+      const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          campaign_id: currentCampaignId,
-          template_id: currentSchedulingTemplate,
-          address_list: JSON.stringify(recipients),
-          schedule_time: scheduleDateTime,
-          status: "scheduled",
-        }),
-      }
-    );
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok)
+        throw new Error("Failed to create new scheduled campaign_data");
 
-    if (!res.ok) throw new Error("Failed to save scheduled letter");
+      const newData = await res.json();
+      currentCampaignDataId = newData.id; // update current ID
+    } else {
+      // Update existing row
+      const res = await fetch(
+        `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${currentCampaignDataId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            template_id: currentEditingTemplateId,
+            status: "scheduled",
+            schedule_time: scheduleDateTime,
+          }),
+        }
+      );
+      if (!res.ok) throw new Error("Failed to update scheduled letter");
+    }
 
     showAlert(`📅 Letter scheduled for ${scheduleDateTime}`);
     closeScheduleModal();
   } catch (err) {
-    console.error("Schedule save error:", err);
-    showAlert("Error scheduling letter.");
+    console.error("Schedule update error:", err);
+    showAlert("Error scheduling letter: " + err.message);
   }
 }
 
-// ----------------------
-// CSV Upload
-// ----------------------
+// ======================
+// CSV Upload (unchanged, but enforces campaign before upload)
+// ======================
 async function parseCSV(file) {
-  if (!currentCampaignId) {
-    showAlert("⚠️ Please select a campaign first before uploading recipients.");
-    return;
-  }
-
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
@@ -416,10 +446,7 @@ async function parseCSV(file) {
         };
       });
 
-      // ✅ Save globally for persistence
       localStorage.setItem("recipients", JSON.stringify(recipients));
-
-      console.log("Recipients loaded:", recipients);
 
       const uploadBox = document.getElementById("uploadBox");
       uploadBox.innerHTML = `
@@ -437,7 +464,6 @@ async function parseCSV(file) {
     },
   });
 }
-
 
 function setupDragAndDrop() {
   const uploadBox = document.getElementById("uploadBox");
@@ -465,16 +491,12 @@ function setupDragAndDrop() {
   uploadBox.addEventListener("drop", async (e) => {
     const dt = e.dataTransfer;
     const file = dt.files[0];
-    if (file) {
-      await parseCSV(file);
-    }
+    if (file) await parseCSV(file);
   });
 
   csvFileInput.addEventListener("change", async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      await parseCSV(file);
-    }
+    if (file) await parseCSV(file);
   });
 
   function preventDefaults(e) {
@@ -491,35 +513,19 @@ function resetUpload() {
     <div class="upload-icon"><img src="./assets/images/icon.png" alt="Upload" width="52" height="52" /></div>
     <div class="upload-main-text">Drag & drop your CSV file here</div>
     <div class="upload-sub-text">or click to browse your files</div>
-    <input type="file" id="csvFile" accept=".csv" style="display:none;" />
-    <button class="choose-file-btn" onclick="document.getElementById('csvFile').click()">Choose File</button>
+    <input type="file" id="csvFile" accept=".csv" class="hidden-input" />
+    <label for="csvFile" class="choose-file-btn">Choose File</label>
     <div class="file-size-info">Max file size: 10MB</div>
   `;
 
   recipients = [];
-  localStorage.removeItem("recipients"); // ✅ clear from persistence too
+  localStorage.removeItem("recipients");
   setupDragAndDrop();
 }
 
-
-// ----------------------
-// Sample CSV
-// ----------------------
-function downloadSampleCSV() {
-  const sample = `Company,firstName,lastName,address,city,state,zipCode
-PCM Integrations,Alex,Doe,2145 Sunnydale Blvd,Clearwater,FL,33765`;
-  const blob = new Blob([sample], { type: "text/csv" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "sample_recipients.csv";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-// ----------------------
-// PCM API
-// ----------------------
+// ======================
+// PCM API Auth (unchanged)
+// ======================
 async function getToken() {
   const payload = {
     apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
@@ -536,27 +542,31 @@ async function getToken() {
   return data.token;
 }
 
-// Modal functions
+// ======================
+// Order + update campaign_data to SENT
+// ======================
 window.showSuccessModal = function () {
   document.getElementById("successModal").style.display = "block";
 };
-
 window.closeModal = function () {
   document.getElementById("successModal").style.display = "none";
 };
 
-async function orderDesign(templateId, button) {
-  // const campaignSelect = document.getElementById("existingCampaign");
-  // currentCampaignId = campaignSelect.value;
-  if (!currentCampaignId) {
-    showAlert("Please select a campaign first!");
-    return;
+async function fetchLatestCampaign() {
+  try {
+    const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns");
+    if (!res.ok) throw new Error("Failed to fetch campaigns");
+    const campaigns = await res.json();
+    return campaigns.length ? campaigns[campaigns.length - 1] : null;
+  } catch (err) {
+    console.error("Error fetching campaigns:", err);
+    return null;
   }
+}
 
-  if (!recipients.length) {
-    showAlert("Please upload a CSV file with recipients first!");
-    return;
-  }
+async function orderDesign(templateId, button) {
+  // Guard: campaign + recipients + template
+  if (!ensureTemplateSelected()) return;
 
   const originalText = button.textContent;
   button.textContent = "Processing...";
@@ -571,26 +581,14 @@ async function orderDesign(templateId, button) {
       day: "numeric",
     });
 
-    let finalHtml = document.getElementById(templateId).innerHTML;
-    finalHtml = finalHtml.replace(/DATE/g, formattedDate);
-
-    const campaignPayload = {
-      campaign_id: currentCampaignId,
-      template_id: parseInt(templateId.replace(/\D/g, "")) || null,
-      address_list: JSON.stringify(recipients),
-      schedule_time: null,
-      status: "sent",
-    };
-
-    await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(campaignPayload),
-    });
+    // Fetch template HTML by id (don't assume it's in the DOM)
+    const tplRes = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`);
+    if (!tplRes.ok) throw new Error("Failed to load template content");
+    const tpl = await tplRes.json();
+    let finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
 
     // --- Place Order with PCM ---
     const token = await getToken();
-    // console.log(token);
     const payload = {
       extRefNbr: "12345",
       designID: 0,
@@ -617,15 +615,30 @@ async function orderDesign(templateId, button) {
       },
       body: JSON.stringify(payload),
     });
-    console.log(res);
-    const data = await res.json();
-    console.log("Order Response:", data);
 
-    if (res.ok) {
-      window.showSuccessModal();
-    } else {
-      throw new Error(data.message || "API request failed");
-    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "API request failed");
+
+    // ✅ Always create a new campaign_data row (no update)
+    const newDataPayload = {
+      campaign_id: currentCampaignId,
+      template_id: currentEditingTemplateId,
+      address_list: JSON.stringify(recipients),
+      status: "sent",
+      schedule_time: null,
+    };
+    const resData = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newDataPayload),
+    });
+    if (!resData.ok)
+      throw new Error("Failed to create new campaign_data entry");
+    const newCampaignData = await resData.json();
+    currentCampaignDataId = newCampaignData.id;
+    localStorage.setItem("currentCampaignDataId", currentCampaignDataId);
+
+    showCampaignSuccessModal();
   } catch (err) {
     console.error("Order Design Error:", err);
     showAlert("Error ordering letters: " + err.message);
@@ -635,26 +648,37 @@ async function orderDesign(templateId, button) {
   }
 }
 
-// ----------------------
+function scheduleSelectedLetter() {
+  if (!ensureCampaignReadyForAction()) return;
+  if (!ensureTemplateSelected()) return;
+  openScheduleModal(window.currentEditingTemplateId); // ✅ from global
+}
+
+// ======================
 // Page Init
-// ----------------------
+// ======================
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("App started");
+  const path = window.location.pathname;
 
-  loadTemplates();
+  if (path.includes("templateGallery.html")) {
+    // Template Gallery page → load all templates with edit + select buttons
+    loadGalleryTemplates();
+  } else if (path.includes("campaign_management.html")) {
+    // Campaign Management page → only first 6 templates
+    loadTemplates();
+  }
 
-  // ✅ Restore recipients if available, otherwise resetUpload()
+  // Restore campaign, campaign_data, recipients
+  const savedCampaignId = localStorage.getItem("currentCampaignId");
+  const savedCampaignDataId = localStorage.getItem("currentCampaignDataId");
+  if (savedCampaignId) currentCampaignId = parseInt(savedCampaignId, 10);
+  if (savedCampaignDataId)
+    currentCampaignDataId = parseInt(savedCampaignDataId, 10);
+
   const savedRecipients = localStorage.getItem("recipients");
   if (savedRecipients) {
     recipients = JSON.parse(savedRecipients);
-    console.log("🔄 Restored recipients:", recipients);
-
-    // Re-render recipients in UI if needed
-    if (typeof renderRecipients === "function") {
-      renderRecipients(recipients);
-    }
-
-    // Update uploadBox UI to show success message
     const uploadBox = document.getElementById("uploadBox");
     if (uploadBox) {
       uploadBox.innerHTML = `
@@ -667,9 +691,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       `;
     }
   } else {
-    resetUpload(); // only reset if nothing was stored
+    resetUpload();
   }
+  // Restore template selection
+  const savedTemplateId = localStorage.getItem("currentEditingTemplateId");
+  if (savedTemplateId) {
+    window.currentEditingTemplateId = parseInt(savedTemplateId, 10);
 
-  // ✅ Always load campaigns fresh
-  await loadCampaigns();
+    // If we’re on gallery page → update UI
+    const selectedDiv = document.querySelector(
+      `.template[data-template-id='${savedTemplateId}']`
+    );
+    if (selectedDiv) {
+      selectedDiv.classList.add("selected");
+      const btn = selectedDiv.querySelector(".order-design-btn");
+      if (btn) btn.textContent = "✅ Selected";
+    }
+
+    console.log("🔄 Restored template:", window.currentEditingTemplateId);
+  }
 });

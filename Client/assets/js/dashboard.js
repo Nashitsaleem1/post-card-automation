@@ -1,3 +1,53 @@
+// // let currentCampaignId = null;
+// let currentCampaignDataId = null;
+// let currentEditingTemplateId = null;
+
+// async function loadTemplates() {
+//   const templatesGrid = document.getElementById("templatesGrid");
+//   if (!templatesGrid) return;
+
+//   try {
+//     const response = await fetch("http://127.0.0.1:8000/templates");
+//     const templates = await response.json();
+
+//     templatesGrid.innerHTML = "";
+//     templatesGrid.style.display = "grid";
+//     templatesGrid.style.gridTemplateColumns = "repeat(3, 1fr)";
+//     templatesGrid.style.gap = "1.5rem";
+
+//     // Only first 6 templates
+//     templates.slice(0, 6).forEach((tpl) => {
+//       const div = document.createElement("div");
+//       div.classList.add("template-card");
+//       div.dataset.templateId = tpl.id;
+
+//       div.innerHTML = `
+//         <div class="template-preview">
+//           <div class="template-content collapsed">
+//             ${tpl.html_content}
+//           </div>
+//           <button class="show-more-btn" onclick="toggleShowMore(this, event)">Show More</button>
+
+//         </div>
+//       `;
+
+//       div.addEventListener("click", () => {
+//         document
+//           .querySelectorAll(".template-card")
+//           .forEach((el) => el.classList.remove("selected"));
+//         div.classList.add("selected");
+//         currentEditingTemplateId = tpl.id;
+//         console.log("✅ Template selected:", tpl.id);
+//       });
+
+//       templatesGrid.appendChild(div);
+//     });
+//   } catch (err) {
+//     console.error("Error loading templates:", err);
+//     templatesGrid.innerHTML = "<p>Failed to load templates.</p>";
+//   }
+// }
+
 function formatScheduleInfo(info) {
   if (!info) return "No schedule set";
   const date = new Date(info);
@@ -15,6 +65,168 @@ function formatScheduleInfo(info) {
       hour12: true,
     })
   );
+}
+
+async function getToken() {
+  const payload = {
+    apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
+    apiSecret: "MmZlMzIwMzItMTlhZS00Mjk0LWE1NWYtYmI5NTg5MDUxYTM0",
+    childRefNbr: "myAccountReference",
+  };
+  const res = await fetch("https://v3.pcmintegrations.com/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Auth failed");
+  const data = await res.json();
+  return data.token;
+}
+
+async function orderDesign(templateId, button, campaignId) {
+  // Guard: campaign + recipients + template
+  if (!ensureTemplateSelected()) return;
+
+  const originalText = button.textContent;
+  button.textContent = "Processing...";
+  button.disabled = true;
+
+  try {
+    const todayObj = new Date();
+    const todayISO = todayObj.toISOString().split("T")[0];
+    const formattedDate = todayObj.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    // Fetch template HTML by id (don't assume it's in the DOM)
+    const tplRes = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`);
+    if (!tplRes.ok) throw new Error("Failed to load template content");
+    const tpl = await tplRes.json();
+    let finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
+
+    // --- Place Order with PCM ---
+    const token = await getToken();
+    const payload = {
+      extRefNbr: "12345",
+      designID: 0,
+      mailClass: "FirstClass",
+      mailDate: todayISO,
+      color: true,
+      printOnBothSides: true,
+      insertAddressingPage: true,
+      envelope: {
+        font: "Bradley Hand",
+        type: "fullWindow",
+        fontColor: "Black",
+      },
+      recipients,
+      letter: finalHtml,
+    };
+
+    const res = await fetch("https://v3.pcmintegrations.com/order/letter", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "API request failed");
+
+    // ✅ Always create a new campaign_data row (no update)
+    const newDataPayload = {
+      campaign_id: campaignId, // ✅ use passed campaign
+      template_id: templateId,
+      address_list: JSON.stringify(recipients),
+      status: "sent",
+      schedule_time: null,
+    };
+    const resData = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newDataPayload),
+    });
+    if (!resData.ok)
+      throw new Error("Failed to create new campaign_data entry");
+    const newCampaignData = await resData.json();
+    currentCampaignDataId = newCampaignData.id;
+    localStorage.setItem("currentCampaignDataId", currentCampaignDataId);
+
+    showCampaignSuccessModal();
+  } catch (err) {
+    console.error("Order Design Error:", err);
+    showAlert("Error ordering letters: " + err.message);
+  } finally {
+    button.textContent = originalText;
+    button.disabled = false;
+  }
+}
+
+let currentCampaignDataIdForSchedule = null;
+
+function openCampaignScheduleModal(campaignDataId) {
+  currentCampaignDataIdForSchedule = campaignDataId;
+  document.getElementById("scheduleDate").value = "";
+  document.getElementById("scheduleTime").value = "";
+  document.getElementById("scheduleModal").style.display = "flex";
+}
+
+function closeCampaignScheduleModal() {
+  document.getElementById("scheduleModal").style.display = "none";
+  currentCampaignDataIdForSchedule = null;
+}
+async function confirmCampaignSchedule() {
+  if (!currentCampaignDataIdForSchedule) return;
+
+  const date = document.getElementById("scheduleDate").value;
+  const time = document.getElementById("scheduleTime").value;
+
+  if (!date || !time) return alert("Please select both date and time.");
+
+  const scheduleDateTime = `${date}T${time}:00`;
+
+  try {
+    // PUT request to update campaign_data
+    const res = await fetch(
+      `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${currentCampaignDataIdForSchedule}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "scheduled",
+          schedule_time: scheduleDateTime,
+        }),
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to update campaign schedule");
+
+    const updatedData = await res.json();
+
+    // Update table row directly without reloading all data
+    const row = document
+      .querySelector(
+        `button.schedule-btn[data-id="${currentCampaignDataIdForSchedule}"]`
+      )
+      ?.closest("tr");
+    if (row) {
+      const scheduleCell = row.children[4]; // 5th column = schedule
+      scheduleCell.innerHTML = formatScheduleInfo(updatedData.schedule_time);
+    }
+
+    alert(
+      `📅 Schedule updated for ${formatScheduleInfo(updatedData.schedule_time)}`
+    );
+    closeCampaignScheduleModal();
+  } catch (err) {
+    console.error("Error updating campaign schedule:", err);
+    alert("Failed to update schedule: " + err.message);
+  }
 }
 
 function formatAddresses(addressListStr) {
@@ -118,6 +330,136 @@ async function fetchScannedAddresses(qrCodeId) {
     console.error("Error fetching scanned addresses:", err);
     return [];
   }
+}
+
+async function openCampaignDetailModal(campaignData) {
+  const modal = document.getElementById("campaignModal2");
+  const modalMailerName = document.getElementById("modalMailerName");
+  const modalAddresses = document.getElementById("modalAddresses");
+  const filterCheckbox = document.getElementById("filterScanned");
+
+  let currentRecipients =
+    typeof campaignData.address_list === "string"
+      ? safeParseRecipients(campaignData.address_list)
+      : campaignData.address_list;
+
+  const scannedRecipients = await fetchScannedAddresses(
+    campaignData.qr_code_id
+  );
+
+  currentRecipients = currentRecipients.map((r) => {
+    const matched = scannedRecipients.find(
+      (s) =>
+        s.firstName === r.firstName &&
+        s.lastName === r.lastName &&
+        s.address === r.address
+    );
+    return { ...r, scanned: !!matched };
+  });
+
+  modalMailerName.textContent = campaignData.mailer_name;
+  filterCheckbox.checked = false;
+
+  // ✅ Render only recipients table
+  function renderAddresses() {
+    let recipientsToShow = currentRecipients;
+    if (filterCheckbox.checked) {
+      recipientsToShow = recipientsToShow.filter((r) => r.scanned);
+    }
+
+    if (!recipientsToShow.length) {
+      modalAddresses.innerHTML = "<p>No addresses available.</p>";
+      return;
+    }
+
+    modalAddresses.innerHTML = `
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:separate; border-spacing:0 12px; font-size:14px;">
+          <thead>
+            <tr style="background:black; color:white; text-align:left;">
+              <th style="padding:10px;">Name</th>
+              <th style="padding:10px;">Address</th>
+              <th style="padding:10px;">City</th>
+              <th style="padding:10px;">State</th>
+              <th style="padding:10px;">Zip</th>
+              <th style="padding:10px;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${recipientsToShow
+              .map(
+                (r) => `
+                <tr style="background:#fafafa; border-radius:8px;">
+                  <td style="padding:10px;">${r.firstName || ""} ${
+                  r.lastName || ""
+                }</td>
+                  <td style="padding:10px;">${r.address || ""}</td>
+                  <td style="padding:10px;">${r.city || ""}</td>
+                  <td style="padding:10px;">${r.state || ""}</td>
+                  <td style="padding:10px;">${r.zipCode || ""}</td>
+                  <td style="padding:10px; font-weight:bold; color:${
+                    r.scanned ? "green" : "red"
+                  };">
+                    ${r.scanned ? "✅ Scanned" : "❌ Not Scanned"}
+                  </td>
+                </tr>`
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  filterCheckbox.onchange = renderAddresses;
+  renderAddresses();
+// Remove old footer if it exists
+const oldFooter = modal.querySelector("#modalFooter");
+if (oldFooter) oldFooter.remove();
+
+// Create footer with template grid
+const footerDiv = document.createElement("div");
+footerDiv.id = "modalFooter";
+footerDiv.style.marginTop = "20px";
+footerDiv.innerHTML = `
+  <h3 style="margin-bottom:10px">Select a Template to Send Letter</h3>
+  <div id="templatesGrid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;"></div>
+  <button id="sendLetterBtn" style="margin-top:20px; padding:10px 20px; background:#2b7fff; color:white; border:none; border-radius:6px; cursor:pointer;">
+    Send Letter
+  </button>
+`;
+
+// Append to modal content
+const modalContent = modal.querySelector(".modal-content2");
+modalContent.appendChild(footerDiv);
+
+// Then load templates
+await loadTemplates();
+
+
+  // ✅ Attach send button
+  const sendBtn = document.getElementById("sendLetterBtn");
+  sendBtn.onclick = async () => {
+    if (!window.currentEditingTemplateId) {
+      return alert("⚠️ Please select a template first.");
+    }
+
+    try {
+      await orderDesign(
+        window.currentEditingTemplateId,
+        sendBtn,
+        campaignData.campaign_id || campaignData.id
+      );
+
+      await loadDashboard();
+      modal.style.display = "none"; // close on success
+    } catch (err) {
+      console.error("Send Letter failed:", err);
+      showAlert("❌ Failed to send letter. Please try again.");
+    }
+  };
+
+  modal.style.display = "block";
 }
 
 // ----------------------
@@ -227,9 +569,15 @@ async function loadDashboard() {
                 ${d.template_preview || "N/A"}
               </div>
             </td>
-            <td style="padding:12px; width:20%;">${formatScheduleInfo(
-              d.schedule_time
-            )}</td>
+            <td style="padding:12px; width:20%;">
+              ${
+                d.schedule_time
+                  ? formatScheduleInfo(d.schedule_time)
+                  : `<button class="schedule-btn" data-id="${d.id}" style="background:grey; border:none;border-radius:5px; width:110px; height:28px; cursor:pointer;" title="Set Schedule">
+                      Set Schedule
+                    </button>`
+              }
+            </td>
             <td style="padding:12px; width:10%;"><span style="${statusClass}">${
             d.status
           }</span></td>
@@ -262,7 +610,7 @@ async function loadDashboard() {
         }
       });
     });
-
+    window.allCampaigns = Array.isArray(data.data) ? data.data : [];
     // --- Modal Logic ---
     const modal = document.getElementById("campaignModal2");
     const closeBtn = modal.querySelector(".close");
@@ -338,30 +686,7 @@ async function loadDashboard() {
       btn.addEventListener("click", async () => {
         const index = btn.dataset.index;
         const d = data.data[index];
-
-        // modalCampaignName.textContent = data.campaign.campaign_name;
-        modalMailerName.textContent = d.mailer_name;
-
-        currentRecipients =
-          typeof d.address_list === "string"
-            ? safeParseRecipients(d.address_list)
-            : d.address_list;
-
-        const scannedRecipients = await fetchScannedAddresses(d.qr_code_id);
-
-        currentRecipients = currentRecipients.map((r) => {
-          const matched = scannedRecipients.find(
-            (s) =>
-              s.firstName === r.firstName &&
-              s.lastName === r.lastName &&
-              s.address === r.address
-          );
-          return { ...r, scanned: !!matched };
-        });
-
-        filterCheckbox.checked = false;
-        renderAddresses();
-        modal.style.display = "block";
+        openCampaignDetailModal(d);
       });
     });
 
@@ -375,6 +700,67 @@ async function loadDashboard() {
     console.error(err);
     alert("Failed to load dashboard data");
   }
+  return window.allCampaigns;
 }
+
+// Auto-run on page load
+document.addEventListener("DOMContentLoaded", async () => {
+  console.log("Dashboard loaded");
+
+  const viewCampaign = localStorage.getItem("viewCampaignId");
+  if (viewCampaign) {
+    localStorage.removeItem("viewCampaignId"); // clear so it doesn’t persist
+
+    // ⏳ wait until campaigns load
+    await loadDashboard();
+
+    // make sure campaigns are stored globally
+    const campaigns = window.allCampaigns || [];
+
+    if (campaigns.length > 0) {
+      // always open the first one (newest)
+      openCampaignDetailModal(campaigns[0]);
+    } else {
+      console.warn("⚠️ No campaigns available to open.");
+    }
+  }
+});
+
+document.querySelector(".dashboard").addEventListener("click", (e) => {
+  const btn = e.target.closest(".schedule-btn");
+  if (!btn) return;
+
+  // Prevent double handling
+  if (btn.dataset.clicked === "true") return;
+  btn.dataset.clicked = "true";
+
+  const campaignDataId = btn.dataset.id;
+  openCampaignScheduleModal(campaignDataId);
+
+  // Remove the clicked flag after modal closes
+  const modal = document.getElementById("scheduleModal");
+  const removeFlag = () => {
+    btn.dataset.clicked = "false";
+    modal.removeEventListener("transitionend", removeFlag);
+  };
+  modal.addEventListener("transitionend", removeFlag);
+});
+
+document.getElementById("cancelScheduleBtn").addEventListener("click", () => {
+  closeCampaignScheduleModal();
+});
+
+// Confirm schedule
+document
+  .getElementById("confirmScheduleBtn")
+  .addEventListener("click", async () => {
+    await confirmCampaignSchedule();
+  });
+
+// Optional: close modal on outside click
+window.addEventListener("click", (e) => {
+  const modal = document.getElementById("scheduleModal");
+  if (e.target === modal) closeCampaignScheduleModal();
+});
 
 loadDashboard();

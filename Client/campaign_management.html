@@ -34,25 +34,42 @@
     </nav>
 
     <div class="container">
-      <div class="campaign-top">
-        <select id="existingCampaign" onchange="onCampaignChange()">
-          <option value="">Select an existing campaign</option>
-        </select>
-        <button
-          id="createCampaignBtn"
-          class="btn btn-primary"
-          style="margin-left: 4px"
-        >
-          Create Campaign
-        </button>
+      <h1 class="heading3">
+        <i>
+          Start Automating Your
+          <span style="color: #2b7fff">PostCardMania</span><br />
+          process by creating a campaign
+        </i>
+      </h1>
+
+      <!-- Create Campaign Section -->
+      <div class="create-campaign-section" id="createcampaign">
+        <div class="create-campaign-header">
+          <h3>Create Campaign</h3>
+          <button
+            class="campaign-btn"
+            onclick='window.location.href="dashboard.html"'
+          >
+            Campaign Management
+          </button>
+        </div>
+
+        <div class="create-campaign-form">
+          <input
+            type="text"
+            placeholder="Enter Campaign Name"
+            class="campaign-input"
+          />
+          <input
+            type="text"
+            placeholder="Enter Mailer Name"
+            class="campaign-input"
+          />
+        </div>
       </div>
 
       <div class="upload-section">
-        <h1 class="heading3">
-          Get started easily—download our <br />sample
-          <span style="color: #2b7fff">CSV template</span> before uploading your
-          file.
-        </h1>
+        <h3 class="audience_heading">Select Your Audience</h3>
         <!-- Two-column layout -->
         <div class="upload-flex">
           <div class="info_download">
@@ -128,11 +145,30 @@
           </div>
         </div>
       </div>
-      <!-- Center button below upload section -->
 
-      <div class="upload-footer">
-        <a href="templateGallery.html">Select, Edit & Schedule Mails</a>
-        <a href="dashboard.html">View All Campaigns</a>
+      <h3 class="audience_heading">Select Your Template</h3>
+      <div class="templates-grid" id="templatesGrid"></div>
+      <!-- Template Options -->
+      <div class="template-options">
+        <a href="#templatesGrid" class="template-link"
+          >Use an Existing Template</a
+        >
+        <a href="templateGallery.html" class="template-link"
+          >Go to Template Page</a
+        >
+        <a href="templateGallery.html" class="template-link"
+          >Make a New Template</a
+        >
+      </div>
+      <!-- Action Buttons -->
+      <!-- Merged Action Button -->
+      <div class="template-actions">
+        <button class="btn-primary" onclick="createAndSend()">
+          Create Campaign & Send Letter
+        </button>
+        <button class="btn-primary" onclick="scheduleSelectedLetter()">
+          Schedule Letter
+        </button>
       </div>
     </div>
 
@@ -150,6 +186,19 @@
       <div class="custom-modal-content">
         <div id="alertMessage" class="custom-modal-text"></div>
         <button id="alertOkBtn" class="custom-modal-ok-btn">OK</button>
+      </div>
+    </div>
+    <div id="campaignSuccessModal" class="modal-overlay">
+      <div class="modal-box">
+        <h2>✅ Campaign Created & Letter Sent</h2>
+        <p>
+          Your campaign has been successfully created and the letter has been
+          sent.
+        </p>
+        <div class="modal-buttons">
+          <button id="successOkBtn">OK</button>
+          <button id="viewCampaignBtn">View Campaign</button>
+        </div>
       </div>
     </div>
 
@@ -220,6 +269,37 @@
       </div>
     </div>
 
+    <div id="scheduleModal" class="custom-modal-sch" style="display: none">
+      <div class="custom-modal-sch-content schedule-modal">
+        <div class="form-group3">
+          <label for="scheduleDate">Select Date:</label>
+          <input type="date" id="scheduleDate" class="schedule-input" />
+        </div>
+
+        <div class="form-group3">
+          <label for="scheduleTime">Select Time:</label>
+          <input type="time" id="scheduleTime" class="schedule-input" />
+        </div>
+
+        <div class="modal-actions">
+          <button onclick="closeScheduleModal()" class="btn btn-cancel">
+            Cancel
+          </button>
+          <button onclick="confirmSchedule()" class="btn btn-confirm">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="successModal" class="modal-overlay">
+      <div class="modal-box">
+        <h2>🎉 Success!</h2>
+        <p>Your order has been placed successfully.</p>
+        <div class="modal-buttons">
+          <button class="btn-primary" onclick="closeModal()">OK</button>
+        </div>
+      </div>
+    </div>
     <!-- Regular JavaScript -->
     <script src="./assets/js/script.js"></script>
   </body>
@@ -243,5 +323,11 @@
         navLinks.classList.remove("nav-active");
       }
     });
+
+    function scrollToCreateCampaign() {
+      document
+        .getElementById("createcampaign")
+        .scrollIntoView({ behavior: "smooth" });
+    }
   </script>
 </html>
