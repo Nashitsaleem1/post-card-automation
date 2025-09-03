@@ -1552,6 +1552,7 @@ table tbody tr:nth-child(even) {
   font-size: 1rem;
   border-radius: 6px;
   cursor: pointer;
+  outline: none;
   border: 1px solid #ccc;
   /* min-width: 250px; */
   appearance: none;

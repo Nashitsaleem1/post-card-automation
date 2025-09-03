@@ -642,8 +642,34 @@ document.addEventListener("DOMContentLoaded", async () => {
   console.log("App started");
 
   loadTemplates();
-  resetUpload();
 
-  // ✅ Always load campaigns on init (dropdown fresh every time)
+  // ✅ Restore recipients if available, otherwise resetUpload()
+  const savedRecipients = localStorage.getItem("recipients");
+  if (savedRecipients) {
+    recipients = JSON.parse(savedRecipients);
+    console.log("🔄 Restored recipients:", recipients);
+
+    // Re-render recipients in UI if needed
+    if (typeof renderRecipients === "function") {
+      renderRecipients(recipients);
+    }
+
+    // Update uploadBox UI to show success message
+    const uploadBox = document.getElementById("uploadBox");
+    if (uploadBox) {
+      uploadBox.innerHTML = `
+        <div class="upload-icon" style="color: #28a745;">✓</div>
+        <div class="upload-main-text" style="color: #28a745;">File uploaded successfully!</div>
+        <div class="upload-sub-text">${recipients.length} recipients restored from last session</div>
+        <button class="choose-file-btn" onclick="resetUpload()" style="background: #6c757d; margin-top: 1rem;">
+          Upload Different File
+        </button>
+      `;
+    }
+  } else {
+    resetUpload(); // only reset if nothing was stored
+  }
+
+  // ✅ Always load campaigns fresh
   await loadCampaigns();
 });

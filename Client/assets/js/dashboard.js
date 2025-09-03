@@ -190,12 +190,13 @@ async function loadDashboard() {
 ">
   <thead style="transform: translateY(-16px);">
     <tr style="background:#2b7fff; color:white;">
-      <th style="padding:18px; text-align:left; width:18%;">Campaign Name</th>
-      <th style="padding:18px; text-align:left; width:15%;">Recipients</th>
+      <th style="padding:18px; text-align:left; width:15%;">Campaign Name</th>
+      <th style="padding:18px; text-align:left; width:15%;">Mailer Name</th>
+      <th style="padding:18px; text-align:left; width:12%;">Recipients</th>
       <th style="padding:18px; text-align:left; width:18%;">Template</th>
       <th style="padding:18px; text-align:left; width:20%;">Schedule Time</th>
-      <th style="padding:18px; text-align:left; width:11%;">Status</th>
-      <th style="padding:18px; text-align:left; width:17%;">Action</th>
+      <th style="padding:18px; text-align:left; width:10%;">Status</th>
+      <th style="padding:18px; text-align:left; width:10%;">Action</th>
     </tr>
   </thead>
 <tbody>
@@ -203,18 +204,22 @@ async function loadDashboard() {
         .map((d, i) => {
           const statusClass =
             d.status?.toLowerCase() === "sent"
-              ? "background:   #4caf50;; color:white; padding:6px 10px; border-radius:20px; font-size:13px; min-width:90px; min-height:30px; display:inline-block; text-align:center;"
+              ? "background:#4caf50; color:white; padding:6px 10px; border-radius:20px; font-size:13px; min-width:90px; min-height:30px; display:inline-block; text-align:center;"
               : d.status?.toLowerCase() === "scheduled"
-              ? "background:#17a2b8; color:white; padding:6px 10px;  border-radius:20px; font-size:13px; min-width:90px;  min-height:30px; display:inline-block; text-align:center;"
-              : "background:#6c757d; color:white; padding:6px 10px;  border-radius:20px; font-size:13px; min-width:90px;  min-height:30px; display:inline-block; text-align:center;";
+              ? "background:#17a2b8; color:white; padding:6px 10px; border-radius:20px; font-size:13px; min-width:90px; min-height:30px; display:inline-block; text-align:center;"
+              : "background:#6c757d; color:white; padding:6px 10px; border-radius:20px; font-size:13px; min-width:90px; min-height:30px; display:inline-block; text-align:center;";
 
           return `
           <tr style="background:white; box-shadow:0 1px 4px rgba(0,0,0,0.05); border-radius:6px;">
-            <td style="padding:12px; width:20%;">${d.campaign_name}</td>
-            <td style="padding:12px; text-align:left; width:15%; padding-left:40px">
+<td style="padding:12px; width:15%; padding-left:30px;">
+  <strong>${d.campaign_name}</strong>
+</td>
+
+            <td style="padding:12px; width:15%;">${d.mailer_name}</td>
+            <td style="padding:12px; text-align:left; width:12%; padding-left:40px">
               ${safeParseRecipients(d.address_list).length}
             </td>
-            <td style="padding:12px; width:15%;">
+            <td style="padding:12px; width:18%;">
               <button class="toggle-template-btn" data-index="${i}" style="padding:7px 10px; background:#1abc9c; color:white; border:none; border-radius:5px; cursor:pointer;">
                 View Template
               </button>
@@ -225,10 +230,10 @@ async function loadDashboard() {
             <td style="padding:12px; width:20%;">${formatScheduleInfo(
               d.schedule_time
             )}</td>
-            <td style="padding:12px; width:12%;"><span style="${statusClass}">${
+            <td style="padding:12px; width:10%;"><span style="${statusClass}">${
             d.status
           }</span></td>
-            <td style="padding:12px; width:13%;">
+            <td style="padding:12px; width:10%;">
               <button class="view-details-btn" data-index="${i}" style="padding:7px 10px; background:#636185; color:white; border:none; border-radius:5px; cursor:pointer;">
                 View Details
               </button>
@@ -335,7 +340,7 @@ async function loadDashboard() {
         const d = data.data[index];
 
         // modalCampaignName.textContent = data.campaign.campaign_name;
-        modalMailerName.textContent = data.mailer_name;
+        modalMailerName.textContent = d.mailer_name;
 
         currentRecipients =
           typeof d.address_list === "string"
