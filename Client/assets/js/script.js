@@ -13,7 +13,9 @@ async function loadTemplates() {
   if (!templatesGrid) return;
 
   try {
-    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates");
+    const response = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/templates"
+    );
     const templates = await response.json();
 
     templatesGrid.innerHTML = "";
@@ -73,7 +75,9 @@ async function loadGalleryTemplates() {
   if (!templatesGrid) return;
 
   try {
-    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates");
+    const response = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/templates"
+    );
     const templates = await response.json();
 
     templatesGrid.innerHTML = ""; // Clear grid
@@ -184,14 +188,17 @@ async function saveAsNewTemplate() {
   }
 
   try {
-    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        html_content: htmlContent,
-        qr_code_id: qrCodeId,
-      }),
-    });
+    const response = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/templates",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          html_content: htmlContent,
+          qr_code_id: qrCodeId,
+        }),
+      }
+    );
     if (!response.ok) throw new Error("Failed to create template");
 
     closeSaveAsNewModal();
@@ -272,14 +279,17 @@ async function CreateCampaign() {
 
   try {
     // 1) Create the campaign only
-    const resCampaign = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        campaign_name: campaignName,
-        mailer_name: mailerName,
-      }),
-    });
+    const resCampaign = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/campaigns",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          campaign_name: campaignName,
+          mailer_name: mailerName,
+        }),
+      }
+    );
 
     if (!resCampaign.ok) {
       const err = await resCampaign.json().catch(() => ({}));
@@ -367,7 +377,6 @@ async function confirmSchedule() {
     let createNewRow = true;
 
     if (currentCampaignDataId) {
-      // Fetch current campaign_data to check template
       const res = await fetch(
         `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${currentCampaignDataId}`
       );
@@ -375,12 +384,11 @@ async function confirmSchedule() {
       const currentData = await res.json();
 
       if (currentData.template_id === currentEditingTemplateId) {
-        createNewRow = false; // same template → update existing
+        createNewRow = false;
       }
     }
 
     if (createNewRow) {
-      // Create new campaign_data row
       const payload = {
         campaign_id: currentCampaignId,
         template_id: currentEditingTemplateId,
@@ -388,18 +396,20 @@ async function confirmSchedule() {
         schedule_time: scheduleDateTime,
         status: "scheduled",
       };
-      const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        "https://pcm-app-h8mn8.ondigitalocean.app/campaign-data",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
       if (!res.ok)
         throw new Error("Failed to create new scheduled campaign_data");
 
       const newData = await res.json();
-      currentCampaignDataId = newData.id; // update current ID
+      currentCampaignDataId = newData.id;
     } else {
-      // Update existing row
       const res = await fetch(
         `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${currentCampaignDataId}`,
         {
@@ -417,6 +427,9 @@ async function confirmSchedule() {
 
     showAlert(`📅 Letter scheduled for ${scheduleDateTime}`);
     closeScheduleModal();
+
+    window.location.href = "dashboard.html";
+    // optional 1s delay so alert shows briefly
   } catch (err) {
     console.error("Schedule update error:", err);
     showAlert("Error scheduling letter: " + err.message);
@@ -554,7 +567,9 @@ window.closeModal = function () {
 
 async function fetchLatestCampaign() {
   try {
-    const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns");
+    const res = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/campaigns"
+    );
     if (!res.ok) throw new Error("Failed to fetch campaigns");
     const campaigns = await res.json();
     return campaigns.length ? campaigns[campaigns.length - 1] : null;
@@ -582,7 +597,9 @@ async function orderDesign(templateId, button) {
     });
 
     // Fetch template HTML by id (don't assume it's in the DOM)
-    const tplRes = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`);
+    const tplRes = await fetch(
+      `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
+    );
     if (!tplRes.ok) throw new Error("Failed to load template content");
     const tpl = await tplRes.json();
     let finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
@@ -627,11 +644,14 @@ async function orderDesign(templateId, button) {
       status: "sent",
       schedule_time: null,
     };
-    const resData = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newDataPayload),
-    });
+    const resData = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/campaign-data",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newDataPayload),
+      }
+    );
     if (!resData.ok)
       throw new Error("Failed to create new campaign_data entry");
     const newCampaignData = await resData.json();
