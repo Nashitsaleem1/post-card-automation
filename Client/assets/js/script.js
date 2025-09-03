@@ -661,10 +661,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   console.log("App started");
   const path = window.location.pathname;
 
-  if (path.includes("templateGallery.html")) {
+  if (path.includes("templategallery")) {
     // Template Gallery page → load all templates with edit + select buttons
     loadGalleryTemplates();
-  } else if (path.includes("campaign_management.html")) {
+  } else if (path.includes("campaign_management")) {
     // Campaign Management page → only first 6 templates
     loadTemplates();
   }
