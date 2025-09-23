@@ -322,7 +322,8 @@ h2 {
   gap: 0.5rem;
   height: 49px;
   padding: 0.6rem 1.2rem;
-  background: #4caf50;
+  /* background: #4caf50; */
+  background: #2b7fff;
   color: white;
   border: 1px solid #b2baca;
   border-radius: 10px;
@@ -336,7 +337,7 @@ h2 {
 }
 
 .sample-download-btn:hover {
-  background: #4caf50;
+  background: #2b7fff;
   transform: scale(1.1);
 
   color: white;
@@ -462,15 +463,15 @@ h2 {
   border-radius: 10px;
   border: none;
   float: right;
-  background-color: #4caf50;
+  background: #2b7fff;
   color: white;
-  font-size: 1rem;  
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.5s ease;
   outline: none;
 }
 .create-campaign-btn:hover {
-  background: #4caf50;
+  background: #2b7fff;
   transform: scale(1.1);
 
   color: white;
@@ -783,7 +784,7 @@ h2 {
 }
 
 .btn-primary {
-  background: #4caf50;
+   background: #4caf50;
   color: white;
 }
 
@@ -1338,7 +1339,7 @@ h2 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1.5rem;
-  margin-top: 4rem;
+  margin-top: 6rem;
   margin-bottom: 4.7rem;
 }
 
@@ -1659,7 +1660,7 @@ table tbody tr:nth-child(even) {
 }
 
 .campaign-btn {
-  background: #4caf50;
+  background: #2b7fff;
   color: white;
   padding: 0.7rem 1rem;
   border: none;
@@ -1671,7 +1672,7 @@ table tbody tr:nth-child(even) {
 }
 
 .campaign-btn:hover {
-  background: #4caf50;
+  background: #2b7fff;
   transform: scale(1.1);
 }
 
@@ -1759,7 +1760,7 @@ table tbody tr:nth-child(even) {
   margin-top: 7rem;
 }
 .template-actions .btn-primary {
-  background: #4caf50;
+  background: #2b7fff;
   color: #fff;
   padding: 0.6rem 1.2rem;
   border: none;
@@ -1770,8 +1771,7 @@ table tbody tr:nth-child(even) {
   transition: transform 0.2s ease;
 }
 .template-actions .btn-primary:hover {
-  background: #4caf50;
-}
+  background: #2b7fff;}
 
 #campaignModal2 {
   display: none;
@@ -1795,4 +1795,35 @@ table tbody tr:nth-child(even) {
   border-radius: 12px;
   overflow-y: auto; /* scroll inside modal */
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+.batch-search {
+  padding: 1rem;
+  border: 1px solid #ddd;
+  margin-bottom: 2rem;
+  border-radius: 8px;
+  background: #f9f9f9;
+}
+.suggestions-box {
+  border: 1px solid #ccc;
+  background: #fff;
+  max-height: 120px;
+  overflow-y: auto;
+}
+.suggestion-item {
+  padding: 5px;
+  cursor: pointer;
+}
+.suggestion-item:hover {
+  background: #eee;
+}
+.results-section {
+  margin-top: 1rem;
+}
+.result-card {
+  padding: 10px;
+  border: 1px solid #ddd;
+  margin-bottom: 0.5rem;
+  border-radius: 6px;
+  background: #fff;
 }

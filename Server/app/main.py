@@ -17,8 +17,8 @@ from .models import Template, Campaign, CampaignData, QRCodeInfo
 from sqlalchemy.orm import Session, joinedload
 
 API_URL = "https://v3.pcmintegrations.com/auth/login"
-API_KEY = "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0"
-API_SECRET = "MmZlMzIwMzItMTlhZS00Mjk0LWE1NWYtYmI5NTg5MDUxYTM0"
+API_KEY = "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy"
+API_SECRET = "OWU4YWQ4MTMtNTE3ZC00Y2QzLTg1YjEtYTQxZWEzNDAwYmIx"
 CHILD_REF_NBR = "myAccountReference"
 
 # ---------- Scheduler ----------
@@ -34,9 +34,9 @@ origins = [o.strip() for o in origins_env.split(",") if o.strip()]
 
 # Allowed origins
 origins = [
-    "http://127.0.0.1:5500",        
-    "http://localhost:5500",         
-    "https://physical-mail-automation.netlify.app" # Netlify frontend
+    "http://127.0.0.1:5500",
+    "http://localhost:5500",
+    "https://physical-mail-automation.netlify.app",  # Netlify frontend
 ]
 
 if not origins:
@@ -50,6 +50,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # ---------- Utility: Token Fetch ----------
 def get_pcm_token():
@@ -102,12 +103,20 @@ def send_letter_job(campaign_data_id: int):
         recipients = json.loads(campaign_data.address_list)
 
         payload = {
-            "extRefNbr": "12345",
+            "extRefNbr": "prod_12345",
             "designID": 0,
             "mailClass": "FirstClass",
             "mailDate": today_iso,
             "color": True,
             "printOnBothSides": True,
+            "returnAddress": {
+                "firstName": "Mark",
+                "lastName": "Fazzini",
+                "address": "4175 Woodlands Pkwy",
+                "city": "Palm Harbor",
+                "state": "FL",
+                "zipCode": "34685",
+            },
             "insertAddressingPage": True,
             "envelope": {
                 "font": "Bradley Hand",
@@ -220,20 +229,21 @@ def delete_template(template_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"detail": "Template deleted successfully."}
 
+
 # Get single template
 @app.get("/templates/{template_id}", response_model=schemas.TemplateRead)
 def get_template(template_id: int, db: Session = Depends(get_db)):
     template = db.query(Template).filter(Template.id == template_id).first()
     if not template:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Template not found."
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found."
         )
     return {
         "id": template.id,
         "html_content": template.template,
         "qr_code_id": template.qr_code_id,
     }
+
 
 # ---------- Campaigns ----------
 @app.post("/campaigns", response_model=schemas.CampaignRead)
@@ -274,7 +284,7 @@ def create_campaign_data(
         template_id=data.template_id,
         address_list=data.address_list,
         schedule_time=run_time,
-        status=data.status or "pending"
+        status=data.status or "pending",
     )
     db.add(new_data)
     db.commit()
@@ -322,10 +332,12 @@ def get_campaign_dashboard(db: Session = Depends(get_db)):
 
 @app.get("/campaign-data/{campaign_data_id}", response_model=schemas.CampaignDataRead)
 def get_campaign_data(campaign_data_id: int, db: Session = Depends(get_db)):
-    campaign_data = db.query(CampaignData).filter(CampaignData.id == campaign_data_id).first()
+    campaign_data = (
+        db.query(CampaignData).filter(CampaignData.id == campaign_data_id).first()
+    )
     if not campaign_data:
         raise HTTPException(status_code=404, detail="CampaignData not found")
-    
+
     return campaign_data
 
 
@@ -400,9 +412,11 @@ def get_dashboard_all(db: Session = Depends(get_db)):
 def update_campaign_data(
     campaign_data_id: int,
     payload: schemas.CampaignDataUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    campaign_data = db.query(CampaignData).filter(CampaignData.id == campaign_data_id).first()
+    campaign_data = (
+        db.query(CampaignData).filter(CampaignData.id == campaign_data_id).first()
+    )
     if not campaign_data:
         raise HTTPException(status_code=404, detail="CampaignData not found")
 

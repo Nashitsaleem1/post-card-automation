@@ -67,6 +67,21 @@ function toggleShowMore(button, event) {
     : "Show Less";
 }
 
+// ----------------------
+// Sample CSV
+// ----------------------
+function downloadSampleCSV() {
+  const sample = `firstName,lastName,address,city,state,zipCode
+Alex,Doe,2145 Sunnydale Blvd,Clearwater,FL,33765`;
+  const blob = new Blob([sample], { type: "text/csv" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "sample_recipients.csv";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 // ======================
 // Template Gallery (all templates with edit + select button)
 // ======================
@@ -436,6 +451,44 @@ async function confirmSchedule() {
   }
 }
 
+function saveTemplate() {
+  if (!window.currentEditingTemplateId) {
+    showAlert("⚠️ Please select a template first.");
+    return;
+  }
+
+  // Grab the updated HTML from the editor modal
+  const editorDiv = document.getElementById("letterEditor");
+  if (!editorDiv) {
+    showAlert("⚠️ Could not find the editor.");
+    return;
+  }
+  const updatedHtml = editorDiv.innerHTML;
+
+  // Find the template in the gallery grid
+  const templateDiv = document.querySelector(
+    `.template[data-template-id='${window.currentEditingTemplateId}'] .letter-container`
+  );
+  if (!templateDiv) {
+    showAlert("⚠️ Could not find the template in the gallery.");
+    return;
+  }
+
+  // Update the gallery
+  templateDiv.innerHTML = updatedHtml;
+  templateDiv.classList.add("saved-highlight");
+
+  // Persist in localStorage
+  localStorage.setItem("savedTemplateHtml", updatedHtml);
+  localStorage.setItem("savedTemplateId", window.currentEditingTemplateId);
+
+  showAlert("✅ Template saved!");
+  console.log("Template saved locally and updated in gallery:", {
+    id: window.currentEditingTemplateId,
+    html: updatedHtml,
+  });
+}
+
 // ======================
 // CSV Upload (unchanged, but enforces campaign before upload)
 // ======================
@@ -460,7 +513,7 @@ async function parseCSV(file) {
       });
 
       localStorage.setItem("recipients", JSON.stringify(recipients));
-      console.log(recipients)
+      console.log(recipients);
       const uploadBox = document.getElementById("uploadBox");
       uploadBox.innerHTML = `
         <div class="upload-icon" style="color: #28a745;">✓</div>
@@ -541,8 +594,8 @@ function resetUpload() {
 // ======================
 async function getToken() {
   const payload = {
-    apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
-    apiSecret: "MmZlMzIwMzItMTlhZS00Mjk0LWE1NWYtYmI5NTg5MDUxYTM0",
+    apiKey: "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy",
+    apiSecret: "OWU4YWQ4MTMtNTE3ZC00Y2QzLTg1YjEtYTQxZWEzNDAwYmIx",
     childRefNbr: "myAccountReference",
   };
   const res = await fetch("https://v3.pcmintegrations.com/auth/login", {
@@ -607,12 +660,20 @@ async function orderDesign(templateId, button) {
     // --- Place Order with PCM ---
     const token = await getToken();
     const payload = {
-      extRefNbr: "12345",
+      extRefNbr: "prod_12345",
       designID: 0,
       mailClass: "FirstClass",
       mailDate: todayISO,
       color: true,
       printOnBothSides: true,
+      returnAddress: {
+        firstName: "Mark",
+        lastName: "Fazzini",
+        address: "4175 Woodlands Pkwy",
+        city: "Palm Harbor",
+        state: "FL",
+        zipCode: "34685",
+      },
       insertAddressingPage: true,
       envelope: {
         font: "Bradley Hand",
@@ -636,7 +697,7 @@ async function orderDesign(templateId, button) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || "API request failed");
 
-    // ✅ Always create a new campaign_data row (no update)
+    // Always create a new campaign_data row (no update)
     const newDataPayload = {
       campaign_id: currentCampaignId,
       template_id: templateId,
@@ -671,7 +732,7 @@ async function orderDesign(templateId, button) {
 function scheduleSelectedLetter() {
   if (!ensureCampaignReadyForAction()) return;
   if (!ensureTemplateSelected()) return;
-  openScheduleModal(window.currentEditingTemplateId); // ✅ from global
+  openScheduleModal(window.currentEditingTemplateId);
 }
 
 // ======================
@@ -681,7 +742,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   console.log("App started");
   const path = window.location.pathname;
 
-  if (path.includes("templategallery")) {
+  if (path.includes("templateGallery")) {
     // Template Gallery page → load all templates with edit + select buttons
     loadGalleryTemplates();
   } else if (path.includes("campaign_management")) {
