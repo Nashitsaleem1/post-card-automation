@@ -67,20 +67,6 @@ function toggleShowMore(button, event) {
     : "Show Less";
 }
 
-// ----------------------
-// Sample CSV
-// ----------------------
-function downloadSampleCSV() {
-  const sample = `firstName,lastName,address,city,state,zipCode
-Alex,Doe,2145 Sunnydale Blvd,Clearwater,FL,33765`;
-  const blob = new Blob([sample], { type: "text/csv" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "sample_recipients.csv";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
 
 // ======================
 // Template Gallery (all templates with edit + select button)
@@ -126,6 +112,21 @@ async function loadGalleryTemplates() {
     console.error("Error loading templates:", err);
     templatesGrid.innerHTML = "<p>Failed to load templates.</p>";
   }
+}
+
+// ----------------------
+// Sample CSV
+// ----------------------
+function downloadSampleCSV() {
+  const sample = `firstName,lastName,address,city,state,zipCode
+Alex,Doe,2145 Sunnydale Blvd,Clearwater,FL,33765`;
+  const blob = new Blob([sample], { type: "text/csv" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "sample_recipients.csv";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 function selectTemplate(templateId, btn) {

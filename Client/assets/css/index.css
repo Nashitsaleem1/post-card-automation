@@ -414,8 +414,6 @@ h2 {
 .template {
   position: relative;
   width: 100%;
-  max-width: 500px;
-  min-height: 400px;
   background: linear-gradient(135deg, #ffffff, #f9f9f9);
   border-radius: 16px;
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
@@ -424,16 +422,16 @@ h2 {
   border: 1px solid #ddd;
   padding: 1.5rem;
   transition: transform 0.4s ease, box-shadow 0.4s ease;
+  height: 100%;
 }
 
 .template:hover {
   transform: translateY(-4px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
 }
-
 .templates-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 2rem;
   margin-top: 3rem;
   align-items: stretch;
@@ -444,6 +442,7 @@ h2 {
   padding: 1.2rem;
   margin-bottom: 4rem;
   margin-top: 2rem;
+  flex-grow: 1;
   overflow-y: auto;
   font-size: 16px;
   line-height: 1.5;
@@ -784,7 +783,7 @@ h2 {
 }
 
 .btn-primary {
-   background: #4caf50;
+  background: #4caf50;
   color: white;
 }
 
@@ -1771,7 +1770,8 @@ table tbody tr:nth-child(even) {
   transition: transform 0.2s ease;
 }
 .template-actions .btn-primary:hover {
-  background: #2b7fff;}
+  background: #2b7fff;
+}
 
 #campaignModal2 {
   display: none;
@@ -1795,35 +1795,4 @@ table tbody tr:nth-child(even) {
   border-radius: 12px;
   overflow-y: auto; /* scroll inside modal */
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-}
-
-.batch-search {
-  padding: 1rem;
-  border: 1px solid #ddd;
-  margin-bottom: 2rem;
-  border-radius: 8px;
-  background: #f9f9f9;
-}
-.suggestions-box {
-  border: 1px solid #ccc;
-  background: #fff;
-  max-height: 120px;
-  overflow-y: auto;
-}
-.suggestion-item {
-  padding: 5px;
-  cursor: pointer;
-}
-.suggestion-item:hover {
-  background: #eee;
-}
-.results-section {
-  margin-top: 1rem;
-}
-.result-card {
-  padding: 10px;
-  border: 1px solid #ddd;
-  margin-bottom: 0.5rem;
-  border-radius: 6px;
-  background: #fff;
 }
