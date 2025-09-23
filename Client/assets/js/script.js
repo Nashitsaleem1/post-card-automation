@@ -67,7 +67,6 @@ function toggleShowMore(button, event) {
     : "Show Less";
 }
 
-
 // ======================
 // Template Gallery (all templates with edit + select button)
 // ======================
@@ -743,7 +742,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   console.log("App started");
   const path = window.location.pathname;
 
-  if (path.includes("templateGallery")) {
+  if (path.includes("templategallery")) {
     // Template Gallery page → load all templates with edit + select buttons
     loadGalleryTemplates();
   } else if (path.includes("campaign_management")) {
