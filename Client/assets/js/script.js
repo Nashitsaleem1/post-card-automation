@@ -501,7 +501,7 @@ async function parseCSV(file) {
       console.log(results.data); // Log parsed data to inspect
 
       // Filter out empty rows or invalid data
-      const recipients = results.data
+      recipients = results.data
         .map((r) => {
           const row = Object.fromEntries(
             Object.entries(r).map(([k, v]) => [k.toLowerCase(), v])
