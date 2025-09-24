@@ -693,9 +693,11 @@ async function orderDesign(templateId, button) {
       },
       body: JSON.stringify(payload),
     });
+    console.log(res)
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || "API request failed");
+    
 
     // Always create a new campaign_data row (no update)
     const newDataPayload = {
