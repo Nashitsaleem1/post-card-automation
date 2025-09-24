@@ -264,6 +264,7 @@ function ensureCampaignReadyForAction() {
     );
     return false;
   }
+  console.log(recipients)
   if (!recipients.length) {
     showAlert("⚠️ Please upload a CSV file with recipients.");
     return false;
