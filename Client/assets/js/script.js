@@ -659,6 +659,7 @@ async function orderDesign(templateId, button) {
 
     // --- Place Order with PCM ---
     const token = await getToken();
+    console.log(token);
     const payload = {
       extRefNbr: "prod_12345",
       designID: 0,
@@ -693,11 +694,14 @@ async function orderDesign(templateId, button) {
       },
       body: JSON.stringify(payload),
     });
-    console.log(res)
+    console.log(res);
 
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json().catch((err) => {
+      console.log("Error parsing response body:", err);
+      return {};
+    });
+    console.log(data); // This will give you more insight into the error
     if (!res.ok) throw new Error(data.message || "API request failed");
-    
 
     // Always create a new campaign_data row (no update)
     const newDataPayload = {
