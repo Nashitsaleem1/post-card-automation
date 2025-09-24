@@ -497,23 +497,33 @@ async function parseCSV(file) {
     header: true,
     skipEmptyLines: true,
     complete: (results) => {
-      recipients = results.data.map((r) => {
-        const row = Object.fromEntries(
-          Object.entries(r).map(([k, v]) => [k.toLowerCase(), v])
-        );
-        return {
-          company: row.company,
-          firstName: row.firstname || "Test",
-          lastName: row.lastname || "Name",
-          address: row.address || "",
-          city: row.city || "",
-          state: row.state || "",
-          zipCode: row.zipcode || "",
-        };
-      });
+      console.log(results.data); // Log parsed data to inspect
+
+      // Filter out empty rows or invalid data
+      const recipients = results.data
+        .map((r) => {
+          const row = Object.fromEntries(
+            Object.entries(r).map(([k, v]) => [k.toLowerCase(), v])
+          );
+
+          // Only return non-empty rows that have required data
+          if (row.firstname && row.lastname && row.address && row.city && row.state && row.zipcode) {
+            return {
+              firstName: row.firstname || "Test",
+              lastName: row.lastname || "Name",
+              address: row.address || "",
+              city: row.city || "",
+              state: row.state || "",
+              zipCode: row.zipcode || "",
+            };
+          } else {
+            return null; // Return null for invalid rows
+          }
+        })
+        .filter((recipient) => recipient !== null); // Remove any null rows
 
       localStorage.setItem("recipients", JSON.stringify(recipients));
-      console.log(recipients);
+      console.log(recipients)
       const uploadBox = document.getElementById("uploadBox");
       uploadBox.innerHTML = `
         <div class="upload-icon" style="color: #28a745;">✓</div>
@@ -530,6 +540,7 @@ async function parseCSV(file) {
     },
   });
 }
+
 
 function setupDragAndDrop() {
   const uploadBox = document.getElementById("uploadBox");
