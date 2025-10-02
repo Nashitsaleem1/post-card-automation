@@ -28,6 +28,7 @@ scheduler.start()
 # ---------- App ----------
 app = FastAPI(title="PCM Automation", version="1.0.0")
 
+
 # ---------- CORS ----------
 origins_env = os.getenv("CORS_ORIGINS", "")
 origins = [o.strip() for o in origins_env.split(",") if o.strip()]
