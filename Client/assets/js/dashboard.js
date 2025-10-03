@@ -374,20 +374,28 @@ async function openCampaignDetailModal(campaignData) {
   filterCheckbox.checked = false;
 
   // Render addresses table
-function renderAddresses() {
-  let recipientsToShow = currentRecipients;
+  function renderAddresses() {
+    // Log currentRecipients to check the data structure
+    console.log(currentRecipients);
 
-  // If checkbox is checked, filter for scanned recipients, otherwise show all
-  if (filterCheckbox.checked) {
-    recipientsToShow = recipientsToShow.filter((r) => r.scanned);
-  }
-  
-  if (!recipientsToShow.length) {
-    modalAddresses.innerHTML = "<p>No addresses available.</p>";
-    return;
-  }
+    let recipientsToShow = currentRecipients;
 
-  modalAddresses.innerHTML = `
+    if (filterCheckbox.checked) {
+      // If the checkbox is checked, only show scanned recipients
+      recipientsToShow = recipientsToShow.filter((r) => r.scanned);
+    } else {
+      // If unchecked, show both scanned and unscanned recipients
+      recipientsToShow = recipientsToShow.filter(
+        (r) => !r.scanned || r.scanned
+      );
+    }
+
+    if (!recipientsToShow.length) {
+      modalAddresses.innerHTML = "<p>No addresses available.</p>";
+      return;
+    }
+
+    modalAddresses.innerHTML = `
     <div style="overflow-x:auto;">
       <table style="width:100%; border-collapse:separate; border-spacing:0 12px; font-size:14px;">
         <thead>
@@ -404,26 +412,42 @@ function renderAddresses() {
           ${recipientsToShow
             .map(
               (r) => `
-              <tr style="background:#fafafa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); transition:background 0.2s;">
-                <td style="padding:10px; border-top-left-radius:8px; border-bottom-left-radius:8px;">
-                  ${r.firstName || ""} ${r.lastName || ""}
-                </td>
-                <td style="padding:10px;">${r.address || ""}</td>
-                <td style="padding:10px;">${r.city || ""}</td>
-                <td style="padding:10px;">${r.state || ""}</td>
-                <td style="padding:10px;">${r.zipCode || ""}</td>
-                <td style="padding:10px; font-weight:bold; color:${r.scanned ? "green" : "red"};">
-                  ${r.scanned ? "✅ Scanned" : "❌ Not Scanned"}
-                </td>
-              </tr>`
+                <tr style="background:#fafafa; border-radius:8px;">
+                  <td style="padding:10px;">${r.firstName || ""} ${
+                r.lastName || ""
+              }</td>
+                  <td style="padding:10px;">${r.address || ""}</td>
+                  <td style="padding:10px;">${r.city || ""}</td>
+                  <td style="padding:10px;">${r.state || ""}</td>
+                  <td style="padding:10px;">${r.zipCode || ""}</td>
+                  <td style="padding:10px; font-weight:bold; color:${
+                    r.scanned ? "green" : "red"
+                  };">
+                    ${r.scanned ? "✅ Scanned" : "❌ Not Scanned"}
+                  </td>
+                </tr>`
             )
             .join("")}
         </tbody>
       </table>
     </div>
   `;
-}
 
+    // Add hover effects
+    document.querySelectorAll("tbody tr").forEach((row) => {
+      row.addEventListener(
+        "mouseenter",
+        () => (row.style.background = "#f0f0f0")
+      );
+      row.addEventListener(
+        "mouseleave",
+        () => (row.style.background = "#fafafa")
+      );
+    });
+  }
+
+  // Re-render addresses when the checkbox changes
+  filterCheckbox.addEventListener("change", renderAddresses);
   renderAddresses();
 
   // Remove old footer if exists
