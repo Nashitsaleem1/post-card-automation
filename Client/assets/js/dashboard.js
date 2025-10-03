@@ -374,52 +374,56 @@ async function openCampaignDetailModal(campaignData) {
   filterCheckbox.checked = false;
 
   // Render addresses table
-  function renderAddresses() {
-    let recipientsToShow = currentRecipients;
-    if (filterCheckbox.checked) {
-      recipientsToShow = recipientsToShow.filter((r) => r.scanned);
-    }
-    if (!recipientsToShow.length) {
-      modalAddresses.innerHTML = "<p>No addresses available.</p>";
-      return;
-    }
+function renderAddresses() {
+  let recipientsToShow = currentRecipients;
 
-    modalAddresses.innerHTML = `
-      <div style="overflow-x:auto;">
-        <table style="width:100%; border-collapse:separate; border-spacing:0 12px; font-size:14px;">
-          <thead>
-            <tr style="background:black; color:white; text-align:left;">
-              <th style="padding:10px;">Name</th>
-              <th style="padding:10px;">Address</th>
-              <th style="padding:10px;">City</th>
-              <th style="padding:10px;">State</th>
-              <th style="padding:10px;">Zip</th>
-              <th style="padding:10px;">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${recipientsToShow
-              .map(
-                (r) => `
-              <tr style="background:#fafafa; border-radius:8px;">
-                <td style="padding:10px;">${r.firstName || ""} ${
-                  r.lastName || ""
-                }</td>
+  // If checkbox is checked, filter for scanned recipients, otherwise show all
+  if (filterCheckbox.checked) {
+    recipientsToShow = recipientsToShow.filter((r) => r.scanned);
+  }
+  
+  if (!recipientsToShow.length) {
+    modalAddresses.innerHTML = "<p>No addresses available.</p>";
+    return;
+  }
+
+  modalAddresses.innerHTML = `
+    <div style="overflow-x:auto;">
+      <table style="width:100%; border-collapse:separate; border-spacing:0 12px; font-size:14px;">
+        <thead>
+          <tr style="background:black; color:white; text-align:left;">
+            <th style="padding:10px;">Name</th>
+            <th style="padding:10px;">Address</th>
+            <th style="padding:10px;">City</th>
+            <th style="padding:10px;">State</th>
+            <th style="padding:10px;">Zip</th>
+            <th style="padding:10px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${recipientsToShow
+            .map(
+              (r) => `
+              <tr style="background:#fafafa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); transition:background 0.2s;">
+                <td style="padding:10px; border-top-left-radius:8px; border-bottom-left-radius:8px;">
+                  ${r.firstName || ""} ${r.lastName || ""}
+                </td>
                 <td style="padding:10px;">${r.address || ""}</td>
                 <td style="padding:10px;">${r.city || ""}</td>
                 <td style="padding:10px;">${r.state || ""}</td>
                 <td style="padding:10px;">${r.zipCode || ""}</td>
-                <td style="padding:10px; font-weight:bold; color:${
-                  r.scanned ? "green" : "red"
-                };">${r.scanned ? "✅ Scanned" : "❌ Not Scanned"}</td>
+                <td style="padding:10px; font-weight:bold; color:${r.scanned ? "green" : "red"};">
+                  ${r.scanned ? "✅ Scanned" : "❌ Not Scanned"}
+                </td>
               </tr>`
-              )
-              .join("")}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
   renderAddresses();
 
   // Remove old footer if exists
