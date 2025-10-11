@@ -27,7 +27,7 @@
       <ul class="nav-links">
         <li><a href="index.html">Home</a></li>
         <li><a href="templateGallery.html">Template Gallery</a></li>
-        <li><a href="campaign_management.html">Campaign Management</a></li>
+        <li><a href="campaign_builder.html">Campaign Builder</a></li>
         <li><a href="dashboard.html">Dashboard</a></li>
       </ul>
       <div class="hamburger" id="hamburger">☰</div>
@@ -130,7 +130,6 @@
         <button id="alertOkBtn" class="custom-modal-ok-btn">OK</button>
       </div>
     </div>
-
     <!-- Confirm Modal -->
     <div id="confirmModal" class="custom-modal" style="display: none">
       <div class="custom-modal-content">
@@ -153,6 +152,57 @@
         </div>
       </div>
     </div>
+    <div id="userGuideIcon">
+      <img src="./assets/images/userguideicon.png" alt="User Guide" />
+    </div>
+
+    <div id="userGuideOverlay">
+      <div id="userGuideContent">
+        <span id="closeGuide">&times;</span>
+        <div class="guide-inner">
+          <h2>Welcome to POSTCARDMANIA Service</h2>
+          <p>
+            Follow these steps to successfully create and send your campaigns:
+          </p>
+          <br />
+          <ol>
+            <li>
+              <strong>Choose Your Starting Point:</strong> You have two options
+              on the dashboard: <em>"New Campaign"</em> or
+              <em>"New Mailer"</em>. Start by creating either a campaign or
+              designing a mailer.
+            </li>
+            <li>
+              <strong>Select Your Audience:</strong> Once your campaign and
+              mailer are ready, choose your recipients using either
+              <em>"Upload CSV"</em> or <em>"Batch Search"</em> to select your
+              audience.
+            </li>
+            <li>
+              <strong>Choose or Edit a Template:</strong> You can select an
+              existing template or edit it according to your needs. Any template
+              you edit will automatically be available for your campaign.
+            </li>
+            <li>
+              <strong>Create or Send Your Letter:</strong> You have two options:
+              <em>"Create and Send"</em> to immediately send the letter, or
+              <em>"Create and Save"</em> to save the campaign or one-off mailer
+              for later use. You can schedule them in dashboard.
+            </li>
+            <li>
+              <strong>Order Tracking and Insights Dashboard:</strong> Access all
+              campaign details in one place. The dashboard lets users schedule
+              pending letters, manage multiple mailers per campaign, and track
+              recipient engagement, such as whether a letter has been scanned.
+            </li>
+          </ol>
+          <p style="font-weight: 600; color: #10b981">
+            Enjoy using PostcRDMANIA to automate your mailing efficiently!
+          </p>
+        </div>
+      </div>
+    </div>
+
     <!-- Regular JavaScript -->
     <script src="./assets/js/script.js"></script>
   </body>
@@ -175,6 +225,42 @@
       ) {
         navLinks.classList.remove("nav-active");
       }
+    });
+  </script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const guideIcon = document.getElementById("userGuideIcon");
+      const guideOverlay = document.getElementById("userGuideOverlay");
+      const closeGuide = document.getElementById("closeGuide");
+      const getStartedBtn = document.getElementById("getStartedBtn");
+
+      // Function to close the guide
+      function closeUserGuide() {
+        guideOverlay.classList.remove("show");
+      }
+
+      // Open overlay when clicking icon
+      guideIcon.addEventListener("click", () => {
+        guideOverlay.classList.add("show");
+      });
+
+      // Close overlay
+      closeGuide.addEventListener("click", closeUserGuide);
+      getStartedBtn.addEventListener("click", closeUserGuide);
+
+      // Click outside content to close
+      guideOverlay.addEventListener("click", (e) => {
+        if (e.target === guideOverlay) {
+          closeUserGuide();
+        }
+      });
+
+      // ESC key to close
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && guideOverlay.classList.contains("show")) {
+          closeUserGuide();
+        }
+      });
     });
   </script>
 </html>

@@ -2,7 +2,7 @@ import os
 import json
 from typing import List
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.date import DateTrigger
 import requests
@@ -13,8 +13,9 @@ from sqlalchemy import desc
 from .database import Base, engine, get_db
 from . import schemas
 from pytz import timezone, utc
-from .models import Template, Campaign, CampaignData, QRCodeInfo
+from .models import Template, Campaign, CampaignData, MailerOneOff, QRCodeInfo
 from sqlalchemy.orm import Session, joinedload
+from .database import SessionLocal
 
 API_URL = "https://v3.pcmintegrations.com/auth/login"
 API_KEY = "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy"
@@ -28,7 +29,6 @@ scheduler.start()
 # ---------- App ----------
 app = FastAPI(title="PCM Automation", version="1.0.0")
 
-
 # ---------- CORS ----------
 origins_env = os.getenv("CORS_ORIGINS", "")
 origins = [o.strip() for o in origins_env.split(",") if o.strip()]
@@ -38,11 +38,13 @@ origins = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
     "http://127.0.0.1:5501",
-    "https://physical-mail-automation.netlify.app",  # Netlify frontend
+    "https://physical-mail-automation.netlify.app",
 ]
+
 
 if not origins:
     origins = ["*"]
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -73,10 +75,8 @@ def get_pcm_token():
     return data.get("token")
 
 
-# ---------- Scheduler Job ----------
+# ---------- Scheduler Job for Campaign ----------
 def send_letter_job(campaign_data_id: int):
-    from .database import SessionLocal
-
     db = SessionLocal()
 
     try:
@@ -94,13 +94,19 @@ def send_letter_job(campaign_data_id: int):
             print(f"⚠️ Template {campaign_data.template_id} not found")
             return
 
+        # --- Ensure it's pending ---
+        if campaign_data.status != "pending":
+            print(
+                f"⏩ Mailer {campaign_data.id} already processed ({campaign_data.status})"
+            )
+            return
+
         # --- Prepare payload ---
         today_obj = datetime.utcnow()
         today_iso = today_obj.strftime("%Y-%m-%d")
         formatted_date = today_obj.strftime("%B %d, %Y")
 
         final_html = template.template.replace("DATE", formatted_date)
-
         recipients = json.loads(campaign_data.address_list)
 
         payload = {
@@ -110,14 +116,6 @@ def send_letter_job(campaign_data_id: int):
             "mailDate": today_iso,
             "color": True,
             "printOnBothSides": True,
-            "returnAddress": {
-                "firstName": "Mark",
-                "lastName": "Fazzini",
-                "address": "4175 Woodlands Pkwy",
-                "city": "Palm Harbor",
-                "state": "FL",
-                "zipCode": "34685",
-            },
             "insertAddressingPage": True,
             "envelope": {
                 "font": "Bradley Hand",
@@ -143,11 +141,25 @@ def send_letter_job(campaign_data_id: int):
         data = res.json()
         print("📨 PCM API Response:", data)
 
-        # --- If success, update status to 'sent' ---
+        # --- If success, update status ---
         if all(k in data for k in ["batchID", "orderID", "extRefNbr"]):
             campaign_data.status = "sent"
+            campaign_data.send_date = datetime.utcnow()
             db.commit()
             print(f"✅ CampaignData {campaign_data_id} marked as SENT")
+
+            # ✅ Schedule QR tracking after 24 hours
+            track_time = datetime.utcnow() + timedelta(hours=24)
+            scheduler.add_job(
+                qr_tracking_job,
+                trigger=DateTrigger(run_date=track_time),
+                args=[campaign_data.id],
+                id=f"qr_track_{campaign_data.id}",
+                replace_existing=True,
+            )
+            print(
+                f"📅 Scheduled QR tracking for CampaignData {campaign_data.id} in 24h."
+            )
         else:
             campaign_data.status = "failed"
             db.commit()
@@ -170,6 +182,262 @@ def send_letter_job(campaign_data_id: int):
         db.close()
 
 
+# ---------- QR Tracking Job ----------
+def qr_tracking_job(campaign_data_id: int):
+    from .database import SessionLocal
+    from apscheduler.triggers.date import DateTrigger
+    from datetime import datetime, timedelta
+    import json, requests, os
+
+    db = SessionLocal()
+    try:
+        campaign_data = (
+            db.query(CampaignData).filter(CampaignData.id == campaign_data_id).first()
+        )
+        if not campaign_data:
+            print(f"⚠️ CampaignData {campaign_data_id} not found for QR tracking")
+            return
+
+        template = (
+            db.query(Template).filter(Template.id == campaign_data.template_id).first()
+        )
+        if not template or not template.qr_code_id:
+            print(f"⚠️ Template {campaign_data.template_id} has no QR code linked")
+            return
+
+        qr_code = (
+            db.query(QRCodeInfo).filter(QRCodeInfo.id == template.qr_code_id).first()
+        )
+        if not qr_code:
+            print(f"⚠️ QR Code {template.qr_code_id} not found")
+            return
+
+        # --- Fetch QR Tracking Data ---
+        token = get_pcm_token()
+        url = f"https://v3.pcmintegrations.com/qr-code/{qr_code.id}/tracking"
+        headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
+        resp = requests.get(url, headers=headers)
+        data = resp.json()
+
+        results = data.get("results", [])
+        if not results:
+            print(f"ℹ️ No QR scans found yet for QR {qr_code.id} — retrying in 24h.")
+            next_run = datetime.utcnow() + timedelta(hours=24)
+            scheduler.add_job(
+                qr_tracking_job,
+                trigger=DateTrigger(run_date=next_run),
+                args=[campaign_data_id],
+                id=f"qr_track_{campaign_data_id}",
+                replace_existing=True,
+            )
+            return
+
+        # --- Compare recipients ---
+        recipients = json.loads(campaign_data.address_list)
+        matched_recipients = []
+        for rec in recipients:
+            for scan in results:
+                r = scan.get("recipient", {})
+                if (
+                    r.get("firstName") == rec.get("firstName")
+                    and r.get("lastName") == rec.get("lastName")
+                    and r.get("address") == rec.get("address")
+                ):
+                    matched_recipients.append(rec)
+                    break
+
+        matched = len(matched_recipients)
+        total = len(recipients)
+
+        if matched == total:
+            print(
+                f"✅ All {matched} recipients scanned QR for CampaignData {campaign_data_id}"
+            )
+            campaign_data.is_qr_scanned_complete = True
+            db.commit()
+
+            # --- NEW: Write log of scanned mailers ---
+            log_entry = (
+                f"[{datetime.utcnow()}] CampaignData ID: {campaign_data_id} | "
+                f"Mailer: {campaign_data.mailer_name or 'Unnamed'} | "
+                f"Recipients Scanned: {matched}/{total}\n"
+                f"Recipients:\n{json.dumps(matched_recipients, indent=2)}\n"
+                + "-" * 60
+                + "\n"
+            )
+
+            log_path = os.path.join(os.getcwd(), "scanned_mailers_log.txt")
+            with open(log_path, "a", encoding="utf-8") as log_file:
+                log_file.write(log_entry)
+            print(f"📝 Log written to {log_path}")
+
+            # --- NEW: Send notification ---
+            send_scan_complete_notification(
+                campaign_data_id,
+                campaign_data.mailer_name or f"Mailer-{campaign_data_id}",
+                matched_recipients,
+            )
+
+            # --- Fetch next pending mailer ---
+            next_pending = (
+                db.query(CampaignData)
+                .filter(
+                    CampaignData.campaign_id == campaign_data.campaign_id,
+                    CampaignData.status == "pending",
+                )
+                .order_by(CampaignData.id.asc())
+                .first()
+            )
+
+            if next_pending:
+                print(f"📩 Sending next pending CampaignData {next_pending.id}")
+                send_letter_job(next_pending.id)
+            else:
+                print(
+                    f"🏁 No more pending mailers left in campaign {campaign_data.campaign_id}"
+                )
+        else:
+            print(f" Only {matched}/{total} recipients scanned QR — retrying in 24h.")
+            next_run = datetime.utcnow() + timedelta(hours=24)
+            scheduler.add_job(
+                qr_tracking_job,
+                trigger=DateTrigger(run_date=next_run),
+                args=[campaign_data_id],
+                id=f"qr_track_{campaign_data_id}",
+                replace_existing=True,
+            )
+
+    except Exception as e:
+        print(f"❌ Error in qr_tracking_job: {e}")
+    finally:
+        db.close()
+
+
+def send_scan_complete_notification(
+    campaign_data_id: int, mailer_name: str, recipients: list
+):
+    """
+    Send a notification (can be replaced with email, webhook, etc.)
+    """
+    print(
+        f"📢 Notification: Mailer '{mailer_name}' (ID {campaign_data_id}) fully scanned by all recipients."
+    )
+    print("👥 Scanned Recipients:")
+    for r in recipients:
+        print(f" - {r.get('firstName')} {r.get('lastName')} @ {r.get('address')}")
+
+
+def campaign_watcher_job():
+    """
+    Runs every 24 hours to find any newly added mailers
+    that are still pending and not yet processed.
+    """
+    db = SessionLocal()
+    try:
+        pending_mailers = (
+            db.query(CampaignData)
+            .filter(
+                CampaignData.status == "pending",
+                CampaignData.is_qr_scanned_complete == False,
+            )
+            .all()
+        )
+
+        for mailer in pending_mailers:
+            print(
+                f" Found new pending mailer {mailer.id} in campaign {mailer.campaign_id}"
+            )
+            send_letter_job(mailer.id)
+
+    except Exception as e:
+        print(f"❌ Error in campaign_watcher_job: {e}")
+    finally:
+        db.close()
+
+
+def send_oneoff_job(mailer_id: int):
+    db = SessionLocal()
+
+    try:
+        mailer = db.query(MailerOneOff).filter(MailerOneOff.id == mailer_id).first()
+        if not mailer:
+            print(f" MailerOneOff {mailer_id} not found")
+            return
+
+        template = db.query(Template).filter(Template.id == mailer.template_id).first()
+        if not template:
+            print(f"Template {mailer.template_id} not found")
+            mailer.status = "failed"
+            db.commit()
+            return
+
+        # --- Prepare payload ---
+        today_obj = datetime.utcnow()
+        today_iso = today_obj.strftime("%Y-%m-%d")
+        formatted_date = today_obj.strftime("%B %d, %Y")
+
+        final_html = template.template.replace("DATE", formatted_date)
+
+        recipients = json.loads(mailer.address_list)
+
+        payload = {
+            "extRefNbr": f"oneoff_{mailer.id}",
+            "designID": 0,
+            "mailClass": "FirstClass",
+            "mailDate": today_iso,
+            "color": True,
+            "printOnBothSides": True,
+            "insertAddressingPage": True,
+            "envelope": {
+                "font": "Bradley Hand",
+                "type": "fullWindow",
+                "fontColor": "Black",
+            },
+            "recipients": recipients,
+            "letter": final_html,
+        }
+
+        # --- Call PCM API ---
+        token = get_pcm_token()
+        res = requests.post(
+            "https://v3.pcmintegrations.com/order/letter",
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
+            json=payload,
+            timeout=30,
+        )
+
+        data = res.json()
+        print("📨 PCM API Response:", data)
+
+        # --- Update status based on response ---
+        if all(k in data for k in ["batchID", "orderID", "extRefNbr"]):
+            mailer.status = "sent"
+            db.commit()
+            print(f"✅ MailerOneOff {mailer_id} marked as SENT")
+        else:
+            mailer.status = "failed"
+            db.commit()
+            print(
+                f"❌ Failed to send MailerOneOff {mailer_id}: Missing response fields"
+            )
+
+    except Exception as e:
+        print(f"❌ Error sending one-off mailer {mailer_id}:", e)
+        try:
+            mailer = db.query(MailerOneOff).filter(MailerOneOff.id == mailer_id).first()
+            if mailer:
+                mailer.status = "failed"
+                db.commit()
+        except:
+            pass
+    finally:
+        db.close()
+
+
 # ---------- Health ----------
 @app.get("/")
 def root():
@@ -179,6 +447,16 @@ def root():
 @app.get("/healthz")
 def healthz():
     return {"status": "ok"}
+
+
+# ---------- Start Campaign Watcher ----------
+scheduler.add_job(
+    campaign_watcher_job,
+    trigger="interval",
+    hours=24,
+    id="campaign_watcher_job",
+    replace_existing=True,
+)
 
 
 # ---------- Templates ----------
@@ -259,9 +537,7 @@ def create_campaign(campaign: schemas.CampaignCreate, db: Session = Depends(get_
             status_code=400, detail="Campaign with this name already exists."
         )
 
-    new_campaign = Campaign(
-        campaign_name=campaign.campaign_name, mailer_name=campaign.mailer_name
-    )
+    new_campaign = Campaign(campaign_name=campaign.campaign_name)
     db.add(new_campaign)
     db.commit()
     db.refresh(new_campaign)
@@ -277,34 +553,34 @@ def create_campaign_data(
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
-    run_time = data.schedule_time  # keep as provided, no tz conversion
+    run_time = data.schedule_time
+    send_date = data.send_date
 
     # Create CampaignData
     new_data = CampaignData(
         campaign_id=data.campaign_id,
+        mailer_name=data.mailer_name,
         template_id=data.template_id,
         address_list=data.address_list,
         schedule_time=run_time,
+        send_date=send_date,
         status=data.status or "pending",
     )
     db.add(new_data)
     db.commit()
     db.refresh(new_data)
 
-    # Schedule job only if schedule_time is provided
-    if run_time is not None:
+    if new_data.status == "sent":
+        # Schedule first QR check after 1 hour (not full 24h)
+        track_time = datetime.utcnow() + timedelta(hours=1)
         scheduler.add_job(
-            send_letter_job,
-            trigger=DateTrigger(run_date=run_time),
+            qr_tracking_job,
+            trigger=DateTrigger(run_date=track_time),
             args=[new_data.id],
-            id=f"campaign_data_{new_data.id}",
+            id=f"qr_track_{new_data.id}",
             replace_existing=True,
         )
-        print(f"✅ Scheduled CampaignData {new_data.id} at {run_time}")
-    else:
-        print(
-            f"⏩ CampaignData {new_data.id} has no schedule; sending immediately or waiting."
-        )
+        print(f"📅 Scheduled first QR check in 1 hour for CampaignData {new_data.id}")
 
     return new_data
 
@@ -331,15 +607,39 @@ def get_campaign_dashboard(db: Session = Depends(get_db)):
     return campaigns
 
 
-@app.get("/campaign-data/{campaign_data_id}", response_model=schemas.CampaignDataRead)
-def get_campaign_data(campaign_data_id: int, db: Session = Depends(get_db)):
-    campaign_data = (
-        db.query(CampaignData).filter(CampaignData.id == campaign_data_id).first()
+@app.get("/campaign-data/{campaign_id}", response_model=List[schemas.CampaignDataRead])
+def get_campaign_data_by_campaign(campaign_id: int, db: Session = Depends(get_db)):
+    campaign_data_list = (
+        db.query(CampaignData).filter(CampaignData.campaign_id == campaign_id).all()
     )
-    if not campaign_data:
+    if not campaign_data_list:
+        raise HTTPException(status_code=404, detail="CampaignData not found")
+    return campaign_data_list
+
+
+@app.get(
+    "/campaign-data-with-name/{campaign_id}",
+    response_model=List[schemas.CampaignDataWithCampaignName],
+)
+def get_campaign_data_with_name(campaign_id: int, db: Session = Depends(get_db)):
+    # Query CampaignData joined with Campaign to get campaign_name
+    data = (
+        db.query(CampaignData, Campaign.campaign_name.label("campaign_name"))
+        .join(Campaign, Campaign.id == CampaignData.campaign_id)
+        .filter(CampaignData.campaign_id == campaign_id)
+        .all()
+    )
+    if not data:
         raise HTTPException(status_code=404, detail="CampaignData not found")
 
-    return campaign_data
+    # Convert to list of dicts for response
+    result = []
+    for cd, cname in data:
+        row = cd.__dict__.copy()  # all CampaignData columns
+        row.pop("_sa_instance_state", None)  # remove internal SQLAlchemy attr
+        row["campaign_name"] = cname  # add campaign_name
+        result.append(row)
+    return result
 
 
 @app.get("/dashboard/all")
@@ -380,14 +680,12 @@ def get_dashboard_all(db: Session = Depends(get_db)):
         "latest_campaign": {
             "id": latest_campaign.id,
             "campaign_name": latest_campaign.campaign_name,
-            "mailer_name": latest_campaign.mailer_name,
         },
         "total_recipients": total_recipients,
         "all_campaigns": [
             {
                 "id": campaign.id,
                 "campaign_name": campaign.campaign_name,
-                "mailer_name": campaign.mailer_name,
             }
             for campaign in campaigns
         ],
@@ -396,7 +694,7 @@ def get_dashboard_all(db: Session = Depends(get_db)):
                 "id": d.id,
                 "campaign_id": d.campaign_id,
                 "campaign_name": d.campaign.campaign_name if d.campaign else None,
-                "mailer_name": d.campaign.mailer_name if d.campaign else None,
+                "mailer_name": d.mailer_name,
                 "address_list": d.address_list,
                 "schedule_time": d.schedule_time,
                 "status": d.status,
@@ -428,7 +726,154 @@ def update_campaign_data(
         campaign_data.status = payload.status
     if payload.schedule_time is not None:
         campaign_data.schedule_time = payload.schedule_time
+    if payload.send_date is not None:
+        campaign_data.send_date = payload.send_date
 
     db.commit()
     db.refresh(campaign_data)
+
+    #  Case 1: If schedule_time is provided → schedule sending job
+    if payload.schedule_time is not None:
+        scheduler.add_job(
+            send_letter_job,
+            trigger=DateTrigger(run_date=payload.schedule_time),
+            args=[campaign_data.id],
+            id=f"campaign_data_{campaign_data.id}",
+            replace_existing=True,
+        )
+        print(f" Scheduled CampaignData {campaign_data.id} at {payload.schedule_time}")
+
+    # Case 2: If no schedule_time but status is 'sent' → schedule QR tracking job
+    elif payload.status == "sent":
+        track_time = datetime.utcnow() + timedelta(hours=24)
+        scheduler.add_job(
+            qr_tracking_job,
+            trigger=DateTrigger(run_date=track_time),
+            args=[campaign_data.id],
+            id=f"qr_track_{campaign_data.id}",
+            replace_existing=True,
+        )
+        print(
+            f"📅 CampaignData {campaign_data.id} marked as SENT — scheduled QR tracking in 24h"
+        )
+
+    else:
+        print(
+            f"⏩ CampaignData {campaign_data.id} has no schedule and not sent yet — waiting."
+        )
+
     return campaign_data
+
+
+@app.post("/mailer-one-off", response_model=schemas.MailerOneOffResponse)
+def create_mailer_one_off(
+    payload: schemas.MailerOneOffCreate, db: Session = Depends(get_db)
+):
+    try:
+        mailer = MailerOneOff(
+            mailer_name=payload.mailer_name,
+            template_id=payload.template_id,
+            address_list=payload.address_list,
+            schedule_time=payload.schedule_time,
+            send_date=payload.send_date,
+            status=payload.status or "pending",
+        )
+        db.add(mailer)
+        db.commit()
+        db.refresh(mailer)
+
+        # ✅ Schedule job if schedule_time is provided
+        if payload.schedule_time:
+            scheduler.add_job(
+                send_oneoff_job,
+                trigger=DateTrigger(run_date=payload.schedule_time),
+                args=[mailer.id],
+                id=f"oneoff_{mailer.id}",
+                replace_existing=True,
+            )
+            print(f"✅ Scheduled one-off mailer {mailer.id} at {payload.schedule_time}")
+        else:
+            print(
+                f"⏩ Mailer {mailer.id} has no schedule_time, sending immediately or waiting."
+            )
+
+        return mailer
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to save mailer: {str(e)}")
+
+
+@app.get("/mailer-one-off/count")
+def get_one_off_mailers_count(db: Session = Depends(get_db)):
+    try:
+        count = db.query(MailerOneOff).count()
+        return {"total_one_off_mailers": count}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch one-off mailers count: {str(e)}"
+        )
+
+
+@app.get("/mailer-one-off/all", response_model=list[schemas.MailerOneOffResponse])
+def get_all_one_off_mailers(db: Session = Depends(get_db)):
+    try:
+        mailers = db.query(MailerOneOff).all()
+        return mailers
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch one-off mailers: {str(e)}"
+        )
+
+
+@app.get("/mailer-one-off/{mailer_id}", response_model=schemas.MailerOneOffResponse)
+def get_mailer_one_off(mailer_id: int, db: Session = Depends(get_db)):
+    try:
+        mailer = db.query(MailerOneOff).filter(MailerOneOff.id == mailer_id).first()
+        if not mailer:
+            raise HTTPException(status_code=404, detail="Mailer not found")
+        return mailer
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch mailer: {str(e)}")
+
+
+@app.put("/mailer-one-off/{mailer_id}", response_model=schemas.MailerOneOffResponse)
+def update_mailer_one_off(
+    mailer_id: int, payload: schemas.MailerOneOffUpdate, db: Session = Depends(get_db)
+):
+    try:
+        mailer = db.query(MailerOneOff).filter(MailerOneOff.id == mailer_id).first()
+        if not mailer:
+            raise HTTPException(status_code=404, detail="Mailer not found")
+
+        # --- Update only provided fields ---
+        if payload.template_id is not None:
+            mailer.template_id = payload.template_id
+        if payload.schedule_time is not None:
+            mailer.schedule_time = payload.schedule_time
+        if payload.status is not None:
+            mailer.status = payload.status
+        if payload.send_date is not None:
+            mailer.send_date = payload.send_date
+
+        db.commit()
+        db.refresh(mailer)
+
+        # --- ✅ Schedule the job if schedule_time is provided ---
+        if payload.schedule_time is not None:
+            scheduler.add_job(
+                send_oneoff_job,
+                trigger=DateTrigger(run_date=payload.schedule_time),
+                args=[mailer.id],
+                id=f"oneoff_{mailer.id}",
+                replace_existing=True,
+            )
+            print(f"✅ One-off mailer {mailer.id} scheduled at {payload.schedule_time}")
+
+        return mailer
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update mailer: {str(e)}"
+        )

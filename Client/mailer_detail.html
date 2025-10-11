@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>One-Off Mailer Detail</title>
+    <link
+      class="taskbar-icon"
+      rel="icon"
+      type="image/png"
+      href="./assets/images/Untitled design - 2025-09-01T183547.741.png"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: #f8fafc;
+        color: #1e293b;
+      }
+
+      .top-nav {
+        background: white;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 1.25rem 2rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+      .top-nav-content {
+        max-width: 1600px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .mailer-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .mailer-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      .container {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 2rem;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 2rem;
+        align-items: start;
+      }
+
+      .main-content {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .mailer-detail-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+
+      .mailer-card-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .mailer-card-head h3 {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: #0f172a;
+      }
+
+      .mailer-meta {
+        font-size: 13px;
+        color: #64748b;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .status-pending {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .status-scheduled {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+      .status-sent {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      .info-item {
+        padding: 0.75rem;
+        background: #f8fafc;
+        border-radius: 8px;
+      }
+
+      .info-item strong {
+        display: block;
+        color: #64748b;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+        font-weight: 600;
+      }
+
+      .info-item span {
+        font-size: 14px;
+        color: #0f172a;
+        font-weight: 500;
+      }
+
+      .mailer-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        color: white;
+      }
+
+      .btn-primary:hover:not(:disabled) {
+        background:linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      }
+
+      .btn-secondary {
+        background: white;
+        color: #3b82f6;
+        border: 1px solid #3b82f6;
+      }
+
+      .btn-secondary:hover:not(:disabled) {
+        background: #eff6ff;
+      }
+
+      .btn-outline {
+        background: white;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+      }
+
+      .btn-outline:hover:not(:disabled) {
+        background: #f8fafc;
+      }
+
+      .template-section {
+        display: none;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+      }
+
+      .template-section.visible {
+        display: block;
+      }
+
+      .section-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 1rem;
+      }
+
+      .templates-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+      }
+
+      .template-card {
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        overflow: hidden;
+        cursor: pointer;
+        background: white;
+        transition: all 0.2s;
+        position: relative;
+      }
+
+      .template-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .template-card.selected {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      .template-card.selected::after {
+        content: "✓";
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        width: 28px;
+        height: 28px;
+        background:linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 16px;
+      }
+
+      .template-preview {
+        height: 180px;
+        overflow: hidden;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 1rem;
+        font-size: 11px;
+      }
+
+      .full-preview-btn {
+        width: 100%;
+        padding: 8px;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .full-preview-btn:hover {
+        background: #e2e8f0;
+      }
+
+      .show-all-btn {
+        grid-column: 1 / -1;
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+
+      .show-all-btn:hover {
+        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      }
+
+      .recipients-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+      }
+
+      .filter-bar {
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .filter-bar input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+
+      .filter-bar label {
+        cursor: pointer;
+        user-select: none;
+        font-size: 14px;
+        color: #475569;
+      }
+
+      .recipient-item {
+        padding: 0.75rem;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 13px;
+      }
+
+      .recipient-item:last-child {
+        border-bottom: none;
+      }
+
+      .recipient-name {
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 2px;
+      }
+
+      .recipient-address {
+        color: #64748b;
+        font-size: 12px;
+      }
+
+      .recipient-status {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        margin-top: 4px;
+      }
+
+      .recipient-status.scanned {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      .recipient-status.not-scanned {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .preview-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+
+      .preview-content {
+        background: white;
+        border-radius: 16px;
+        max-width: 800px;
+        max-height: 90vh;
+        overflow-y: auto;
+        position: relative;
+        padding: 2rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      }
+
+      .preview-content h2 {
+        font-size: 20px;
+        color: #0f172a;
+        margin-bottom: 1.5rem;
+      }
+
+      .close-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        width: 40px;
+        height: 40px;
+        border: none;
+        background: #ef4444;
+        color: white;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+
+      .close-btn:hover {
+        background: #dc2626;
+        transform: scale(1.1);
+      }
+
+      #scheduleModal .preview-content {
+        max-width: 400px;
+      }
+
+      #scheduleModal label {
+        display: block;
+        text-align: left;
+        margin: 0.75rem 0 0.25rem;
+        font-weight: 600;
+        font-size: 14px;
+        color: #374151;
+      }
+
+      #scheduleModal input[type="date"],
+      #scheduleModal input[type="time"] {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 1rem;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+
+      #scheduleModal input[type="date"]:focus,
+      #scheduleModal input[type="time"]:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      #scheduleModal .btn {
+        width: 100%;
+        margin-top: 1rem;
+      }
+
+      /* Template Preview Modal Styles */
+      .template-preview-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+      .template-preview-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        cursor: pointer;
+      }
+      .template-preview-content {
+        position: relative;
+        background: white;
+        border-radius: 16px;
+        max-width: 900px;
+        width: 100%;
+        max-height: 90vh;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .template-preview-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f8fafc;
+      }
+      .template-preview-header h3 {
+        font-size: 20px;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 1rem;
+        }
+        .mailer-card-head {
+          flex-direction: column;
+        }
+        .templates-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f5f9;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="top-nav">
+      <div class="top-nav-content">
+        <div>
+          <div class="mailer-label">One-Off Mailer</div>
+          <div class="mailer-title" id="mailerName">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="main-content">
+        <div class="mailer-detail-card">
+          <div class="mailer-card-head">
+            <div>
+              <h3 id="mailerNameCard">Loading...</h3>
+              <div class="mailer-meta">One-Off Mailer</div>
+            </div>
+            <div style="text-align: right">
+              <div class="status-badge status-pending" id="mailerStatus">
+                Loading...
+              </div>
+            </div>
+          </div>
+
+          <div id="mailerInfoContent" class="info-grid"></div>
+          <div id="actionButtons" class="mailer-actions"></div>
+        </div>
+
+        <div class="template-section" id="templateSection">
+          <div class="section-title">📝 Select Template</div>
+          <div class="templates-grid" id="templatesGrid"></div>
+        </div>
+
+        <div class="recipients-card">
+          <div class="section-title">Recipients</div>
+          <div class="filter-bar" id="filterBar" style="display: none;">
+            <input type="checkbox" id="filterScanned" />
+            <label for="filterScanned">Show only scanned letters</label>
+          </div>
+          <div id="recipientsTable"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="previewOverlay" class="preview-overlay">
+      <div class="preview-content">
+        <button class="close-btn" onclick="closePreview()">✖</button>
+        <div id="previewBody"></div>
+      </div>
+    </div>
+
+    <div id="scheduleModal" class="preview-overlay">
+      <div class="preview-content">
+        <button class="close-btn" onclick="closeScheduleModal()">✖</button>
+        <h2>📅 Schedule Mailer</h2>
+
+        <form onsubmit="confirmSchedule(); return false;">
+          <label for="scheduleDate">Select Date</label>
+          <input type="date" id="scheduleDate" required />
+
+          <label for="scheduleTime">Select Time</label>
+          <input type="time" id="scheduleTime" required />
+
+          <button type="submit" class="btn btn-primary">
+            ✅ Confirm Schedule
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+let recipients = [];
+let currentMailer = null;
+let currentSchedulingTemplate = null;
+window.currentEditingTemplateId = null;
+
+function getQueryParam(key) {
+  const params = new URLSearchParams(window.location.search);
+  return params.get(key);
+}
+
+function openScheduleModal(templateId) {
+  window.currentEditingTemplateId = templateId;
+  currentSchedulingTemplate = templateId;
+  document.getElementById("scheduleDate").value = "";
+  document.getElementById("scheduleTime").value = "";
+  document.getElementById("scheduleModal").style.display = "flex";
+}
+
+function closeScheduleModal() {
+  document.getElementById("scheduleModal").style.display = "none";
+  currentSchedulingTemplate = null;
+}
+
+async function confirmSchedule() {
+  if (!window.currentEditingTemplateId) {
+    alert("Please select a template first.");
+    return;
+  }
+
+  const date = document.getElementById("scheduleDate").value;
+  const time = document.getElementById("scheduleTime").value;
+  if (!date || !time) return alert("Please select both date and time.");
+
+  const scheduleDateTime = `${date}T${time}:00`;
+  const mailerId = getQueryParam("id");
+
+  try {
+    const payload = {
+      template_id: window.currentEditingTemplateId,
+      schedule_time: scheduleDateTime,
+      status: "scheduled",
+    };
+
+    const res = await fetch(
+      `http://127.0.0.1:8000/mailer-one-off/${mailerId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to schedule mailer");
+
+    await res.json();
+
+    alert("Mailer scheduled successfully!");
+    closeScheduleModal();
+    location.reload();
+  } catch (err) {
+    console.error(err);
+    alert("Error scheduling mailer: " + err.message);
+  }
+}
+
+async function openTemplatePreview(templateId) {
+  try {
+    const res = await fetch(`http://127.0.0.1:8000/templates/${templateId}`);
+    if (!res.ok) {
+      throw new Error("Failed to fetch template");
+    }
+    const template = await res.json();
+
+    const todayObj = new Date();
+    const formattedDate = todayObj.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    const finalHtml = (template.html_content || "<p>No content available</p>").replace(/DATE/g, formattedDate);
+
+    const previewModal = document.createElement("div");
+    previewModal.className = "template-preview-modal";
+    previewModal.innerHTML = `
+      <div class="template-preview-overlay" onclick="this.parentElement.remove()"></div>
+      <div class="template-preview-content">
+        <div class="template-preview-header">
+          <h3>Template Preview</h3>
+          <button class="btn btn-outline" onclick="this.closest('.template-preview-modal').remove()">Close</button>
+        </div>
+        <iframe srcdoc="${finalHtml.replace(/"/g, '&quot;')}"
+                style="width:100%;height:80vh;border:none;margin-top:1rem;"></iframe>
+      </div>
+    `;
+    document.body.appendChild(previewModal);
+  } catch (err) {
+    console.error("openTemplatePreview error:", err);
+    alert("Could not load template preview. Please try again.");
+  }
+}
+
+async function getToken() {
+  const payload = {
+    apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
+    apiSecret: "NTEyYWY5ZDQtYjJhMy00OWJmLWJkZTEtZjVjMmZjMDkwYTNl",
+    childRefNbr: "myAccountReference",
+  };
+  const res = await fetch("https://v3.pcmintegrations.com/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Auth failed");
+  const data = await res.json();
+  return data.token;
+}
+
+async function orderDesign(templateId, button) {
+  const originalText = button.textContent;
+  button.textContent = "Processing...";
+  button.disabled = true;
+
+  try {
+    const mailerId = getQueryParam("id");
+    if (!mailerId) throw new Error("Mailer ID not found");
+
+    const todayObj = new Date();
+    const todayISO = todayObj.toISOString().split("T")[0];
+    const formattedDate = todayObj.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    const tplRes = await fetch(`http://127.0.0.1:8000/templates/${templateId}`);
+    if (!tplRes.ok) throw new Error("Failed to load template content");
+    const tpl = await tplRes.json();
+    const finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
+
+    const token = await getToken();
+
+    const pcmPayload = {
+      extRefNbr: "12345",
+      designID: 0,
+      mailClass: "FirstClass",
+      mailDate: todayISO,
+      color: true,
+      printOnBothSides: true,
+      insertAddressingPage: true,
+      envelope: {
+        font: "Bradley Hand",
+        type: "fullWindow",
+        fontColor: "Black",
+      },
+      recipients: recipients,
+      letter: finalHtml,
+    };
+
+    const res = await fetch("https://v3.pcmintegrations.com/order/letter", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(pcmPayload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "PCM API request failed");
+
+    alert("✅ Letter sent successfully!");
+
+    const updatePayload = {
+      status: "sent",
+      send_date: new Date().toISOString(),
+      template_id: templateId,
+    };
+
+    const updateRes = await fetch(`http://127.0.0.1:8000/mailer-one-off/${mailerId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatePayload),
+    });
+
+    if (!updateRes.ok) {
+      const errData = await updateRes.json().catch(() => ({}));
+      throw new Error(errData.detail || "Failed to update mailer table");
+    }
+
+    const updatedMailer = await updateRes.json();
+    currentMailer = { ...updatedMailer };
+    renderMailerInfo(currentMailer);
+
+    return true;
+
+  } catch (err) {
+    console.error("Order Design Error:", err);
+    alert("Error sending letter: " + err.message);
+    return false;
+  } finally {
+    button.textContent = originalText;
+    button.disabled = false;
+  }
+}
+
+function attachMailerActions(mailer) {
+  const actions = document.getElementById("actionButtons");
+  actions.innerHTML = "";
+
+  const schedBtn = document.createElement("button");
+  schedBtn.className = "btn btn-secondary";
+  schedBtn.innerHTML = "📅 Schedule";
+  schedBtn.onclick = () => {
+    if (!window.currentEditingTemplateId) {
+      alert("Please select a template before scheduling.");
+      return;
+    }
+    openScheduleModal(window.currentEditingTemplateId);
+  };
+  actions.appendChild(schedBtn);
+
+  const sendBtn = document.createElement("button");
+  sendBtn.className = "btn btn-primary";
+  sendBtn.innerHTML = "✉️ Send Letter";
+  sendBtn.onclick = (e) => {
+    if (!window.currentEditingTemplateId) {
+      alert("Please select a template before sending.");
+      return;
+    }
+    orderDesign(window.currentEditingTemplateId, sendBtn);
+  };
+  actions.appendChild(sendBtn);
+}
+
+function formatSchedule(dateString) {
+  if (!dateString) return "No schedule set";
+  const d = new Date(dateString);
+  if (isNaN(d)) return "No schedule set";
+  return (
+    d.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }) +
+    " at " +
+    d.toLocaleTimeString("en-GB", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })
+  );
+}
+
+function renderMailerInfo(mailer) {
+  currentMailer = mailer;
+
+  document.getElementById("mailerName").textContent = mailer.mailer_name;
+  document.getElementById("mailerNameCard").textContent = mailer.mailer_name;
+
+  const statusEl = document.getElementById("mailerStatus");
+
+  if (mailer.status === "sent") {
+    statusEl.textContent = "Sent";
+    statusEl.className = "status-badge status-sent";
+    handleSentMailer(mailer);
+    return;
+  }
+
+  if (mailer.status === "scheduled") {
+    statusEl.textContent = "Scheduled";
+    statusEl.className = "status-badge status-scheduled";
+    handleScheduledMailer(mailer);
+    return;
+  }
+
+  statusEl.textContent = "Pending";
+  statusEl.className = "status-badge status-pending";
+  handlePendingMailer(mailer);
+}
+
+function handleScheduledMailer(mailer) {
+  const infoContent = document.getElementById("mailerInfoContent");
+  if (!infoContent) return;
+
+  infoContent.innerHTML = "";
+
+  const sendDateItem = document.createElement("div");
+  sendDateItem.className = "info-item";
+  sendDateItem.innerHTML = `
+    <strong>Send Date & Time</strong>
+    <span>${formatSchedule(mailer.schedule_time)}</span>
+  `;
+  infoContent.appendChild(sendDateItem);
+
+  const expectedDelivery = new Date(mailer.schedule_time);
+  expectedDelivery.setDate(expectedDelivery.getDate() + 7);
+
+  const deliveryItem = document.createElement("div");
+  deliveryItem.className = "info-item";
+  deliveryItem.innerHTML = `
+    <strong>Expected Delivery</strong>
+    <span>${expectedDelivery.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    })}</span>
+  `;
+  infoContent.appendChild(deliveryItem);
+
+  const recipientCount = JSON.parse(mailer.address_list || "[]").length;
+  const totalCost = (recipientCount * 1.31).toFixed(2);
+
+  const costItem = document.createElement("div");
+  costItem.className = "info-item";
+  costItem.innerHTML = `
+    <strong>Expected Cost</strong>
+    <span>$${totalCost}</span>
+  `;
+  infoContent.appendChild(costItem);
+
+  const actions = document.getElementById("actionButtons");
+  actions.innerHTML = "";
+
+  if (mailer.template_id) {
+    const viewTemplateBtn = document.createElement("button");
+    viewTemplateBtn.className = "btn btn-outline";
+    viewTemplateBtn.innerHTML = "View Selected Template";
+    viewTemplateBtn.onclick = () => openTemplatePreview(mailer.template_id);
+    actions.appendChild(viewTemplateBtn);
+  }
+
+  document.getElementById("templateSection").classList.remove("visible");
+  document.getElementById("filterBar").style.display = "none";
+}
+
+function handlePendingMailer(mailer) {
+  document.getElementById("templateSection").classList.add("visible");
+  loadTemplates();
+
+  const infoContent = document.getElementById("mailerInfoContent");
+  if (!infoContent) return;
+
+  infoContent.innerHTML = "";
+
+  const recipientCount = JSON.parse(mailer.address_list || "[]").length;
+  const totalCost = (recipientCount * 1.31).toFixed(2);
+
+  const costItem = document.createElement("div");
+  costItem.className = "info-item";
+  costItem.innerHTML = `
+    <strong>Estimated Cost</strong>
+    <span>${totalCost}</span>
+  `;
+  infoContent.appendChild(costItem);
+
+  attachMailerActions(mailer);
+  
+  document.getElementById("filterBar").style.display = "none";
+}
+
+async function fetchScannedRecipients(qrCodeId) {
+  if (!qrCodeId) return [];
+  
+  const token = await getToken();
+  if (!token) return [];
+
+  try {
+    const res = await fetch(`https://v3.pcmintegrations.com/qr-code/${qrCodeId}/tracking`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    if (!data.results || !Array.isArray(data.results)) return [];
+
+    return data.results.map(item => ({
+      firstName: item.recipient.firstName,
+      lastName: item.recipient.lastName,
+      address: item.recipient.address,
+      city: item.recipient.city,
+      state: item.recipient.state,
+      zipcode: item.recipient.zipCode,
+    }));
+  } catch (err) {
+    console.error("Error fetching scanned recipients:", err);
+    return [];
+  }
+}
+
+function handleSentMailer(mailer) {
+  const infoContent = document.getElementById("mailerInfoContent");
+  if (!infoContent) return;
+
+  infoContent.innerHTML = "";
+
+  const sendDateItem = document.createElement("div");
+  sendDateItem.className = "info-item";
+  sendDateItem.innerHTML = `
+    <strong>Sent Date & Time</strong>
+    <span>${formatSchedule(mailer.send_date)}</span>
+  `;
+  infoContent.appendChild(sendDateItem);
+
+  const expectedDelivery = new Date(mailer.send_date);
+  expectedDelivery.setDate(expectedDelivery.getDate() + 7);
+
+  const deliveryItem = document.createElement("div");
+  deliveryItem.className = "info-item";
+  deliveryItem.innerHTML = `
+    <strong>Expected Delivery</strong>
+    <span>${expectedDelivery.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    })}</span>
+  `;
+  infoContent.appendChild(deliveryItem);
+
+  const recipientCount = JSON.parse(mailer.address_list || "[]").length;
+  const totalCost = (recipientCount * 1.31).toFixed(2);
+
+  const costItem = document.createElement("div");
+  costItem.className = "info-item";
+  costItem.innerHTML = `
+    <strong>Expected Cost</strong>
+    <span>$${totalCost}</span>
+  `;
+  infoContent.appendChild(costItem);
+
+  const actions = document.getElementById("actionButtons");
+  actions.innerHTML = "";
+
+  if (mailer.template_id) {
+    const viewTemplateBtn = document.createElement("button");
+    viewTemplateBtn.className = "btn btn-outline";
+    viewTemplateBtn.innerHTML = "View Selected Template";
+    viewTemplateBtn.onclick = () => openTemplatePreview(mailer.template_id);
+    actions.appendChild(viewTemplateBtn);
+  }
+
+  document.getElementById("templateSection").classList.remove("visible");
+  document.getElementById("filterBar").style.display = "flex";
+}
+
+async function loadTemplates(selectedTemplateId = null) {
+  const templatesGrid = document.getElementById("templatesGrid");
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/templates");
+    const templates = await response.json();
+
+    templatesGrid.innerHTML = "";
+
+    function renderTemplateCard(tpl) {
+      const div = document.createElement("div");
+      div.classList.add("template-card");
+      div.dataset.templateId = tpl.id;
+
+      if (selectedTemplateId && tpl.id === selectedTemplateId) {
+        div.classList.add("selected");
+        window.currentEditingTemplateId = tpl.id;
+      }
+
+      div.innerHTML = `
+        <div class="template-preview">${tpl.html_content}</div>
+        <button class="full-preview-btn" onclick="openFullPreview('${encodeURIComponent(
+          tpl.html_content
+        )}', event)">
+          Full Preview
+        </button>
+      `;
+
+      div.addEventListener("click", (e) => {
+        if (e.target.classList.contains("full-preview-btn")) return;
+
+        document
+          .querySelectorAll(".template-card")
+          .forEach((el) => el.classList.remove("selected"));
+        div.classList.add("selected");
+        window.currentEditingTemplateId = tpl.id;
+      });
+
+      return div;
+    }
+
+    templates.slice(0, 6).forEach((tpl) => {
+      templatesGrid.appendChild(renderTemplateCard(tpl));
+    });
+
+    if (templates.length > 6) {
+      const showAllBtn = document.createElement("button");
+      showAllBtn.textContent = "Show All Templates";
+      showAllBtn.classList.add("show-all-btn");
+
+      showAllBtn.addEventListener("click", () => {
+        showAllBtn.remove();
+        templates.slice(6).forEach((tpl) => {
+          templatesGrid.appendChild(renderTemplateCard(tpl));
+        });
+      });
+
+      templatesGrid.appendChild(showAllBtn);
+    }
+  } catch (err) {
+    console.error("Error loading templates:", err);
+    templatesGrid.innerHTML = "<p>Failed to load templates.</p>";
+  }
+}
+
+function openFullPreview(encodedHtml, event) {
+  event.stopPropagation();
+  const html = decodeURIComponent(encodedHtml);
+  const overlay = document.getElementById("previewOverlay");
+  const body = document.getElementById("previewBody");
+  body.innerHTML = html;
+  overlay.style.display = "flex";
+}
+
+function closePreview() {
+  document.getElementById("previewOverlay").style.display = "none";
+  document.getElementById("previewBody").innerHTML = "";
+}
+
+async function getQrCodeIdFromTemplate(templateId) {
+  if (!templateId) return null;
+  try {
+    const res = await fetch(`http://127.0.0.1:8000/templates/${templateId}`);
+    if (!res.ok) throw new Error("Failed to fetch template for QR code");
+    const template = await res.json();
+    return template.qr_code_id || null;
+  } catch (err) {
+    console.error("Error fetching QR code ID:", err);
+    return null;
+  }
+}
+
+async function renderRecipients(list, templateId = null, mailerStatus = "pending") {
+  let qrCodeId = null;
+  
+  if (mailerStatus === "sent" && templateId) {
+    qrCodeId = await getQrCodeIdFromTemplate(templateId);
+
+    if (qrCodeId) {
+      try {
+        const scannedRecipients = await fetchScannedRecipients(qrCodeId);
+
+        list = list.map((r) => {
+          const matched = scannedRecipients.find(
+            (s) =>
+              s.firstName === r.firstName &&
+              s.lastName === r.lastName &&
+              s.address === r.address
+          );
+          return { ...r, scanned: !!matched };
+        });
+
+        recipients = list;
+      } catch (err) {
+        console.error("Error updating scanned status:", err);
+      }
+    }
+  }
+
+  const tableDiv = document.getElementById("recipientsTable");
+  if (!list.length) {
+    tableDiv.innerHTML = "<p style='text-align:center;color:#64748b;padding:1rem;'>No recipients available.</p>";
+    return;
+  }
+
+  const showScannedStatus = mailerStatus === "sent";
+
+  tableDiv.innerHTML = list
+    .map(
+      (r) => `
+    <div class="recipient-item">
+      <div class="recipient-name">${r.firstName || ""} ${r.lastName || ""}</div>
+      <div class="recipient-address">${r.address || ""}, ${r.city || ""} ${r.state || ""} ${r.zipcode || ""}</div>
+      ${
+        showScannedStatus && r.scanned !== undefined
+          ? `<span class="recipient-status ${
+              r.scanned ? "scanned" : "not-scanned"
+            }">${r.scanned ? "✓ Scanned" : "✗ Not Scanned"}</span>`
+          : ""
+      }
+    </div>
+  `
+    )
+    .join("");
+}
+
+async function updateRecipients() {
+  if (!currentMailer) return;
+
+  const filter = document.getElementById("filterScanned").checked;
+  const originalList = JSON.parse(currentMailer.address_list || "[]");
+
+  await renderRecipients(
+    filter 
+      ? originalList.filter((r) => r.scanned) 
+      : originalList, 
+    currentMailer.template_id,
+    currentMailer.status || "pending"
+  );
+}
+
+async function loadMailerDetail() {
+  const mailerId = getQueryParam("id");
+  if (!mailerId) {
+    alert("No mailer ID provided");
+    return;
+  }
+
+  try {
+    const res = await fetch(`http://127.0.0.1:8000/mailer-one-off/${mailerId}`);
+    if (!res.ok) throw new Error("Failed to fetch mailer details");
+
+    const mailer = await res.json();
+    currentMailer = mailer;
+    renderMailerInfo(mailer);
+
+    recipients = JSON.parse(mailer.address_list || "[]");
+    await updateRecipients();
+  } catch (err) {
+    console.error(err);
+    alert("Could not load mailer details");
+  }
+}
+
+document
+  .getElementById("filterScanned")
+  .addEventListener("change", updateRecipients);
+window.onload = loadMailerDetail;
+    </script>
+  </body>
+</html>

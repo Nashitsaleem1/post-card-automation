@@ -53,7 +53,7 @@ async function orderDesign(templateId, button, campaignId) {
     });
 
     // Fetch template HTML by id (don't assume it's in the DOM)
-    const tplRes = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`);
+    const tplRes = await fetch(`http://127.0.0.1:8000/templates/${templateId}`);
     if (!tplRes.ok) throw new Error("Failed to load template content");
     const tpl = await tplRes.json();
     let finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
@@ -90,14 +90,15 @@ async function orderDesign(templateId, button, campaignId) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || "API request failed");
 
+    // ✅ Always create a new campaign_data row (no update)
     const newDataPayload = {
-      campaign_id: campaignId,
+      campaign_id: campaignId, // ✅ use passed campaign
       template_id: templateId,
       address_list: JSON.stringify(recipients),
       status: "sent",
       schedule_time: null,
     };
-    const resData = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
+    const resData = await fetch("http://127.0.0.1:8000/campaign-data", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newDataPayload),
@@ -143,7 +144,7 @@ async function confirmCampaignSchedule() {
   try {
     // PUT request to update campaign_data
     const res = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${currentCampaignDataIdForSchedule}`,
+      `http://127.0.0.1:8000/campaign-data/${currentCampaignDataIdForSchedule}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -325,7 +326,7 @@ async function openCampaignDetailModal(campaignData) {
       <div style="overflow-x:auto;">
         <table style="width:100%; border-collapse:separate; border-spacing:0 12px; font-size:14px;">
           <thead>
-            <tr style="color:white; text-align:left;">
+            <tr style="background:black; color:white; text-align:left;">
               <th style="padding:10px;">Name</th>
               <th style="padding:10px;">Address</th>
               <th style="padding:10px;">City</th>
@@ -455,180 +456,238 @@ async function openCampaignDetailModal(campaignData) {
 // ----------------------
 // Dashboard Loader
 // ----------------------
-
 async function loadDashboard() {
   try {
-    const dashboardEl = document.querySelector(".dashboard");
+    const res = await fetch("http://127.0.0.1:8000/dashboard/all");
+    console.log(res);
 
-    // ---- Fetch Campaign Data ----
-    const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/dashboard/all");
-    if (!res.ok && res.status !== 404)
-      throw new Error("Failed to load campaigns");
-    const data = res.status === 404 ? { data: [] } : await res.json();
+    if (res.status === 404) {
+      document.getElementById("totalCampaigns").textContent = "0";
+      document.getElementById("latestCampaign").textContent =
+        "No campaign created yet!";
+      document.getElementById("totalRecipients").textContent = "0";
 
-    // ---- Fetch One-Off Mailers ----
-    const oneOffRes = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/all");
-    let oneOffData = { data: [] };
-    if (oneOffRes.ok) {
-      const json = await oneOffRes.json();
-      oneOffData.data = Array.isArray(json) ? json : json.data || [];
-      oneOffData.total_one_off_mailers =
-        json.total_one_off_mailers || oneOffData.data.length;
+      const dashboardEl = document.querySelector(".dashboard");
+      const existingTable = dashboardEl.querySelector("#campaignDataTable");
+      if (existingTable) existingTable.remove();
+
+      const detailsDiv = document.createElement("div");
+      detailsDiv.id = "campaignDataTable";
+      detailsDiv.innerHTML = `<p style="margin-top: 20px; font-size:16px; color:#555;">
+        No campaign data to show.
+      </p>`;
+      dashboardEl.appendChild(detailsDiv);
+      return;
     }
 
-    // ---- Summary Counts ----
-    document.getElementById("totalCampaigns").textContent =
-      data.total_campaigns || 0;
-    document.getElementById("totalOneOffMailers").textContent =
-      oneOffData.total_one_off_mailers || 0;
+    if (!res.ok) throw new Error("Failed to load dashboard");
 
-    // ---- Remove Old Table ----
+    const data = await res.json();
+    console.log(data);
+    // --- Fill summary cards ---
+    const totalCampaigns = data.campaign ? 1 : 0;
+    // --- Fill summary cards ---
+    document.getElementById("totalCampaigns").textContent =
+      data.total_campaigns;
+
+    document.getElementById("latestCampaign").textContent = data.latest_campaign
+      ? `${data.latest_campaign.campaign_name} (Mailer: ${data.latest_campaign.mailer_name})`
+      : "No campaigns";
+
+    document.getElementById("totalRecipients").textContent =
+      data.total_recipients;
+
+    // --- Show campaign data table ---
+    const dashboardEl = document.querySelector(".dashboard");
     const existingTable = dashboardEl.querySelector("#campaignDataTable");
     if (existingTable) existingTable.remove();
 
     const detailsDiv = document.createElement("div");
     detailsDiv.id = "campaignDataTable";
 
-    // ---- Deduplicate Campaigns ----
-    let uniqueCampaigns = [];
-    let seenCampaignIds = new Set();
-    if (data.data) {
-      for (let d of data.data) {
-        if (!seenCampaignIds.has(d.campaign_id)) {
-          seenCampaignIds.add(d.campaign_id);
-          uniqueCampaigns.push(d);
-        }
-      }
-    }
-
-    // ---- Combine all items ----
-    const combined = [
-      ...uniqueCampaigns.map((d) => ({
-        category: "Campaign",
-        id: d.campaign_id,
-        name: d.campaign_name,
-        recipientsList: safeParseRecipients(d.address_list),
-        recipients: safeParseRecipients(d.address_list).length,
-        type: "campaign",
-      })),
-      ...oneOffData.data.map((d) => ({
-        category: "One-Off Mailer",
-        id: d.id,
-        name: d.mailer_name,
-        recipientsList: safeParseRecipients(d.address_list || "[]"),
-        recipients: safeParseRecipients(d.address_list || "[]").length,
-        type: "oneoff",
-      })),
-    ];
-
-    // ---- Render Table ----
-    if (!combined.length) {
-      detailsDiv.innerHTML = `<p style="margin-top:20px; font-size:16px; color:#555;">No data to show.</p>`;
+    if (!data.data || !data.data.length) {
+      detailsDiv.innerHTML = `<p style="margin-top: 20px; font-size:16px; color:#555;">
+        No campaign data to show.
+      </p>`;
     } else {
       detailsDiv.innerHTML = `
-<table style="width:100%; border-collapse: separate; border-spacing: 0 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden;">
+<table style="
+  width:100%; 
+  border-collapse: separate; 
+  border-spacing: 0 16px; 
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+  border-radius: 8px; 
+  overflow: hidden;
+">
   <thead style="transform: translateY(-16px);">
-    <tr style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white;">
-      <th style="padding:18px;">Type(Campaign/One-off Mailer)</th>
-      <th style="padding:18px;">Name(Campaign/Mailer)</th>
-      <th style="padding:18px;">Target Recipients/Audience</th>
-      <th style="padding:18px;">Action</th>
+    <tr style="background:#2b7fff; color:white;">
+      <th style="padding:18px; text-align:left; width:15%;">Campaign Name</th>
+      <th style="padding:18px; text-align:left; width:15%;">Mailer Name</th>
+      <th style="padding:18px; text-align:left; width:12%;">Recipients</th>
+      <th style="padding:18px; text-align:left; width:18%;">Template</th>
+      <th style="padding:18px; text-align:left; width:20%;">Schedule Time</th>
+      <th style="padding:18px; text-align:left; width:10%;">Status</th>
+      <th style="padding:18px; text-align:left; width:10%;">Action</th>
     </tr>
   </thead>
+<tbody>
+      ${data.data
+        .map((d, i) => {
+          const statusClass =
+            d.status?.toLowerCase() === "sent"
+              ? "background:#4caf50; color:white; padding:6px 10px; border-radius:20px; font-size:13px; min-width:90px; min-height:30px; display:inline-block; text-align:center;"
+              : d.status?.toLowerCase() === "scheduled"
+              ? "background:#17a2b8; color:white; padding:6px 10px; border-radius:20px; font-size:13px; min-width:90px; min-height:30px; display:inline-block; text-align:center;"
+              : "background:#6c757d; color:white; padding:6px 10px; border-radius:20px; font-size:13px; min-width:90px; min-height:30px; display:inline-block; text-align:center;";
 
-        <tbody>
-          ${combined
-            .map(
-              (d) => `
-              <tr style="background:white; box-shadow:0 1px 4px rgba(0,0,0,0.05); border-radius:6px;">
-                <td style="padding:12px;"><strong>${d.category}</strong></td>
-                <td style="padding:12px;">${d.name}</td>
-                <td style="padding:12px;">
-                  <button class="view-recipients-btn" 
-                          data-id="${d.id}" 
-                          data-type="${d.type}"
-                          style="padding:7px 12px; background:#10b981; color:white; border:none; border-radius:5px; cursor:pointer;">
-                    View Recipients | ${d.recipients}
-                  </button>
-                </td>
-                <td style="padding:12px;">
-                  <button class="view-details-btn" 
-                          data-id="${d.id}" 
-                          data-type="${d.type}"
-                          style="padding:7px 10px; background:#636185; color:white; border:none; border-radius:5px; cursor:pointer;">
-                    View Details
-                  </button>
-                </td>
-              </tr>
-            `
-            )
-            .join("")}
-        </tbody>
-      </table>`;
+          return `
+          <tr style="background:white; box-shadow:0 1px 4px rgba(0,0,0,0.05); border-radius:6px;">
+<td style="padding:12px; width:15%; padding-left:30px;">
+  <strong>${d.campaign_name}</strong>
+</td>
+
+            <td style="padding:12px; width:15%;">${d.mailer_name}</td>
+            <td style="padding:12px; text-align:left; width:12%; padding-left:40px">
+              ${safeParseRecipients(d.address_list).length}
+            </td>
+            <td style="padding:12px; width:18%;">
+              <button class="toggle-template-btn" data-index="${i}" style="padding:7px 10px; background:#1abc9c; color:white; border:none; border-radius:5px; cursor:pointer;">
+                View Template
+              </button>
+              <div id="template-preview-${i}" style="display:none; margin-top:8px; border:1px solid #ddd; padding:8px; border-radius:6px; background:#fafafa;">
+                ${d.template_preview || "N/A"}
+              </div>
+            </td>
+            <td style="padding:12px; width:20%;">
+              ${
+                d.schedule_time
+                  ? formatScheduleInfo(d.schedule_time)
+                  : `<button class="schedule-btn" data-id="${d.id}" style="background:grey;padding:7px 10px; color:white; border:none;border-radius:5px; cursor:pointer;" title="Set Schedule">
+                      Set Schedule
+                    </button>`
+              }
+            </td>
+            <td style="padding:12px; width:10%;"><span style="${statusClass}">${
+            d.status
+          }</span></td>
+            <td style="padding:12px; width:10%;">
+              <button class="view-details-btn" data-index="${i}" style="padding:7px 10px; background:#636185; color:white; border:none; border-radius:5px; cursor:pointer;">
+                View Details
+              </button>
+            </td>
+          </tr>`;
+        })
+        .join("")}
+    </tbody>
+  </table>
+`;
     }
 
     dashboardEl.appendChild(detailsDiv);
 
-    // ---- Recipients Modal Handler ----
-    document.querySelectorAll(".view-recipients-btn").forEach((btn) => {
-      btn.addEventListener("click", (event) => {
-        const id = parseInt(event.target.dataset.id);
-        const type = event.target.dataset.type;
-        const item = combined.find((d) => d.id === id && d.type === type);
-        if (item) showRecipientsModal(item.recipientsList);
+    // --- Template full preview logic ---
+    document.querySelectorAll(".toggle-template-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const idx = btn.dataset.index;
+        const previewHtml = window.allCampaigns[idx]?.template_preview || "N/A";
+        openFullPreview(encodeURIComponent(previewHtml), e);
       });
     });
 
-    // ---- Details Click ----
+    window.allCampaigns = Array.isArray(data.data) ? data.data : [];
+    // --- Modal Logic ---
+    const modal = document.getElementById("campaignModal2");
+    const closeBtn = modal.querySelector(".close");
+    const modalCampaignName = document.getElementById("modalCampaignName");
+    const modalMailerName = document.getElementById("modalMailerName");
+    const modalAddresses = document.getElementById("modalAddresses");
+    const filterCheckbox = document.getElementById("filterScanned");
+
+    let currentRecipients = [];
+
+    function renderAddresses() {
+      let recipientsToShow = currentRecipients;
+      if (filterCheckbox.checked) {
+        recipientsToShow = recipientsToShow.filter((r) => r.scanned);
+      }
+
+      if (!recipientsToShow.length) {
+        modalAddresses.innerHTML = "<p>No addresses available.</p>";
+        return;
+      }
+
+      modalAddresses.innerHTML = `
+  <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:separate; border-spacing:0 12px; font-size:14px;">
+      <thead>
+        <tr style="background:black; color:white; text-align:left;">
+          <th style="padding:10px;">Name</th>
+          <th style="padding:10px;">Address</th>
+          <th style="padding:10px;">City</th>
+          <th style="padding:10px;">State</th>
+          <th style="padding:10px;">Zip</th>
+          <th style="padding:10px;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${recipientsToShow
+          .map(
+            (r) => `
+            <tr style="background:#fafafa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); transition:background 0.2s;">
+              <td style="padding:10px; border-top-left-radius:8px; border-bottom-left-radius:8px;">
+                ${r.firstName || ""} ${r.lastName || ""}
+              </td>
+              <td style="padding:10px;">${r.address || ""}</td>
+              <td style="padding:10px;">${r.city || ""}</td>
+              <td style="padding:10px;">${r.state || ""}</td>
+              <td style="padding:10px;">${r.zipCode || ""}</td>
+              <td style="padding:10px; font-weight:bold; color:${
+                r.scanned ? "green" : "red"
+              };">
+                ${r.scanned ? "✅ Scanned" : "❌ Not Scanned"}
+              </td>
+            </tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>
+  </div>
+`;
+
+      document.querySelectorAll("tbody tr").forEach((row) => {
+        row.addEventListener(
+          "mouseenter",
+          () => (row.style.background = "#f0f0f0")
+        );
+        row.addEventListener(
+          "mouseleave",
+          () => (row.style.background = "#fafafa")
+        );
+      });
+    }
+
     document.querySelectorAll(".view-details-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const id = btn.dataset.id;
-        const type = btn.dataset.type;
-        const url =
-          type === "campaign"
-            ? `./campaign_detail.html?id=${id}`
-            : `./mailer_detail.html?id=${id}`;
-        window.open(url, "_blank");
+        const index = btn.dataset.index;
+        const d = data.data[index];
+
+        // Open new page in a separate tab with campaign ID
+        window.open(`./campaign_detail.html?id=${d.id}`, "_blank");
       });
     });
+
+    closeBtn.onclick = () => (modal.style.display = "none");
+    window.onclick = (e) => {
+      if (e.target === modal) modal.style.display = "none";
+    };
+
+    filterCheckbox.addEventListener("change", renderAddresses);
   } catch (err) {
     console.error(err);
     alert("Failed to load dashboard data");
   }
-}
-
-// ----------------------
-// Modal Display
-function showRecipientsModal(recipients) {
-  const modal = document.getElementById("recipientsModal");
-  const listContainer = document.getElementById("recipientsList");
-  const closeBtn = modal.querySelector(".close-btn");
-
-  listContainer.innerHTML = "";
-
-  if (!recipients.length) {
-    listContainer.innerHTML = "<p>No recipients found.</p>";
-  } else {
-    listContainer.innerHTML = `
-      <ul style="list-style:none; padding:0; margin:0;">
-        ${recipients
-          .map(
-            (r) =>
-              `<li style="padding:8px 0; border-bottom:1px solid #eee;">
-                 ${r.firstName} ${r.lastName} - ${r.email || r.address || ""}
-               </li>`
-          )
-          .join("")}
-      </ul>
-    `;
-  }
-
-  modal.style.display = "flex";
-
-  closeBtn.onclick = () => (modal.style.display = "none");
-  modal.onclick = (e) => {
-    if (e.target === modal) modal.style.display = "none";
-  };
+  return window.allCampaigns;
 }
 
 function openFullPreview(encodedHtml, event) {
