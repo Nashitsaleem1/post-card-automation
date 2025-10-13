@@ -73,6 +73,7 @@ class Template(Base):
     __tablename__ = "templates"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    template_name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)  # <-- Added field
     template: Mapped[str] = mapped_column(Text, nullable=False)  # HTML content
     qr_code_id: Mapped[int] = mapped_column(
         ForeignKey("qr_code_info.id", ondelete="SET NULL"), nullable=True
@@ -89,3 +90,4 @@ class Template(Base):
     )
     # Relationship to QR code
     qr_code: Mapped["QRCodeInfo"] = relationship(back_populates="templates")
+

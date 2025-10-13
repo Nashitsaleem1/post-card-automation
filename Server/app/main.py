@@ -33,6 +33,7 @@ app = FastAPI(title="PCM Automation", version="1.0.0")
 origins_env = os.getenv("CORS_ORIGINS", "")
 origins = [o.strip() for o in origins_env.split(",") if o.strip()]
 
+
 # Allowed origins
 origins = [
     "http://127.0.0.1:5500",
@@ -468,6 +469,7 @@ def get_templates(db: Session = Depends(get_db)):
             "id": t.id,
             "html_content": t.template,  # map field
             "qr_code_id": t.qr_code_id,
+            "template_name": t.template_name
         }
         for t in templates
     ]
@@ -476,7 +478,7 @@ def get_templates(db: Session = Depends(get_db)):
 @app.post("/templates", response_model=schemas.TemplateRead)
 def create_template(template: schemas.TemplateCreate, db: Session = Depends(get_db)):
     new_template = Template(
-        template=template.html_content, qr_code_id=template.qr_code_id
+        template=template.html_content, qr_code_id=template.qr_code_id, template_name=template.template_name
     )
     db.add(new_template)
     db.commit()
@@ -484,9 +486,11 @@ def create_template(template: schemas.TemplateCreate, db: Session = Depends(get_
 
     return {
         "id": new_template.id,
-        "html_content": new_template.template,  # map column to field
+        "html_content": new_template.template, 
         "qr_code_id": new_template.qr_code_id,
+        "template_name":new_template.template_name
     }
+
 
 
 # Delete a template
@@ -521,6 +525,7 @@ def get_template(template_id: int, db: Session = Depends(get_db)):
         "id": template.id,
         "html_content": template.template,
         "qr_code_id": template.qr_code_id,
+        "template_name": template.template_name
     }
 
 

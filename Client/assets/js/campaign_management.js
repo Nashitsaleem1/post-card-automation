@@ -683,6 +683,7 @@ async function loadTemplates() {
               Full Preview
             </button>
           </div>
+          <div class="template-hover-name">${tpl.template_name || "Untitled Template"}</div>
         </div>
       `;
 
@@ -1187,7 +1188,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const path = window.location.pathname;
   window.currentEditingTemplateId = null;
   sessionStorage.removeItem("Restored template");
-  if (path.includes("templategallery")) {
+  if (path.includes("templateGallery")) {
     loadGalleryTemplates();
   } else if (path.includes("campaign_builder")) {
     loadTemplates();

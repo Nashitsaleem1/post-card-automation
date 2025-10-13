@@ -523,6 +523,7 @@ h2 {
   padding: 1rem;
   overflow-y: auto;
   background: #fff;
+  position: relative;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
   height: 400px; /* fixed card size */
@@ -530,9 +531,10 @@ h2 {
   flex-direction: column;
 }
 
-.template-card:hover {
+.template-card:hover .template-hover-name  {
   border-color: #7ada7d;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  opacity: 1;
 }
 
 .template-card.selected {
@@ -549,6 +551,8 @@ h2 {
   max-height: 300px; /* collapsed view */
   overflow: hidden; /* hide extra content */
 }
+
+
 
 .footer-note {
   margin-top: 1rem;
@@ -2263,4 +2267,20 @@ table tbody tr:nth-child(even) {
   margin-top: 0.5rem;
   font-size: 15px;
   line-height: 1.5;
+}
+
+
+.template-hover-name {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  color: black;
+  text-align: center;
+  padding: 6px 0;
+  background: transparent;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
 }

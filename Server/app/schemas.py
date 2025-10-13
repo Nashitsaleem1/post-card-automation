@@ -3,16 +3,18 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 
-# ---------- Template ----------
 class TemplateBase(BaseModel):
+    template_name: str  
     html_content: str
+
 
 class TemplateCreate(TemplateBase):
     qr_code_id: int | None = None
 
+
 class TemplateRead(TemplateBase):
     id: int
-    qr_code_id: int | None  # add this
+    qr_code_id: int | None = None
     model_config = ConfigDict(from_attributes=True)
 
 

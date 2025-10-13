@@ -48,7 +48,9 @@ async function loadGalleryTemplates() {
       div.dataset.qrCodeId = tpl.qr_code_id;
 
       div.innerHTML = `
+       <h3 class="template-title">${tpl.template_name || "Untitled Template"}</h3>
         <div class="letter-container" id="letterPreview${tpl.id}">
+        
           ${tpl.html_content}
         </div>
         <div class="button-actions">
@@ -97,17 +99,27 @@ function closeSaveAsNewModal() {
 }
 
 async function saveAsNewTemplate() {
-  const htmlContent = document.getElementById("letterEditor").innerHTML;
+  const htmlContent = document.getElementById("letterEditor").innerHTML.trim();
+  const templateName = document.getElementById("templateName").value.trim();
 
-  if (!htmlContent.trim()) return showAlert("Please enter content.");
+  if (!htmlContent) return showAlert("Please enter content.");
+  if (!templateName) return showAlert("Please enter a template name.");
 
   let qrCodeId = null;
-  if (currentEditingTemplateId) {
+
+  // ✅ Get qr_code_id from the currently edited template
+  if (window.currentEditingTemplateId) {
     const templateDiv = document.querySelector(
-      `.template[data-template-id='${currentEditingTemplateId}']`
+      `.template[data-template-id='${window.currentEditingTemplateId}']`
     );
-    const qrIdStr = templateDiv.dataset.qrCodeId;
-    qrCodeId = qrIdStr ? parseInt(qrIdStr) : null;
+
+    if (templateDiv) {
+      const qrIdStr = templateDiv.dataset.qrCodeId;
+      qrCodeId = qrIdStr ? parseInt(qrIdStr) : null;
+      console.log("Fetched QR Code ID:", qrCodeId);
+    } else {
+      console.warn("Template div not found for currentEditingTemplateId");
+    }
   }
 
   try {
@@ -115,17 +127,19 @@ async function saveAsNewTemplate() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        template_name: templateName,
         html_content: htmlContent,
-        qr_code_id: qrCodeId,
+        qr_code_id: qrCodeId, // ✅ Keep same QR code if available
       }),
     });
+
     if (!response.ok) throw new Error("Failed to create template");
 
     closeSaveAsNewModal();
-    loadGalleryTemplates();
+    await loadGalleryTemplates();
     showAlert("Template created successfully!");
   } catch (err) {
-    console.error(err);
+    console.error("Error creating template:", err);
     showAlert("Error creating template.");
   }
 }
