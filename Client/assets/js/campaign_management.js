@@ -306,7 +306,7 @@ async function searchProperties() {
   const neighborhood = document
     .getElementById("neighborhoodInput")
     .value.trim();
-
+  console.log(neighborhood);
   const minValue = document.getElementById("minValue").value.trim();
   const maxValue = document.getElementById("maxValue").value.trim();
 
@@ -327,24 +327,30 @@ async function searchProperties() {
     return;
   }
 
-  // ✅ Build query: if neighborhood selected → add city + state
+  // ✅ Build query (for neighborhood searches)
   let queryValue = "";
   if (neighborhood) {
-    queryValue = `${neighborhood}, ${city}, ${state}`;
-  } else if (city && state) {
-    queryValue = `${city}, ${state}`;
-  } else {
-    queryValue = zip || "";
+    queryValue = `${neighborhood}`;
   }
 
-  // Payload
-  const payload = {
-    searchCriteria: {
-      query: queryValue,
-      compAddress: { street, city, state, zip },
-    },
-    options: { useYearBuilt: true, skip: 0, take: 20, projection: "all" },
-  };
+  // ✅ Use different payloads depending on street input
+  let payload;
+  if (street) {
+    payload = {
+      searchCriteria: {
+        query: queryValue,
+        compAddress: { street, city, state, zip },
+      },
+      options: { useYearBuilt: true, skip: 0, take: 20, projection: "all" },
+    };
+  } else {
+    payload = {
+      searchCriteria: {
+        query: queryValue,
+      },
+      options: { useYearBuilt: true, skip: 0, take: 20, projection: "all" },
+    };
+  }
 
   // Valuation filter
   if (minValue || maxValue) {
@@ -417,6 +423,7 @@ async function searchProperties() {
   }
 }
 
+
 function loadZipCodes(cityName, stateCode) {
   const geocoder = new google.maps.Geocoder();
   const query = `${cityName}, ${stateCode}, USA`; // more specific query
@@ -436,17 +443,18 @@ function loadZipCodes(cityName, stateCode) {
       // ✅ fallback: if no postal_code directly, expand search using bounds
       if (zipCodes.size === 0 && results[0].geometry.bounds) {
         const bounds = results[0].geometry.bounds;
+        console.log(bounds)
         fetchZipCodesInBounds(bounds, geocoder, zipCodes);
       } else {
-        populateZipDropdown(zipCodes);
+      populateZipDropdown(zipCodes);
       }
     }
   });
 }
 
 function fetchZipCodesInBounds(bounds, geocoder, zipCodes) {
-  const latStep = 0.05; // ~5km steps
-  const lngStep = 0.05;
+  const latStep = 0.44; // ~5km steps
+  const lngStep = 0.44;
 
   for (
     let lat = bounds.getSouthWest().lat();

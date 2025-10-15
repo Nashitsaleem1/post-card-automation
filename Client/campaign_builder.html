@@ -9,7 +9,7 @@
       class="taskbar-icon"
       rel="icon"
       type="image/png"
-      href="./assets/images/Untitled design - 2025-09-01T183547.741.png"
+      href="./assets/images/p_icon_with_gradient.png"
     />
     <link rel="stylesheet" href="./assets/css/index.css" />
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGHD38AZ4tLZzd7T-D0wR0uOpdSM6ceG0&libraries=places"></script>
@@ -18,7 +18,7 @@
     <nav class="navbar">
       <div class="logo">
         <img
-          src="./assets/images/Untitled design - 2025-09-01T183547.741.png"
+          src="./assets/images/p_icon_with_gradient.png"
           alt="Logo"
           class="logo-img"
         />
@@ -37,10 +37,8 @@
     <div class="container">
       <h1 class="heading3">
         <i>
-          To get started, first create a
-          <span style="color: #2b7fff">Campaign</span><br />
-          or a
-          <span style="color: #2b7fff">New Mailer</span>
+          To get started, first create a Campaign<br />
+          or a New Mailer
         </i>
       </h1>
 
@@ -71,9 +69,7 @@
       <h1 class="heading3">
         <i>
           Select your audience either by uploading<br />
-          <span style="color: #2b7fff">CSV</span>
-          or a
-          <span style="color: #2b7fff">Batch Search</span>
+          CSV or a Batch Search
         </i>
       </h1>
       <div class="selection-cards" id="addressselection">
@@ -362,10 +358,7 @@
       <div id="results" class="results"></div>
 
       <h1 class="heading3">
-        <i>
-          Choose the <span style="color: #2b7fff">Template</span> you want to
-          send
-        </i>
+        <i> Choose the Template you want to send </i>
       </h1>
       <div class="templates-grid" id="templatesGrid"></div>
       <div id="previewOverlay" class="preview-overlay">
@@ -505,7 +498,10 @@
     </div>
     <!-- User Guide Overlay and Icon -->
     <div id="userGuideIcon">
-      <img src="./assets/images/userguideicon.png" alt="User Guide" />
+      <img
+        src="./assets/images/question_mark_user_guide_icon.jpg"
+        alt="User Guide"
+      />
     </div>
 
     <div id="userGuideOverlay">
@@ -600,28 +596,37 @@
 
         // Function to close the guide
         function closeUserGuide() {
-          guideOverlay.classList.remove("show");
+          if (guideOverlay) guideOverlay.classList.remove("show");
         }
 
         // Open overlay when clicking icon
-        guideIcon.addEventListener("click", () => {
-          guideOverlay.classList.add("show");
-        });
+        if (guideIcon && guideOverlay) {
+          guideIcon.addEventListener("click", () => {
+            guideOverlay.classList.add("show");
+          });
+        }
 
-        // Close overlay
-        closeGuide.addEventListener("click", closeUserGuide);
-        getStartedBtn.addEventListener("click", closeUserGuide);
+        // Close overlay buttons
+        if (closeGuide) {
+          closeGuide.addEventListener("click", closeUserGuide);
+        }
+
+        if (getStartedBtn) {
+          getStartedBtn.addEventListener("click", closeUserGuide);
+        }
 
         // Click outside content to close
-        guideOverlay.addEventListener("click", (e) => {
-          if (e.target === guideOverlay) {
-            closeUserGuide();
-          }
-        });
+        if (guideOverlay) {
+          guideOverlay.addEventListener("click", (e) => {
+            if (e.target === guideOverlay) {
+              closeUserGuide();
+            }
+          });
+        }
 
         // ESC key to close
         document.addEventListener("keydown", (e) => {
-          if (e.key === "Escape" && guideOverlay.classList.contains("show")) {
+          if (e.key === "Escape" && guideOverlay?.classList.contains("show")) {
             closeUserGuide();
           }
         });

@@ -53,7 +53,9 @@ async function orderDesign(templateId, button, campaignId) {
     });
 
     // Fetch template HTML by id (don't assume it's in the DOM)
-    const tplRes = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`);
+    const tplRes = await fetch(
+      `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
+    );
     if (!tplRes.ok) throw new Error("Failed to load template content");
     const tpl = await tplRes.json();
     let finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
@@ -97,11 +99,14 @@ async function orderDesign(templateId, button, campaignId) {
       status: "sent",
       schedule_time: null,
     };
-    const resData = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newDataPayload),
-    });
+    const resData = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/campaign-data",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newDataPayload),
+      }
+    );
     if (!resData.ok)
       throw new Error("Failed to create new campaign_data entry");
     const newCampaignData = await resData.json();
@@ -461,13 +466,17 @@ async function loadDashboard() {
     const dashboardEl = document.querySelector(".dashboard");
 
     // ---- Fetch Campaign Data ----
-    const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/dashboard/all");
+    const res = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/dashboard/all"
+    );
     if (!res.ok && res.status !== 404)
       throw new Error("Failed to load campaigns");
     const data = res.status === 404 ? { data: [] } : await res.json();
 
     // ---- Fetch One-Off Mailers ----
-    const oneOffRes = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/all");
+    const oneOffRes = await fetch(
+      "https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/all"
+    );
     let oneOffData = { data: [] };
     if (oneOffRes.ok) {
       const json = await oneOffRes.json();
@@ -528,14 +537,13 @@ async function loadDashboard() {
       detailsDiv.innerHTML = `
 <table style="width:100%; border-collapse: separate; border-spacing: 0 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden;">
   <thead style="transform: translateY(-16px);">
-    <tr style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white;">
+    <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
       <th style="padding:18px;">Type(Campaign/One-off Mailer)</th>
       <th style="padding:18px;">Name(Campaign/Mailer)</th>
       <th style="padding:18px;">Target Recipients/Audience</th>
       <th style="padding:18px;">Action</th>
     </tr>
   </thead>
-
         <tbody>
           ${combined
             .map(
