@@ -526,7 +526,7 @@ h2 {
   position: relative;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
-  height: 400px; /* fixed card size */
+  height: 400px;
   display: flex;
   flex-direction: column;
 }

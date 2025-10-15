@@ -345,7 +345,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const path = window.location.pathname;
   window.currentEditingTemplateId = null;
   localStorage.removeItem("Restored template");
-  if (path.includes("templategallery")) {
+  if (path.includes("templateGallery")) {
     loadGalleryTemplates();
   } else if (path.includes("campaign_management")) {
     loadTemplates();

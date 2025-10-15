@@ -467,7 +467,7 @@ def get_templates(db: Session = Depends(get_db)):
     return [
         {
             "id": t.id,
-            "html_content": t.template,  # map field
+            "html_content": t.template,
             "qr_code_id": t.qr_code_id,
             "template_name": t.template_name
         }
@@ -490,7 +490,6 @@ def create_template(template: schemas.TemplateCreate, db: Session = Depends(get_
         "qr_code_id": new_template.qr_code_id,
         "template_name":new_template.template_name
     }
-
 
 
 # Delete a template
