@@ -454,6 +454,16 @@ def send_oneoff_job(mailer_id: int):
         db.close()
 
 
+# ---------- Health ----------
+@app.get("/")
+def root():
+    return {"Welcome to PCM Automation"}
+
+
+@app.get("/healthz")
+def healthz():
+    return {"status": "ok"}
+
 # ---------- PDF Upload ----------
 
 @app.post("/upload-pdf")
@@ -516,15 +526,6 @@ async def delete_pdf(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
     
-# ---------- Health ----------
-@app.get("/")
-def root():
-    return {"Welcome to PCM Automation"}
-
-
-@app.get("/healthz")
-def healthz():
-    return {"status": "ok"}
 
 
 # ---------- Start Campaign Watcher ----------
