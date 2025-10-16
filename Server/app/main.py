@@ -40,7 +40,6 @@ app = FastAPI(title="PCM Automation", version="1.0.0")
 origins_env = os.getenv("CORS_ORIGINS", "")
 origins = [o.strip() for o in origins_env.split(",") if o.strip()]
 
-
 # Keep the static mount as is:
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -502,6 +501,7 @@ async def upload_pdf(file: UploadFile = File(...)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error uploading file: {str(e)}")
+
 
 # ---------- Delete PDF ----------
 @app.delete("/delete-pdf/{filename}")
