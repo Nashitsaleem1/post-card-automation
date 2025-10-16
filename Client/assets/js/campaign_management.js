@@ -1380,13 +1380,7 @@ async function orderDesign(templateId, button) {
         fontColor: "Black",
       },
       recipients: recipientsList,
-      letter: finalHtml, // This will be either PDF URL or HTML content
-      globalDesignVariables: [
-      {
-        key: "DATE",
-        value: todayISO,
-      },
-    ],
+      letter: finalHtml, 
       };
 
     const res = await fetch("https://v3.pcmintegrations.com/order/letter", {
