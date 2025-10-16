@@ -1,11 +1,3 @@
-// Add at the very top of your script
-window.addEventListener('beforeunload', function(e) {
-  console.trace('Page is about to reload! Stack trace:');
-  e.preventDefault();
-  e.returnValue = '';
-  return '';
-});
-
 const campaignCard = document.getElementById("newCampaignCard");
 const mailerCard = document.getElementById("newMailerCard");
 const campaignFields = document.getElementById("campaignFields");
@@ -19,289 +11,6 @@ const batchsection = document.getElementById("batchdatasearch");
 let cityAutocomplete;
 let recipientsList = [];
 
-let uploadedPdfUrl = null;
-
-// Add PDF upload section after template selection (add to HTML)
-function createPdfUploadSection() {
-  const pdfUploadHtml = `
-    <div class="pdf-upload-section" style="margin: 2rem 0;">
-      <h3 style="margin-bottom: 1rem;">Or Upload Your Own PDF Letter</h3>
-      <div class="pdf-upload-box" id="pdfUploadBox" style="
-        border: 2px dashed #ccc;
-        border-radius: 8px;
-        padding: 2rem;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-      ">
-        <div class="pdf-icon" style="font-size: 3rem; color: #666; margin-bottom: 1rem;">📄</div>
-        <div class="pdf-main-text" style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">
-          Drag & drop your PDF file here
-        </div>
-        <div class="pdf-sub-text" style="color: #666; margin-bottom: 1rem;">
-          or click to browse your files
-        </div>
-        <label for="pdfFile" class="choose-pdf-btn" style="
-          display: inline-block;
-          padding: 0.75rem 1.5rem;
-          background: #2b7fff;
-          color: white;
-          border-radius: 5px;
-          cursor: pointer;
-          transition: background 0.3s ease;
-        ">
-          Choose PDF File
-        </label>
-        <input
-          type="file"
-          id="pdfFile"
-          accept=".pdf"
-          style="display: none;"
-        />
-        <div class="pdf-size-info" style="color: #999; font-size: 0.9rem; margin-top: 1rem;">
-          Max file size: 10MB
-        </div>
-      </div>
-    </div>
-  `;
-
-  // Insert after templates grid
-  const templatesGrid = document.getElementById("templatesGrid");
-  if (templatesGrid && !document.querySelector(".pdf-upload-section")) {
-    templatesGrid.insertAdjacentHTML("afterend", pdfUploadHtml);
-    setupPdfUpload();
-  }
-}
-
-// Setup PDF upload functionality
-function setupPdfUpload() {
-  const pdfUploadBox = document.getElementById("pdfUploadBox");
-  const pdfFileInput = document.getElementById("pdfFile");
-
-  if (!pdfUploadBox || !pdfFileInput) {
-    console.warn("PDF upload elements not found, skipping setup");
-    return;
-  }
-
-  // Check if already initialized to prevent duplicate listeners
-  if (pdfUploadBox.dataset.initialized === 'true') {
-    console.log("PDF upload already initialized");
-    return;
-  }
-  pdfUploadBox.dataset.initialized = 'true';
-
-  // Prevent defaults for drag and drop
-  ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
-    pdfUploadBox.addEventListener(eventName, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-    });
-  });
-
-  // Highlight on drag
-  ["dragenter", "dragover"].forEach((eventName) => {
-    pdfUploadBox.addEventListener(eventName, () => {
-      pdfUploadBox.style.borderColor = "#2b7fff";
-      pdfUploadBox.style.backgroundColor = "#f0f7ff";
-    });
-  });
-
-  ["dragleave", "drop"].forEach((eventName) => {
-    pdfUploadBox.addEventListener(eventName, () => {
-      pdfUploadBox.style.borderColor = "#ccc";
-      pdfUploadBox.style.backgroundColor = "transparent";
-    });
-  });
-
-  // Handle drop
-  pdfUploadBox.addEventListener("drop", async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type === "application/pdf") {
-      await uploadPdfFile(file);
-    } else {
-      showAlert("Please upload a valid PDF file");
-    }
-  });
-
-  // Handle file input change
-  pdfFileInput.addEventListener("change", async (e) => {
-    e.preventDefault();
-    const file = e.target.files[0];
-    if (file) {
-      await uploadPdfFile(file);
-      e.target.value = ''; // Clear input
-    }
-  });
-  
-  console.log("✅ PDF upload initialized");
-}
-
-// Upload PDF to backend
-async function uploadPdfFile(file) {
-  if (file.size > 10 * 1024 * 1024) {
-    showAlert("File size exceeds 10MB limit");
-    return;
-  }
-
-  const pdfUploadBox = document.getElementById("pdfUploadBox");
-  if (!pdfUploadBox) return;
-
-  // Show loading state
-  pdfUploadBox.innerHTML = `
-    <div style="padding: 2rem;">
-      <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
-      <div style="font-size: 1.1rem; color: #666;">Uploading PDF...</div>
-    </div>
-  `;
-
-  try {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/upload-pdf", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Upload failed");
-    }
-
-    const data = await response.json();
-    uploadedPdfUrl = data.url;
-
-    // Show success state
-    pdfUploadBox.innerHTML = `
-      <div style="padding: 2rem;">
-        <div style="font-size: 2rem; color: #28a745; margin-bottom: 1rem;">✓</div>
-        <div style="font-size: 1.1rem; color: #28a745; font-weight: 600; margin-bottom: 0.5rem;">
-          PDF uploaded successfully!
-        </div>
-        <div style="color: #666; margin-bottom: 1rem;">
-          ${file.name} (${(data.size / 1024).toFixed(2)} KB)
-        </div>
-        <button class="remove-pdf-btn" onclick="removePdf('${data.filename}')" style="
-          padding: 0.5rem 1rem;
-          background: #dc3545;
-          color: white;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-        ">
-          Remove PDF
-        </button>
-      </div>
-    `;
-
-    // Deselect any template when PDF is uploaded
-    document.querySelectorAll(".template-card").forEach((card) => {
-      card.classList.remove("selected");
-    });
-    window.currentEditingTemplateId = null;
-
-    console.log("✅ PDF uploaded:", uploadedPdfUrl);
-  } catch (error) {
-    console.error("PDF upload error:", error);
-    showAlert("Error uploading PDF: " + error.message);
-
-    // Reset upload box - ✅ Make sure to re-setup listeners
-    resetPdfUploadBox();
-  }
-}
-
-// ✅ Helper function to reset PDF upload box
-function resetPdfUploadBox() {
-  const pdfUploadBox = document.getElementById("pdfUploadBox");
-  if (!pdfUploadBox) return;
-  
-  // ✅ Remove the initialized flag so we can reinitialize
-  delete pdfUploadBox.dataset.initialized;
-  
-  pdfUploadBox.innerHTML = `
-    <div class="pdf-icon" style="font-size: 3rem; color: #666; margin-bottom: 1rem;">📄</div>
-    <div class="pdf-main-text" style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">
-      Drag & drop your PDF file here
-    </div>
-    <div class="pdf-sub-text" style="color: #666; margin-bottom: 1rem;">
-      or click to browse your files
-    </div>
-    <label for="pdfFile" class="choose-pdf-btn" style="
-      display: inline-block;
-      padding: 0.75rem 1.5rem;
-      background: #2b7fff;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
-    ">
-      Choose PDF File
-    </label>
-    <input type="file" id="pdfFile" accept=".pdf" style="display: none;" />
-    <div class="pdf-size-info" style="color: #999; font-size: 0.9rem; margin-top: 1rem;">
-      Max file size: 10MB
-    </div>
-  `;
-  
-  // ✅ Now reinitialize
-  setupPdfUpload();
-}
-
-// Remove uploaded PDF
-async function removePdf(filename) {
-  try {
-    const response = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/delete-pdf/${filename}`,
-      {
-        method: "DELETE",
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to delete PDF");
-    }
-
-    uploadedPdfUrl = null;
-
-    // Reset upload box
-    const pdfUploadBox = document.getElementById("pdfUploadBox");
-    if (pdfUploadBox) {
-      // ✅ Remove the initialized flag before resetting
-      delete pdfUploadBox.dataset.initialized;
-      
-      pdfUploadBox.innerHTML = `
-        <div class="pdf-icon" style="font-size: 3rem; color: #666; margin-bottom: 1rem;">📄</div>
-        <div class="pdf-main-text" style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">
-          Drag & drop your PDF file here
-        </div>
-        <div class="pdf-sub-text" style="color: #666; margin-bottom: 1rem;">
-          or click to browse your files
-        </div>
-        <label for="pdfFile" class="choose-pdf-btn" style="
-          display: inline-block;
-          padding: 0.75rem 1.5rem;
-          background: #2b7fff;
-          color: white;
-          border-radius: 5px;
-          cursor: pointer;
-        ">
-          Choose PDF File
-        </label>
-        <input type="file" id="pdfFile" accept=".pdf" style="display: none;" />
-        <div class="pdf-size-info" style="color: #999; font-size: 0.9rem; margin-top: 1rem;">
-          Max file size: 10MB
-        </div>
-      `;
-      setupPdfUpload();
-    }
-
-    console.log("✅ PDF removed");
-  } catch (error) {
-    console.error("Error removing PDF:", error);
-    showAlert("Error removing PDF: " + error.message);
-  }
-}
 campaignCard.addEventListener("click", () => {
   campaignCard.classList.add("selected");
   mailerCard.classList.remove("selected");
@@ -548,22 +257,18 @@ function renderAddresses(addressData) {
   const selectAllCheckbox = document.getElementById("selectAllCheckbox");
   const individualCheckboxes = container.querySelectorAll(".audience-checkbox");
 
-  selectAllCheckbox.addEventListener("change", function () {
-    individualCheckboxes.forEach((checkbox) => {
+  selectAllCheckbox.addEventListener("change", function() {
+    individualCheckboxes.forEach(checkbox => {
       checkbox.checked = this.checked;
     });
   });
 
   // Update Select All checkbox when individual checkboxes change
-  individualCheckboxes.forEach((checkbox) => {
-    checkbox.addEventListener("change", function () {
-      const allChecked = Array.from(individualCheckboxes).every(
-        (cb) => cb.checked
-      );
-      const someChecked = Array.from(individualCheckboxes).some(
-        (cb) => cb.checked
-      );
-
+  individualCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener("change", function() {
+      const allChecked = Array.from(individualCheckboxes).every(cb => cb.checked);
+      const someChecked = Array.from(individualCheckboxes).some(cb => cb.checked);
+      
       selectAllCheckbox.checked = allChecked;
       selectAllCheckbox.indeterminate = someChecked && !allChecked;
     });
@@ -718,6 +423,7 @@ async function searchProperties() {
   }
 }
 
+
 function loadZipCodes(cityName, stateCode) {
   const geocoder = new google.maps.Geocoder();
   const query = `${cityName}, ${stateCode}, USA`; // more specific query
@@ -737,17 +443,18 @@ function loadZipCodes(cityName, stateCode) {
       // ✅ fallback: if no postal_code directly, expand search using bounds
       if (zipCodes.size === 0 && results[0].geometry.bounds) {
         const bounds = results[0].geometry.bounds;
+        console.log(bounds)
         fetchZipCodesInBounds(bounds, geocoder, zipCodes);
       } else {
-        populateZipDropdown(zipCodes);
+      populateZipDropdown(zipCodes);
       }
     }
   });
 }
 
 function fetchZipCodesInBounds(bounds, geocoder, zipCodes) {
-  const latStep = 0.044; // ~5km steps
-  const lngStep = 0.044;
+  const latStep = 0.44; // ~5km steps
+  const lngStep = 0.44;
 
   for (
     let lat = bounds.getSouthWest().lat();
@@ -984,9 +691,7 @@ async function loadTemplates() {
               Full Preview
             </button>
           </div>
-          <div class="template-hover-name">${
-            tpl.template_name || "Untitled Template"
-          }</div>
+          <div class="template-hover-name">${tpl.template_name || "Untitled Template"}</div>
         </div>
       `;
 
@@ -1051,7 +756,6 @@ function closePreview() {
   document.getElementById("previewBody").innerHTML = "";
 }
 
-// Update createAndSendLetter to validate PDF or template
 async function createAndSendLetter() {
   const btn = document.querySelector("button[onclick='createAndSendLetter()']");
   const isCampaign = campaignCard.classList.contains("selected");
@@ -1064,6 +768,7 @@ async function createAndSendLetter() {
 
   try {
     if (isCampaign) {
+      // 👉 Campaign workflow
       const campaignName = document
         .getElementById("campaignNameInput")
         .value.trim();
@@ -1081,15 +786,14 @@ async function createAndSendLetter() {
         return;
       }
 
-      // Check if either PDF or template is selected
-      if (!uploadedPdfUrl && !window.currentEditingTemplateId) {
-        showAlert("Please select a template or upload a PDF.");
+      if (!window.currentEditingTemplateId) {
+        showAlert("Please select a template.");
         return;
       }
 
       // Step 1: Place PCM order
       const orderSuccess = await orderDesign(
-        uploadedPdfUrl ? null : window.currentEditingTemplateId,
+        window.currentEditingTemplateId,
         btn
       );
       if (!orderSuccess) {
@@ -1114,12 +818,11 @@ async function createAndSendLetter() {
       const campaignDataPayload = {
         campaign_id: campaign.id,
         mailer_name: mailerName,
-        template_id: uploadedPdfUrl ? null : window.currentEditingTemplateId,
+        template_id: window.currentEditingTemplateId,
         address_list: JSON.stringify(recipientsList),
         schedule_time: null,
-        send_date: new Date().toISOString(),
+        send_date: new Date().toISOString(), // ✅ Save current date
         status: "sent",
-        pdf_url: uploadedPdfUrl || null, // Store PDF URL if used
       };
 
       const dataResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
@@ -1140,6 +843,7 @@ async function createAndSendLetter() {
     }
 
     if (isMailer) {
+      // 👉 Mailer One-Off workflow
       const mailerName = document
         .getElementById("mailerNameOnlyInput")
         .value.trim();
@@ -1154,13 +858,14 @@ async function createAndSendLetter() {
         return;
       }
 
-      if (!uploadedPdfUrl && !window.currentEditingTemplateId) {
-        showAlert("Please select a template or upload a PDF.");
+      if (!window.currentEditingTemplateId) {
+        showAlert("Please select a template.");
         return;
       }
 
+      // Step 1: Place PCM order
       const orderSuccess = await orderDesign(
-        uploadedPdfUrl ? null : window.currentEditingTemplateId,
+        window.currentEditingTemplateId,
         btn
       );
       if (!orderSuccess) {
@@ -1168,14 +873,14 @@ async function createAndSendLetter() {
         return;
       }
 
+      // Step 2: Save mailer one-off
       const mailerPayload = {
         mailer_name: mailerName,
-        template_id: uploadedPdfUrl ? null : window.currentEditingTemplateId,
+        template_id: window.currentEditingTemplateId,
         address_list: JSON.stringify(recipientsList),
         schedule_time: null,
         send_date: new Date().toISOString(),
         status: "sent",
-        pdf_url: uploadedPdfUrl || null,
       };
 
       const mailerResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
@@ -1335,7 +1040,6 @@ async function getToken() {
   return data.token;
 }
 
-// Modified orderDesign function to handle PDF URL
 async function orderDesign(templateId, button) {
   const originalText = button.textContent;
   button.textContent = "Processing...";
@@ -1350,25 +1054,10 @@ async function orderDesign(templateId, button) {
       day: "numeric",
     });
 
-    let finalHtml = "";
-
-    // Check if PDF is uploaded
-    if (uploadedPdfUrl) {
-      // Use PDF URL directly
-      finalHtml = uploadedPdfUrl;
-      console.log("📄 Using uploaded PDF:", finalHtml);
-    } else if (templateId) {
-      // Use template HTML
-      const tplRes = await fetch(
-        `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
-      );
-      if (!tplRes.ok) throw new Error("Failed to load template content");
-      const tpl = await tplRes.json();
-      finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
-      console.log("📝 Using template HTML");
-    } else {
-      throw new Error("Please select a template or upload a PDF");
-    }
+    const tplRes = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`);
+    if (!tplRes.ok) throw new Error("Failed to load template content");
+    const tpl = await tplRes.json();
+    let finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
 
     // --- Place Order with PCM ---
     const token = await getToken();
@@ -1386,7 +1075,7 @@ async function orderDesign(templateId, button) {
         fontColor: "Black",
       },
       recipients: recipientsList,
-      letter: finalHtml, // This will be either PDF URL or HTML content
+      letter: finalHtml,
     };
 
     const res = await fetch("https://v3.pcmintegrations.com/order/letter", {
@@ -1404,7 +1093,7 @@ async function orderDesign(templateId, button) {
     if (!res.ok) throw new Error(data.message || "API request failed");
 
     console.log("✅ Order placed:", data);
-    return true;
+    return true; // ✅ success
   } catch (err) {
     console.error("Order Design Error:", err);
     showAlert("Error ordering letters: " + err.message);
@@ -1498,23 +1187,18 @@ if (performance.getEntriesByType("navigation")[0].type === "reload") {
 
 document.addEventListener("DOMContentLoaded", async () => {
   restoreState();
-  
+
   document.getElementById("campaignName")?.addEventListener("input", saveState);
   document.getElementById("mailerName")?.addEventListener("input", saveState);
-  document.getElementById("mailerNameOnlyInput")?.addEventListener("input", saveState);
-  
+  document
+    .getElementById("mailerNameOnlyInput")
+    ?.addEventListener("input", saveState);
   const path = window.location.pathname;
   window.currentEditingTemplateId = null;
   sessionStorage.removeItem("Restored template");
-  
-  if (path.includes("templateGallery")) {
+  if (path.includes("templategallery")) {
     loadGalleryTemplates();
   } else if (path.includes("campaign_builder")) {
-    await loadTemplates(); // Wait for templates to load
-    
-    // Only setup PDF upload after a short delay to ensure DOM is ready
-    setTimeout(() => {
-      setupPdfUpload();
-    }, 100);
+    loadTemplates();
   }
 });
