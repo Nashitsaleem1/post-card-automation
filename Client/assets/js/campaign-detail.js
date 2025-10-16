@@ -19,7 +19,7 @@ function getQueryParam(key) {
 async function getToken() {
   const payload = {
     apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
-    apiSecret: "NTEyYWY5ZDQtYjJhMy00OWJmLWJkZTEtZjVjMmZjMDkwYTNl",
+    apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
     childRefNbr: "myAccountReference",
   };
   const res = await fetch("https://v3.pcmintegrations.com/auth/login", {
