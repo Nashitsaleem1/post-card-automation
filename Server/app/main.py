@@ -18,8 +18,8 @@ from sqlalchemy.orm import Session, joinedload
 from .database import SessionLocal
 
 API_URL = "https://v3.pcmintegrations.com/auth/login"
-API_KEY = "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy"
-API_SECRET = "OWU4YWQ4MTMtNTE3ZC00Y2QzLTg1YjEtYTQxZWEzNDAwYmIx"
+API_KEY = "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0"
+API_SECRET = "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl"
 CHILD_REF_NBR = "myAccountReference"
 
 # ---------- Scheduler ----------
