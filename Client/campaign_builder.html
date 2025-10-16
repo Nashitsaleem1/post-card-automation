@@ -361,6 +361,103 @@
         <i> Choose the Template you want to send </i>
       </h1>
       <div class="templates-grid" id="templatesGrid"></div>
+      <!-- PDF Upload Section (NEW) -->
+      <div class="pdf-upload-wrapper" style="margin: 3rem 0">
+        <h1 class="heading3">
+          <i> Or Upload Your Own PDF Letter </i>
+        </h1>
+
+        <div class="pdf-upload-section">
+          <div
+            class="pdf-upload-box"
+            id="pdfUploadBox"
+            style="
+              border: 2px dashed #ccc;
+              border-radius: 8px;
+              padding: 2rem;
+              text-align: center;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              background: #f9f9f9;
+            "
+          >
+            <div
+              class="pdf-icon"
+              style="font-size: 3rem; color: #666; margin-bottom: 1rem"
+            >
+              📄
+            </div>
+            <div
+              class="pdf-main-text"
+              style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem"
+            >
+              Drag & drop your PDF file here
+            </div>
+            <div class="pdf-sub-text" style="color: #666; margin-bottom: 1rem">
+              or click to browse your files
+            </div>
+            <label
+              for="pdfFile"
+              class="choose-pdf-btn"
+              style="
+                display: inline-block;
+                padding: 0.75rem 1.5rem;
+                background: #2b7fff;
+                color: white;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: background 0.3s ease;
+                border: none;
+              "
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="vertical-align: middle; margin-right: 0.5rem"
+              >
+                <path
+                  d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+                />
+                <polyline points="14,2 14,8 20,8" />
+              </svg>
+              Choose PDF File
+            </label>
+            <input
+              type="file"
+              id="pdfFile"
+              accept=".pdf"
+              style="display: none"
+            />
+            <div
+              class="pdf-size-info"
+              style="color: #999; font-size: 0.9rem; margin-top: 1rem"
+            >
+              Max file size: 10MB
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="pdf-note"
+          style="
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+          "
+        >
+          <strong>📌 Note:</strong> If you upload a PDF, it will be used instead
+          of the template selection above. The PDF should be properly formatted
+          for mailing.
+        </div>
+      </div>
       <div id="previewOverlay" class="preview-overlay">
         <div class="preview-content">
           <button class="close-btn" onclick="closePreview()">✖</button>

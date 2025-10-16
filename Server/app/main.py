@@ -16,15 +16,24 @@ from pytz import timezone, utc
 from .models import Template, Campaign, CampaignData, MailerOneOff, QRCodeInfo
 from sqlalchemy.orm import Session, joinedload
 from .database import SessionLocal
+from fastapi.staticfiles import StaticFiles
+import uuid
+from pathlib import Path
+from fastapi import FastAPI, UploadFile, File, HTTPException
 
 API_URL = "https://v3.pcmintegrations.com/auth/login"
 API_KEY = "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0"
 API_SECRET = "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl"
 CHILD_REF_NBR = "myAccountReference"
 
+STATIC_DIR = Path("uploads/pdfs")  # New directory not in 'static'
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+
+
 # ---------- Scheduler ----------
 scheduler = BackgroundScheduler()
 scheduler.start()
+
 
 # ---------- App ----------
 app = FastAPI(title="PCM Automation", version="1.0.0")
@@ -32,6 +41,13 @@ app = FastAPI(title="PCM Automation", version="1.0.0")
 # ---------- CORS ----------
 origins_env = os.getenv("CORS_ORIGINS", "")
 origins = [o.strip() for o in origins_env.split(",") if o.strip()]
+
+
+# # Keep the static mount as is:
+# app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Add new mount for uploads:
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 # Allowed origins
@@ -449,6 +465,68 @@ def root():
 def healthz():
     return {"status": "ok"}
 
+# ---------- PDF Upload ----------
+
+@app.post("/upload-pdf")
+async def upload_pdf(file: UploadFile = File(...)):
+    """
+    Upload a PDF file and return its public URL
+    """
+    # Validate file type
+    if not file.content_type == "application/pdf":
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+    
+    # Validate file size (max 10MB)
+    file_size = 0
+    chunk_size = 1024 * 1024  # 1MB chunks
+    content = await file.read()
+    file_size = len(content)
+    
+    if file_size > 10 * 1024 * 1024:  # 10MB
+        raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
+    
+    try:
+        file_extension = os.path.splitext(file.filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        file_path = STATIC_DIR / unique_filename
+        
+        with open(file_path, "wb") as f:
+            f.write(content)
+        
+        # ✅ Change the URL to use /uploads instead of /static
+        file_url = f"https://pcm-app-h8mn8.ondigitalocean.app/uploads/pdfs/{unique_filename}"
+        
+        return {
+            "success": True,
+            "filename": unique_filename,
+            "url": file_url,
+            "size": file_size
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error uploading file: {str(e)}")
+
+# ---------- Delete PDF ----------
+@app.delete("/delete-pdf/{filename}")
+async def delete_pdf(filename: str):
+    """
+    Delete a PDF file from static folder
+    """
+    try:
+        file_path = STATIC_DIR / filename
+        
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        os.remove(file_path)
+        
+        return {
+            "success": True,
+            "message": f"File {filename} deleted successfully"
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
+    
 
 # ---------- Start Campaign Watcher ----------
 scheduler.add_job(
@@ -467,7 +545,7 @@ def get_templates(db: Session = Depends(get_db)):
     return [
         {
             "id": t.id,
-            "html_content": t.template,
+            "html_content": t.template, 
             "qr_code_id": t.qr_code_id,
             "template_name": t.template_name
         }
