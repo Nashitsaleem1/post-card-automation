@@ -29,7 +29,6 @@ CHILD_REF_NBR = "myAccountReference"
 STATIC_DIR = Path("uploads/pdfs")  # New directory not in 'static'
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
-
 # ---------- Scheduler ----------
 scheduler = BackgroundScheduler()
 scheduler.start()
@@ -526,7 +525,6 @@ async def delete_pdf(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
     
-
 
 # ---------- Start Campaign Watcher ----------
 scheduler.add_job(

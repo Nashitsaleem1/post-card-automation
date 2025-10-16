@@ -71,7 +71,7 @@ class CampaignDataWithCampaignName(BaseModel):
     campaign_name: str  # from Campaign table
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # ---------- MailerOneOff ----------
@@ -94,7 +94,7 @@ class MailerOneOffResponse(MailerOneOffCreate):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class MailerOneOffUpdate(BaseModel):
     template_id: Optional[int] = None
