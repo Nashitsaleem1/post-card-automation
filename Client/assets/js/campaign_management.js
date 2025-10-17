@@ -1,5 +1,3 @@
-
-
 const campaignCard = document.getElementById("newCampaignCard");
 const mailerCard = document.getElementById("newMailerCard");
 const campaignFields = document.getElementById("campaignFields");
@@ -18,46 +16,91 @@ let uploadedPdfUrl = null;
 // Add PDF upload section after template selection (add to HTML)
 function createPdfUploadSection() {
   const pdfUploadHtml = `
-    <div class="pdf-upload-section" style="margin: 2rem 0;">
-      <h3 style="margin-bottom: 1rem;">Or Upload Your Own PDF Letter</h3>
-      <div class="pdf-upload-box" id="pdfUploadBox" style="
-        border: 2px dashed #ccc;
-        border-radius: 8px;
-        padding: 2rem;
-        text-align: center;
+  <div class="pdf-upload-section" style="margin: 3rem 0; text-align: center;">
+    <h3 style="
+      margin-bottom: 2rem;
+      font-size: 1.5rem;
+      color: var(--text-primary, #333);
+      font-weight: 700;
+    ">
+      Or Upload Your Own PDF Letter
+    </h3>
+
+    <div class="upload-box" id="pdfUploadBox" style="
+      background: white;
+      border: 2px dashed var(--border-color, #ccc);
+      border-radius: var(--radius-lg, 12px);
+      padding: 3rem;
+      text-align: center;
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.05));
+    ">
+
+      <div class="upload-icon" style="
+        font-size: 3rem;
+        margin-bottom: 1.25rem;
+        color: var(--primary-color, #667eea);
+      ">📄</div>
+
+      <div class="upload-main-text" style="
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary, #222);
+        margin-bottom: 0.75rem;
+      ">
+        Drag & drop your PDF file here
+      </div>
+
+      <div class="upload-sub-text" style="
+        font-size: 1rem;
+        color: var(--text-secondary, #666);
+        margin-bottom: 1.75rem;
+      ">
+        or click to browse your files
+      </div>
+
+      <label for="pdfFile" class="choose-file-btn" style="
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.875rem 1.75rem;
+        background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+        color: white;
+        font-weight: 600;
+        border: none;
+        border-radius: var(--radius-md, 8px);
         cursor: pointer;
         transition: all 0.3s ease;
+        box-shadow: var(--shadow-sm, 0 2px 6px rgba(0, 0, 0, 0.1));
+      "
+      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 10px rgba(0,0,0,0.15)';"
+      onmouseout="this.style.transform=''; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.1)';"
+      >
+        Choose PDF File
+      </label>
+
+      <input
+        type="file"
+        id="pdfFile"
+        accept=".pdf"
+        style="display: none;"
+      />
+
+      <div class="pdf-size-info" style="
+        color: #999;
+        font-size: 0.9rem;
+        margin-top: 1rem;
       ">
-        <div class="pdf-icon" style="font-size: 3rem; color: #666; margin-bottom: 1rem;">📄</div>
-        <div class="pdf-main-text" style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">
-          Drag & drop your PDF file here
-        </div>
-        <div class="pdf-sub-text" style="color: #666; margin-bottom: 1rem;">
-          or click to browse your files
-        </div>
-        <label for="pdfFile" class="choose-pdf-btn" style="
-          display: inline-block;
-          padding: 0.75rem 1.5rem;
-          background: #2b7fff;
-          color: white;
-          border-radius: 5px;
-          cursor: pointer;
-          transition: background 0.3s ease;
-        ">
-          Choose PDF File
-        </label>
-        <input
-          type="file"
-          id="pdfFile"
-          accept=".pdf"
-          style="display: none;"
-        />
-        <div class="pdf-size-info" style="color: #999; font-size: 0.9rem; margin-top: 1rem;">
-          Max file size: 10MB
-        </div>
+        Max file size: 10MB
       </div>
     </div>
-  `;
+  </div>
+`;
 
   // Insert after templates grid
   const templatesGrid = document.getElementById("templatesGrid");
@@ -78,11 +121,11 @@ function setupPdfUpload() {
   }
 
   // Check if already initialized to prevent duplicate listeners
-  if (pdfUploadBox.dataset.initialized === 'true') {
+  if (pdfUploadBox.dataset.initialized === "true") {
     console.log("PDF upload already initialized");
     return;
   }
-  pdfUploadBox.dataset.initialized = 'true';
+  pdfUploadBox.dataset.initialized = "true";
 
   // Prevent defaults for drag and drop
   ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
@@ -125,14 +168,15 @@ function setupPdfUpload() {
     const file = e.target.files[0];
     if (file) {
       await uploadPdfFile(file);
-      e.target.value = ''; // Clear input
+      e.target.value = ""; // Clear input
     }
   });
-  
+
   console.log("✅ PDF upload initialized");
 }
 
 // Upload PDF to backend
+// Call updateButtonStates() after PDF upload succeeds
 async function uploadPdfFile(file) {
   if (file.size > 10 * 1024 * 1024) {
     showAlert("File size exceeds 10MB limit");
@@ -142,7 +186,6 @@ async function uploadPdfFile(file) {
   const pdfUploadBox = document.getElementById("pdfUploadBox");
   if (!pdfUploadBox) return;
 
-  // Show loading state
   pdfUploadBox.innerHTML = `
     <div style="padding: 2rem;">
       <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
@@ -167,7 +210,6 @@ async function uploadPdfFile(file) {
     const data = await response.json();
     uploadedPdfUrl = data.url;
 
-    // Show success state
     pdfUploadBox.innerHTML = `
       <div style="padding: 2rem;">
         <div style="font-size: 2rem; color: #28a745; margin-bottom: 1rem;">✓</div>
@@ -177,7 +219,9 @@ async function uploadPdfFile(file) {
         <div style="color: #666; margin-bottom: 1rem;">
           ${file.name} (${(data.size / 1024).toFixed(2)} KB)
         </div>
-        <button class="remove-pdf-btn" onclick="removePdf('${data.filename}')" style="
+        <button class="remove-pdf-btn" onclick="removePdf('${
+          data.filename
+        }')" style="
           padding: 0.5rem 1rem;
           background: #dc3545;
           color: white;
@@ -196,12 +240,13 @@ async function uploadPdfFile(file) {
     });
     window.currentEditingTemplateId = null;
 
+    // ✅ UPDATE BUTTON STATES AFTER PDF UPLOAD
+    updateButtonStates();
+
     console.log("✅ PDF uploaded:", uploadedPdfUrl);
   } catch (error) {
     console.error("PDF upload error:", error);
     showAlert("Error uploading PDF: " + error.message);
-
-    // Reset upload box - ✅ Make sure to re-setup listeners
     resetPdfUploadBox();
   }
 }
@@ -210,10 +255,10 @@ async function uploadPdfFile(file) {
 function resetPdfUploadBox() {
   const pdfUploadBox = document.getElementById("pdfUploadBox");
   if (!pdfUploadBox) return;
-  
+
   // ✅ Remove the initialized flag so we can reinitialize
   delete pdfUploadBox.dataset.initialized;
-  
+
   pdfUploadBox.innerHTML = `
     <div class="pdf-icon" style="font-size: 3rem; color: #666; margin-bottom: 1rem;">📄</div>
     <div class="pdf-main-text" style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">
@@ -237,12 +282,13 @@ function resetPdfUploadBox() {
       Max file size: 10MB
     </div>
   `;
-  
+
   // ✅ Now reinitialize
   setupPdfUpload();
 }
 
 // Remove uploaded PDF
+// Call updateButtonStates() after PDF removal
 async function removePdf(filename) {
   try {
     const response = await fetch(
@@ -258,12 +304,10 @@ async function removePdf(filename) {
 
     uploadedPdfUrl = null;
 
-    // Reset upload box
     const pdfUploadBox = document.getElementById("pdfUploadBox");
     if (pdfUploadBox) {
-      // ✅ Remove the initialized flag before resetting
       delete pdfUploadBox.dataset.initialized;
-      
+
       pdfUploadBox.innerHTML = `
         <div class="pdf-icon" style="font-size: 3rem; color: #666; margin-bottom: 1rem;">📄</div>
         <div class="pdf-main-text" style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">
@@ -290,17 +334,22 @@ async function removePdf(filename) {
       setupPdfUpload();
     }
 
+    // ✅ UPDATE BUTTON STATES AFTER PDF REMOVAL
+    updateButtonStates();
+
     console.log("✅ PDF removed");
   } catch (error) {
     console.error("Error removing PDF:", error);
     showAlert("Error removing PDF: " + error.message);
   }
 }
+
 campaignCard.addEventListener("click", () => {
   campaignCard.classList.add("selected");
   mailerCard.classList.remove("selected");
   campaignFields.style.display = "block";
   mailerFields.style.display = "none";
+  updateButtonStates();
 });
 
 mailerCard.addEventListener("click", () => {
@@ -308,6 +357,7 @@ mailerCard.addEventListener("click", () => {
   campaignCard.classList.remove("selected");
   mailerFields.style.display = "block";
   campaignFields.style.display = "none";
+  updateButtonStates();
 });
 
 uploadcsvCard.addEventListener("click", () => {
@@ -315,6 +365,7 @@ uploadcsvCard.addEventListener("click", () => {
   BatchsearchCard.classList.remove("selected");
   uploadsection.style.display = "block";
   batchsection.style.display = "none";
+  updateButtonStates();
 });
 
 BatchsearchCard.addEventListener("click", () => {
@@ -322,6 +373,7 @@ BatchsearchCard.addEventListener("click", () => {
   uploadcsvCard.classList.remove("selected");
   batchsection.style.display = "block";
   uploadsection.style.display = "none";
+  updateButtonStates();
 });
 
 // Toggle menu when hamburger clicked
@@ -537,7 +589,7 @@ function renderAddresses(addressData) {
            </button>`;
 
   container.innerHTML = html;
-
+  updateButtonStates();
   // Add Select All functionality
   const selectAllCheckbox = document.getElementById("selectAllCheckbox");
   const individualCheckboxes = container.querySelectorAll(".audience-checkbox");
@@ -877,6 +929,7 @@ async function parseCSV(file) {
     Upload Different File
   </button>
 `;
+      updateButtonStates();
     },
     error: (error) => {
       console.error("CSV parsing error:", error);
@@ -967,22 +1020,22 @@ async function loadTemplates() {
       div.dataset.templateId = tpl.id;
 
       div.innerHTML = `
-        <div class="template-preview">
-          <div class="template-content collapsed">
-            ${tpl.html_content}
-          </div>
-          <div class="template-actions">
-            <button class="full-preview-btn" onclick="openFullPreview('${encodeURIComponent(
-              tpl.html_content
-            )}', event)">
-              Full Preview
-            </button>
-          </div>
-          <div class="template-hover-name">${
-            tpl.template_name || "Untitled Template"
-          }</div>
-        </div>
-      `;
+    <div class="template-preview">
+      <div class="template-content collapsed">
+        ${tpl.html_content}
+      </div>
+      <div class="template-actions">
+        <button class="full-preview-btn" onclick="openFullPreview('${encodeURIComponent(
+          tpl.html_content
+        )}', event)">
+          Full Preview
+        </button>
+      </div>
+      <div class="template-hover-name">${
+        tpl.template_name || "Untitled Template"
+      }</div>
+    </div>
+  `;
 
       div.addEventListener("click", () => {
         document
@@ -990,6 +1043,11 @@ async function loadTemplates() {
           .forEach((el) => el.classList.remove("selected"));
         div.classList.add("selected");
         window.currentEditingTemplateId = tpl.id;
+        uploadedPdfUrl = null; // Clear PDF when template selected
+
+        // ✅ UPDATE BUTTON STATES WHEN TEMPLATE SELECTED
+        updateButtonStates();
+
         console.log("✅ Template selected:", tpl.id);
       });
 
@@ -1380,8 +1438,8 @@ async function orderDesign(templateId, button) {
         fontColor: "Black",
       },
       recipients: recipientsList,
-      letter: finalHtml, 
-      };
+      letter: finalHtml, // This will be either PDF URL or HTML content
+    };
 
     const res = await fetch("https://v3.pcmintegrations.com/order/letter", {
       method: "POST",
@@ -1475,6 +1533,99 @@ if (csvInput) {
   });
 }
 
+// Add this function to manage button states based on PDF/template selection
+function updateButtonStates() {
+  const createAndSaveBtn = document.querySelector(
+    "button[onclick='createAndSave()']"
+  );
+  const createAndSendBtn = document.querySelector(
+    "button[onclick='createAndSendLetter()']"
+  );
+
+  console.log("🔍 updateButtonStates called");
+  console.log("Save button:", createAndSaveBtn);
+  console.log("Send button:", createAndSendBtn);
+  console.log("Recipients:", recipientsList.length);
+  console.log("Template ID:", window.currentEditingTemplateId);
+  console.log("PDF URL:", uploadedPdfUrl);
+  console.log(
+    "Campaign selected:",
+    campaignCard?.classList.contains("selected")
+  );
+  console.log("Mailer selected:", mailerCard?.classList.contains("selected"));
+
+  if (!createAndSaveBtn || !createAndSendBtn) {
+    console.warn(
+      "⚠️ Buttons not found in DOM - make sure button onclick attributes match exactly"
+    );
+    return;
+  }
+
+  // Check if recipients are selected
+  const hasRecipients = recipientsList && recipientsList.length > 0;
+
+  // Check if campaign or mailer is selected
+  const isCampaignSelected =
+    campaignCard && campaignCard.classList.contains("selected");
+  const isMailerSelected =
+    mailerCard && mailerCard.classList.contains("selected");
+  const isModeSelected = isCampaignSelected || isMailerSelected;
+
+  // If PDF is uploaded
+  if (uploadedPdfUrl) {
+    // Enable "Create and Send" if recipients and mode are selected
+    if (hasRecipients && isModeSelected) {
+      createAndSendBtn.disabled = false;
+      createAndSendBtn.style.opacity = "1";
+      createAndSendBtn.style.cursor = "pointer";
+      createAndSendBtn.title = "";
+    } else {
+      createAndSendBtn.disabled = true;
+      createAndSendBtn.style.opacity = "0.5";
+      createAndSendBtn.style.cursor = "not-allowed";
+    }
+
+    // Always disable "Create and Save" when PDF is uploaded
+    createAndSaveBtn.disabled = true;
+    createAndSaveBtn.style.opacity = "0.5";
+    createAndSaveBtn.style.cursor = "not-allowed";
+    createAndSaveBtn.title =
+      "Disabled: Cannot save drafts when using PDF uploads. Use 'Send Letter' instead.";
+
+    console.log(
+      "PDF uploaded: 'Create and Save' disabled, 'Create and Send' state updated"
+    );
+  }
+  // If template is selected (no PDF)
+  else if (window.currentEditingTemplateId) {
+    // Enable both buttons if recipients and mode are selected
+    if (hasRecipients && isModeSelected) {
+      createAndSaveBtn.disabled = false;
+      createAndSaveBtn.style.opacity = "1";
+      createAndSaveBtn.style.cursor = "pointer";
+      createAndSaveBtn.title = "";
+
+      createAndSendBtn.disabled = false;
+      createAndSendBtn.style.opacity = "1";
+      createAndSendBtn.style.cursor = "pointer";
+      createAndSendBtn.title = "";
+
+      console.log("Template selected with recipients: Both buttons enabled");
+    } else {
+      // Disable both if missing recipients or mode selection
+      createAndSaveBtn.disabled = true;
+      createAndSaveBtn.style.opacity = "0.5";
+      createAndSaveBtn.style.cursor = "not-allowed";
+
+      createAndSendBtn.disabled = true;
+      createAndSendBtn.style.opacity = "0.5";
+      createAndSendBtn.style.cursor = "not-allowed";
+
+      console.log("Template selected but missing recipients or mode");
+    }
+  }
+}
+
 // Save on every input change
 document.addEventListener("input", saveFormState);
 
@@ -1490,25 +1641,30 @@ if (performance.getEntriesByType("navigation")[0].type === "reload") {
   sessionStorage.clear();
 }
 
+// Initialize button states on page load
 document.addEventListener("DOMContentLoaded", async () => {
   restoreState();
-  
+
+  // ✅ Initialize button states
+  updateButtonStates();
+
   document.getElementById("campaignName")?.addEventListener("input", saveState);
   document.getElementById("mailerName")?.addEventListener("input", saveState);
-  document.getElementById("mailerNameOnlyInput")?.addEventListener("input", saveState);
-  
+  document
+    .getElementById("mailerNameOnlyInput")
+    ?.addEventListener("input", saveState);
+
   const path = window.location.pathname;
   window.currentEditingTemplateId = null;
   sessionStorage.removeItem("Restored template");
-  
+
   if (path.includes("templateGallery")) {
     loadGalleryTemplates();
   } else if (path.includes("campaign_builder")) {
-    await loadTemplates(); // Wait for templates to load
-    
-    // Only setup PDF upload after a short delay to ensure DOM is ready
+    await loadTemplates();
     setTimeout(() => {
       setupPdfUpload();
+      updateButtonStates(); // ✅ Update after PDF upload section is ready
     }, 100);
   }
 });

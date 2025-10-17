@@ -19,6 +19,7 @@ from .database import SessionLocal
 from fastapi.staticfiles import StaticFiles
 import uuid
 from pathlib import Path
+import pytz
 from fastapi import FastAPI, UploadFile, File, HTTPException
 
 API_URL = "https://v3.pcmintegrations.com/auth/login"
@@ -465,7 +466,9 @@ def root():
 def healthz():
     return {"status": "ok"}
 
+
 # ---------- PDF Upload ----------
+
 
 @app.post("/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...)):
@@ -475,35 +478,38 @@ async def upload_pdf(file: UploadFile = File(...)):
     # Validate file type
     if not file.content_type == "application/pdf":
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
-    
+
     # Validate file size (max 10MB)
     file_size = 0
     chunk_size = 1024 * 1024  # 1MB chunks
     content = await file.read()
     file_size = len(content)
-    
+
     if file_size > 10 * 1024 * 1024:  # 10MB
         raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
-    
+
     try:
         file_extension = os.path.splitext(file.filename)[1]
         unique_filename = f"{uuid.uuid4()}{file_extension}"
         file_path = STATIC_DIR / unique_filename
-        
+
         with open(file_path, "wb") as f:
             f.write(content)
-        
+
         # ✅ Change the URL to use /uploads instead of /static
-        file_url = f"https://pcm-app-h8mn8.ondigitalocean.app/uploads/pdfs/{unique_filename}"
-        
+        file_url = (
+            f"https://pcm-app-h8mn8.ondigitalocean.app/uploads/pdfs/{unique_filename}"
+        )
+
         return {
             "success": True,
             "filename": unique_filename,
             "url": file_url,
-            "size": file_size
+            "size": file_size,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error uploading file: {str(e)}")
+
 
 # ---------- Delete PDF ----------
 @app.delete("/delete-pdf/{filename}")
@@ -513,20 +519,17 @@ async def delete_pdf(filename: str):
     """
     try:
         file_path = STATIC_DIR / filename
-        
+
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="File not found")
-        
+
         os.remove(file_path)
-        
-        return {
-            "success": True,
-            "message": f"File {filename} deleted successfully"
-        }
-    
+
+        return {"success": True, "message": f"File {filename} deleted successfully"}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
-    
+
 
 # ---------- Start Campaign Watcher ----------
 scheduler.add_job(
@@ -545,9 +548,9 @@ def get_templates(db: Session = Depends(get_db)):
     return [
         {
             "id": t.id,
-            "html_content": t.template, 
+            "html_content": t.template,
             "qr_code_id": t.qr_code_id,
-            "template_name": t.template_name
+            "template_name": t.template_name,
         }
         for t in templates
     ]
@@ -556,7 +559,9 @@ def get_templates(db: Session = Depends(get_db)):
 @app.post("/templates", response_model=schemas.TemplateRead)
 def create_template(template: schemas.TemplateCreate, db: Session = Depends(get_db)):
     new_template = Template(
-        template=template.html_content, qr_code_id=template.qr_code_id, template_name=template.template_name
+        template=template.html_content,
+        qr_code_id=template.qr_code_id,
+        template_name=template.template_name,
     )
     db.add(new_template)
     db.commit()
@@ -564,9 +569,9 @@ def create_template(template: schemas.TemplateCreate, db: Session = Depends(get_
 
     return {
         "id": new_template.id,
-        "html_content": new_template.template, 
+        "html_content": new_template.template,
         "qr_code_id": new_template.qr_code_id,
-        "template_name":new_template.template_name
+        "template_name": new_template.template_name,
     }
 
 
@@ -602,7 +607,7 @@ def get_template(template_id: int, db: Session = Depends(get_db)):
         "id": template.id,
         "html_content": template.template,
         "qr_code_id": template.qr_code_id,
-        "template_name": template.template_name
+        "template_name": template.template_name,
     }
 
 
@@ -958,4 +963,157 @@ def update_mailer_one_off(
         db.rollback()
         raise HTTPException(
             status_code=500, detail=f"Failed to update mailer: {str(e)}"
+        )
+
+
+@app.delete("/mailer-one-off/{mailer_id}")
+def delete_mailer_one_off(mailer_id: int, db: Session = Depends(get_db)):
+    try:
+        mailer = db.query(MailerOneOff).filter(MailerOneOff.id == mailer_id).first()
+        if not mailer:
+            raise HTTPException(status_code=404, detail="Mailer not found")
+
+        # Only allow deletion for 'scheduled' or 'pending' statuses
+        if mailer.status not in ["scheduled", "pending"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot delete mailer with status '{mailer.status}'. Only 'scheduled' or 'pending' mailers can be deleted.",
+            )
+
+        # Define EST timezone
+        est = pytz.timezone("America/New_York")
+        now_est = datetime.now(est)
+
+        # Remove scheduled job if it exists
+        if mailer.status == "scheduled":
+            try:
+                scheduler.remove_job(f"oneoff_{mailer.id}")
+                print(f"✅ Removed scheduled job for mailer {mailer.id}")
+            except Exception as e:
+                print(f"⚠️ Could not remove scheduled job: {str(e)}")
+
+        # Proceed with deletion
+        db.delete(mailer)
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"Mailer {mailer.id} deleted successfully.",
+        }
+
+    except HTTPException:
+        raise  # re-raise known errors
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete mailer: {str(e)}"
+        )
+
+
+@app.delete("/campaign-data/{mailer_id}")
+def delete_mailer(mailer_id: int, db: Session = Depends(get_db)):
+    """
+    Delete a mailer and cancel any associated scheduled jobs
+    Only allows deletion for 'pending' or 'scheduled' statuses
+    """
+    try:
+        mailer = db.query(CampaignData).filter(CampaignData.id == mailer_id).first()
+        if not mailer:
+            raise HTTPException(status_code=404, detail="Mailer not found")
+
+        # Only allow deletion for 'scheduled' or 'pending' statuses
+        if mailer.status not in ["scheduled", "pending"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot delete mailer with status '{mailer.status}'. Only 'scheduled' or 'pending' mailers can be deleted.",
+            )
+
+        # Remove scheduled job if it exists
+        if mailer.status == "scheduled":
+            try:
+                scheduler.remove_job(f"campaign_data_{mailer.id}")
+                print(f"✅ Removed scheduled job for mailer {mailer.id}")
+            except Exception as e:
+                print(
+                    f"⚠️ Could not remove scheduled job for mailer {mailer.id}: {str(e)}"
+                )
+
+        # Proceed with deletion
+        db.delete(mailer)
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"Mailer {mailer.id} deleted successfully.",
+        }
+
+    except HTTPException:
+        raise  # re-raise known errors
+    except Exception as e:
+        db.rollback()
+        print(f"Error deleting mailer {mailer_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete mailer: {str(e)}"
+        )
+
+
+@app.delete("/campaigns/{campaign_id}")
+def delete_campaign(campaign_id: int, db: Session = Depends(get_db)):
+    """
+    Delete a campaign and all associated mailers
+    Cancels any scheduled jobs for all mailers in the campaign
+    Only allows deletion if first mailer is 'pending' or 'scheduled'
+    """
+    try:
+        # Fetch all mailers for this campaign
+        mailers = (
+            db.query(CampaignData).filter(CampaignData.campaign_id == campaign_id).all()
+        )
+
+        if not mailers:
+            raise HTTPException(status_code=404, detail="Campaign not found")
+
+        # Check first mailer status
+        first_mailer = mailers[0]
+        if first_mailer.status not in ["pending", "scheduled"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot delete campaign. First mailer has status '{first_mailer.status}'. Only campaigns with 'pending' or 'scheduled' first mailers can be deleted.",
+            )
+
+        # Remove all scheduled jobs for this campaign's mailers
+        for mailer in mailers:
+            if mailer.status == "scheduled":
+                try:
+                    scheduler.remove_job(f"campaign_data_{mailer.id}")
+                    print(
+                        f"✅ Removed scheduled job for mailer {mailer.id} in campaign {campaign_id}"
+                    )
+                except Exception as e:
+                    print(
+                        f"⚠️ Could not remove scheduled job for mailer {mailer.id}: {str(e)}"
+                    )
+
+        # Delete all mailers for this campaign
+        db.query(CampaignData).filter(CampaignData.campaign_id == campaign_id).delete()
+
+        # Delete the campaign
+        campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+        if campaign:
+            db.delete(campaign)
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"Campaign {campaign_id} and all associated mailers deleted successfully.",
+        }
+
+    except HTTPException:
+        raise  # re-raise known errors
+    except Exception as e:
+        db.rollback()
+        print(f"Error deleting campaign {campaign_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete campaign: {str(e)}"
         )

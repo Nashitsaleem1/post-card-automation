@@ -53,6 +53,11 @@
         font-weight: 700;
         color: #0f172a;
       }
+      .top-nav-buttons {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+      }
       .create-mailer-btn {
         padding: 12px 24px;
         background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
@@ -63,12 +68,29 @@
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
-        box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
+        box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3);
       }
       .create-mailer-btn:hover {
-        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
         transform: translateY(-1px);
-        box-shadow: 0 4px 6px linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+      }
+      .delete-campaign-btn {
+        padding: 12px 24px;
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 1px 3px rgba(239, 68, 68, 0.3);
+        display: none;
+      }
+      .delete-campaign-btn:hover {
+        background: #dc2626;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3);
       }
 
       /* Container */
@@ -153,11 +175,6 @@
       .template-card.selected {
         border-color: #3b82f6;
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-      }
-      .template-card img {
-        width: 100%;
-        height: 140px;
-        object-fit: cover;
       }
       .template-mini-preview {
         width: 100%;
@@ -291,7 +308,7 @@
         cursor: not-allowed;
       }
       .btn-primary {
-        background:linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
         color: white;
       }
       .btn-primary:hover:not(:disabled) {
@@ -312,6 +329,15 @@
       }
       .btn-outline:hover {
         background: #f8fafc;
+      }
+      .btn-danger {
+        background: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fca5a5;
+      }
+      .btn-danger:hover:not(:disabled) {
+        background: #fecaca;
+        border-color: #f87171;
       }
       .status-badge {
         display: inline-block;
@@ -563,6 +589,15 @@
         .template-preview-content {
           max-width: 95%;
         }
+        .top-nav-buttons {
+          flex-direction: column;
+          width: 100%;
+          gap: 0.5rem;
+        }
+        .create-mailer-btn,
+        .delete-campaign-btn {
+          width: 100%;
+        }
       }
       /* scrollbars */
       ::-webkit-scrollbar {
@@ -590,9 +625,14 @@
           <div class="campaign-label">Campaign Name</div>
           <div class="campaign-title" id="campaignName">Loading...</div>
         </div>
-        <button class="create-mailer-btn" id="openAddMailerBtn">
-          + Create New Mailer
-        </button>
+        <div class="top-nav-buttons">
+          <button class="create-mailer-btn" id="openAddMailerBtn">
+            + Create New Mailer
+          </button>
+          <button class="delete-campaign-btn" id="deleteCampaignBtn" onclick="deleteCampaign()">
+            🗑️ Delete Campaign
+          </button>
+        </div>
       </div>
     </div>
 
@@ -603,30 +643,24 @@
         <div class="section-header">
           <div class="section-title">All Mailers</div>
         </div>
-
-        <!-- Mailers grid -->
         <div id="mailersSection" class="mailers-grid"></div>
       </div>
 
-      <!-- Template Grid Section (shown when selecting template) -->
+      <!-- Template Grid Section -->
       <div id="templateGridSection" class="template-grid-section">
         <h3>Select a Template</h3>
         <div id="templateGrid" class="template-grid"></div>
       </div>
 
-      <!-- Side panel (for mailer details) -->
+      <!-- Side panel -->
       <aside id="sidePanel" class="side-panel" role="region" aria-hidden="true">
         <div style="position: relative">
           <button id="closeSideBtn" class="close-btn1" title="Close">✖</button>
           <div style="margin-top: 6px">
             <div class="detail-header">
               <div>
-                <div class="detail-title" id="detailMailerName">
-                  Select a mailer
-                </div>
-                <div class="detail-sub" id="detailMailerSub">
-                  Mailer details
-                </div>
+                <div class="detail-title" id="detailMailerName">Select a mailer</div>
+                <div class="detail-sub" id="detailMailerSub">Mailer details</div>
               </div>
             </div>
 
@@ -641,27 +675,15 @@
                 <span>Expected Cost</span><span id="detailCost">-</span>
               </div>
 
-              <!-- View Template Button -->
               <div style="text-align: center; margin-top: 10px">
-                <button
-                  id="viewTemplateBtn"
-                  class="btn btn-secondary"
-                  style="width: 100%"
-                >
+                <button id="viewTemplateBtn" class="btn btn-secondary" style="width: 100%">
                   View Selected Template
                 </button>
               </div>
             </div>
 
             <div id="detailRecipientsSection" style="margin-top: 12px">
-              <div
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  margin-bottom: 8px;
-                "
-              >
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <div style="font-weight: 700">Recipients</div>
                 <div class="recipients-filter">
                   <input
@@ -670,29 +692,13 @@
                     placeholder="Search name..."
                     style="width: 160px; padding: 6px 8px; font-size: 13px"
                   />
-                  <label
-                    style="
-                      font-size: 13px;
-                      display: flex;
-                      align-items: center;
-                      gap: 6px;
-                    "
-                  >
-                    <input type="checkbox" id="detailOnlyScanned" /> Only
-                    scanned
+                  <label style="font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                    <input type="checkbox" id="detailOnlyScanned" /> Only scanned
                   </label>
                 </div>
               </div>
 
-              <div
-                id="detailRecipients"
-                style="
-                  max-height: 320px;
-                  overflow: auto;
-                  border-radius: 6px;
-                  border: 1px solid transparent;
-                "
-              ></div>
+              <div id="detailRecipients" style="max-height: 320px; overflow: auto; border-radius: 6px; border: 1px solid transparent;"></div>
             </div>
           </div>
         </div>
@@ -715,11 +721,7 @@
             <label class="form-label" for="scheduleTime">Time</label>
             <input type="time" id="scheduleTime" class="form-input" />
           </div>
-          <button
-            class="btn btn-primary"
-            style="width: 100%"
-            onclick="confirmSchedule()"
-          >
+          <button class="btn btn-primary" style="width: 100%" onclick="confirmSchedule()">
             Confirm Schedule
           </button>
         </div>
@@ -735,9 +737,7 @@
         </div>
         <div style="padding: 1.25rem">
           <div class="form-group">
-            <label class="form-label" for="createNewmailerName"
-              >Mailer Name</label
-            >
+            <label class="form-label" for="createNewmailerName">Mailer Name</label>
             <input
               type="text"
               id="createNewmailerName"
@@ -749,17 +749,13 @@
             <label class="form-label">Select Template</label>
             <div id="createTemplateGrid" class="template-grid"></div>
           </div>
-          <button
-            id="createMailerSubmit"
-            class="btn btn-primary"
-            style="width: 100%"
-          >
+          <button id="createMailerSubmit" class="btn btn-primary" style="width: 100%">
             Create Mailer
           </button>
         </div>
       </div>
     </div>
-    
+
     <!-- Full Preview Modal -->
     <div id="fullPreviewModal" class="modal-overlay">
       <div class="modal-content" style="max-width: 800px">

@@ -337,15 +337,19 @@ function renderMailers(mailers) {
     const card = document.createElement("div");
     card.className = "mailer-card";
 
+    const canDelete = mailer.status === "pending" || mailer.status === "scheduled";
+    
     const actionButtons = hasSinglePending
       ? `
       <button class="btn btn-outline" onclick="openSidePanel(${mailer.id})">View Detail</button>
       <button class="btn btn-secondary" onclick="openTemplateSelector(${mailer.id}, event)">Select Template</button>
       <button class="btn btn-secondary" onclick="openScheduleModal(${mailer.id})">Schedule</button>
       <button class="btn btn-primary" onclick="sendMailer(${mailer.id}, this)">Send Letter</button>
+      ${canDelete ? `<button class="btn btn-danger" onclick="deleteMailer(${mailer.id})">Delete</button>` : ""}
     `
       : `
       <button class="btn btn-outline" onclick="openSidePanel(${mailer.id}, event)">View Detail</button>
+      ${canDelete ? `<button class="btn btn-danger" onclick="deleteMailer(${mailer.id})">Delete</button>` : ""}
     `;
 
     card.innerHTML = `
@@ -372,6 +376,108 @@ function renderMailers(mailers) {
     mailersSection.appendChild(card);
   });
 }
+// Add these functions to your existing campaign-detail.js
+
+// Add these functions to your existing campaign-detail.js
+
+/* ---------- Delete Mailer ---------- */
+async function deleteMailer(mailerId) {
+  const mailer = allMailers.find((m) => m.id === mailerId);
+  if (!mailer) {
+    alert("Mailer not found");
+    return;
+  }
+
+  // If only one mailer and it's pending or scheduled, offer to delete entire campaign
+  if (allMailers.length === 1 && (mailer.status === "pending" || mailer.status === "scheduled")) {
+    const confirmDelete = confirm(
+      `This is the only mailer in this campaign.\n\nWould you like to:\nOK = Delete entire campaign and mailer\nCancel = Keep campaign`
+    );
+    if (!confirmDelete) return;
+
+    // Delete entire campaign
+    await deleteCampaign();
+    return;
+  }
+
+  // Otherwise, just delete the individual mailer
+  const confirmDelete = confirm(
+    `Are you sure you want to delete "${mailer.mailer_name}"? This action cannot be undone.`
+  );
+  if (!confirmDelete) return;
+
+  try {
+    const res = await fetch(
+      `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${mailerId}`,
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || "Failed to delete mailer");
+    }
+    alert("Mailer deleted successfully!");
+    closeSidePanel();
+    await loadCampaignDetail();
+  } catch (err) {
+    console.error("deleteMailer error:", err);
+    alert("Error deleting mailer: " + err.message);
+  }
+}
+
+/* ---------- Delete Campaign ---------- */
+async function deleteCampaign() {
+  const campaignId = getQueryParam("id");
+  if (!campaignId) {
+    alert("No campaign ID found");
+    return;
+  }
+
+  const confirmDelete = confirm(
+    `Are you sure you want to delete this entire campaign? This action cannot be undone.`
+  );
+  if (!confirmDelete) return;
+
+  try {
+    const res = await fetch(
+      `https://pcm-app-h8mn8.ondigitalocean.app/campaigns/${campaignId}`,
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || "Failed to delete campaign");
+    }
+    alert("Campaign deleted successfully!");
+    // Redirect to campaigns list or home page
+    window.location.href = "dashboard.html";
+  } catch (err) {
+    console.error("deleteCampaign error:", err);
+    alert("Error deleting campaign: " + err.message);
+  }
+}
+
+/* ---------- Update visibility of delete campaign button ---------- */
+function updateDeleteCampaignButtonVisibility() {
+  const deleteBtn = document.getElementById("deleteCampaignBtn");
+  if (!deleteBtn) return;
+
+  // Show button only if first mailer is pending or scheduled
+  if (allMailers && allMailers.length > 0) {
+    const firstMailerStatus = allMailers[0].status || "pending";
+    const shouldShow =
+      firstMailerStatus === "pending" || firstMailerStatus === "scheduled";
+    deleteBtn.style.display = shouldShow ? "block" : "none";
+  } else {
+    // If no mailers, show the button
+    deleteBtn.style.display = "block";
+  }
+}
+
 
 /* ---------- Open Template Selector in Side Panel ---------- */
 async function openTemplateSelector(mailerId, event) {
@@ -862,6 +968,7 @@ async function loadCampaignDetail() {
       currentCampaign.campaign_name || "Unnamed Campaign";
 
     renderMailers(campaignData);
+    updateDeleteCampaignButtonVisibility(); // Add this line
 
     // Always hide template section on initial load
     const templateSection = document.getElementById("templateGridSection");
