@@ -1,14 +1,14 @@
-// --- Prevent page reload/close confirmation ---
-window.addEventListener("beforeunload", function (e) {
-  // Custom confirmation message
-  const confirmationMessage =
-    "Are you sure you want to reload or leave this page?";
+// // --- Prevent page reload/close confirmation ---
+// window.addEventListener("beforeunload", function (e) {
+//   // Custom confirmation message
+//   const confirmationMessage =
+//     "Are you sure you want to reload or leave this page?";
 
-  // Standard way to show the confirmation dialog
-  e.preventDefault();
-  e.returnValue = confirmationMessage; // Some browsers use this
-  return confirmationMessage; // For older ones
-});
+//   // Standard way to show the confirmation dialog
+//   e.preventDefault();
+//   e.returnValue = confirmationMessage; // Some browsers use this
+//   return confirmationMessage; // For older ones
+// });
 
 const campaignCard = document.getElementById("newCampaignCard");
 const mailerCard = document.getElementById("newMailerCard");
