@@ -466,9 +466,7 @@ def root():
 def healthz():
     return {"status": "ok"}
 
-
 # ---------- PDF Upload ----------
-
 
 @app.post("/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...)):
@@ -478,38 +476,35 @@ async def upload_pdf(file: UploadFile = File(...)):
     # Validate file type
     if not file.content_type == "application/pdf":
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
-
+    
     # Validate file size (max 10MB)
     file_size = 0
     chunk_size = 1024 * 1024  # 1MB chunks
     content = await file.read()
     file_size = len(content)
-
+    
     if file_size > 10 * 1024 * 1024:  # 10MB
         raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
-
+    
     try:
         file_extension = os.path.splitext(file.filename)[1]
         unique_filename = f"{uuid.uuid4()}{file_extension}"
         file_path = STATIC_DIR / unique_filename
-
+        
         with open(file_path, "wb") as f:
             f.write(content)
-
+        
         # ✅ Change the URL to use /uploads instead of /static
-        file_url = (
-            f"https://pcm-app-h8mn8.ondigitalocean.app/uploads/pdfs/{unique_filename}"
-        )
-
+        file_url = f"https://pcm-app-h8mn8.ondigitalocean.app/uploads/pdfs/{unique_filename}"
+        
         return {
             "success": True,
             "filename": unique_filename,
             "url": file_url,
-            "size": file_size,
+            "size": file_size
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error uploading file: {str(e)}")
-
 
 # ---------- Delete PDF ----------
 @app.delete("/delete-pdf/{filename}")
@@ -519,17 +514,20 @@ async def delete_pdf(filename: str):
     """
     try:
         file_path = STATIC_DIR / filename
-
+        
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="File not found")
-
+        
         os.remove(file_path)
-
-        return {"success": True, "message": f"File {filename} deleted successfully"}
-
+        
+        return {
+            "success": True,
+            "message": f"File {filename} deleted successfully"
+        }
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
-
+    
 
 # ---------- Start Campaign Watcher ----------
 scheduler.add_job(
@@ -548,9 +546,9 @@ def get_templates(db: Session = Depends(get_db)):
     return [
         {
             "id": t.id,
-            "html_content": t.template,
+            "html_content": t.template, 
             "qr_code_id": t.qr_code_id,
-            "template_name": t.template_name,
+            "template_name": t.template_name
         }
         for t in templates
     ]
@@ -559,9 +557,7 @@ def get_templates(db: Session = Depends(get_db)):
 @app.post("/templates", response_model=schemas.TemplateRead)
 def create_template(template: schemas.TemplateCreate, db: Session = Depends(get_db)):
     new_template = Template(
-        template=template.html_content,
-        qr_code_id=template.qr_code_id,
-        template_name=template.template_name,
+        template=template.html_content, qr_code_id=template.qr_code_id, template_name=template.template_name
     )
     db.add(new_template)
     db.commit()
@@ -569,9 +565,9 @@ def create_template(template: schemas.TemplateCreate, db: Session = Depends(get_
 
     return {
         "id": new_template.id,
-        "html_content": new_template.template,
+        "html_content": new_template.template, 
         "qr_code_id": new_template.qr_code_id,
-        "template_name": new_template.template_name,
+        "template_name":new_template.template_name
     }
 
 
@@ -607,7 +603,7 @@ def get_template(template_id: int, db: Session = Depends(get_db)):
         "id": template.id,
         "html_content": template.template,
         "qr_code_id": template.qr_code_id,
-        "template_name": template.template_name,
+        "template_name": template.template_name
     }
 
 
@@ -1005,9 +1001,7 @@ def delete_mailer_one_off(mailer_id: int, db: Session = Depends(get_db)):
         raise  # re-raise known errors
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=500, detail=f"Failed to delete mailer: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to delete mailer: {str(e)}")
 
 
 @app.delete("/campaign-data/{mailer_id}")
@@ -1034,9 +1028,7 @@ def delete_mailer(mailer_id: int, db: Session = Depends(get_db)):
                 scheduler.remove_job(f"campaign_data_{mailer.id}")
                 print(f"✅ Removed scheduled job for mailer {mailer.id}")
             except Exception as e:
-                print(
-                    f"⚠️ Could not remove scheduled job for mailer {mailer.id}: {str(e)}"
-                )
+                print(f"⚠️ Could not remove scheduled job for mailer {mailer.id}: {str(e)}")
 
         # Proceed with deletion
         db.delete(mailer)
@@ -1052,9 +1044,7 @@ def delete_mailer(mailer_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         print(f"Error deleting mailer {mailer_id}: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to delete mailer: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to delete mailer: {str(e)}")
 
 
 @app.delete("/campaigns/{campaign_id}")
@@ -1066,9 +1056,9 @@ def delete_campaign(campaign_id: int, db: Session = Depends(get_db)):
     """
     try:
         # Fetch all mailers for this campaign
-        mailers = (
-            db.query(CampaignData).filter(CampaignData.campaign_id == campaign_id).all()
-        )
+        mailers = db.query(CampaignData).filter(
+            CampaignData.campaign_id == campaign_id
+        ).all()
 
         if not mailers:
             raise HTTPException(status_code=404, detail="Campaign not found")
@@ -1095,7 +1085,9 @@ def delete_campaign(campaign_id: int, db: Session = Depends(get_db)):
                     )
 
         # Delete all mailers for this campaign
-        db.query(CampaignData).filter(CampaignData.campaign_id == campaign_id).delete()
+        db.query(CampaignData).filter(
+            CampaignData.campaign_id == campaign_id
+        ).delete()
 
         # Delete the campaign
         campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
@@ -1114,6 +1106,4 @@ def delete_campaign(campaign_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         print(f"Error deleting campaign {campaign_id}: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to delete campaign: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to delete campaign: {str(e)}")
