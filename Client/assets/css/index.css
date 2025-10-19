@@ -1642,11 +1642,8 @@ table tbody tr:hover,
 
 .preview-content {
   background: white;
-  width: 90%;
-  max-width: 1000px;
   height: 90%;
   overflow: auto;
-  padding: 2.5rem;
   border-radius: var(--radius-lg);
   position: relative;
   box-shadow: var(--shadow-xl);

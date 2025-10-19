@@ -1,3 +1,15 @@
+// --- Prevent page reload/close confirmation ---
+window.addEventListener("beforeunload", function (e) {
+  // Custom confirmation message
+  const confirmationMessage =
+    "Are you sure you want to reload or leave this page?";
+
+  // Standard way to show the confirmation dialog
+  e.preventDefault();
+  e.returnValue = confirmationMessage; // Some browsers use this
+  return confirmationMessage; // For older ones
+});
+
 const campaignCard = document.getElementById("newCampaignCard");
 const mailerCard = document.getElementById("newMailerCard");
 const campaignFields = document.getElementById("campaignFields");
@@ -1013,11 +1025,13 @@ async function loadTemplates() {
     templatesGrid.style.gridTemplateColumns = "repeat(3, 1fr)";
     templatesGrid.style.gap = "1.5rem";
 
-    // 👉 Function to render a template card
+    //  Function to render a template card
     function renderTemplateCard(tpl) {
       const div = document.createElement("div");
       div.classList.add("template-card");
       div.dataset.templateId = tpl.id;
+
+      const encodedHtml = encodeURIComponent(tpl.html_content || "");
 
       div.innerHTML = `
     <div class="template-preview">
@@ -1025,29 +1039,33 @@ async function loadTemplates() {
         ${tpl.html_content}
       </div>
       <div class="template-actions">
-        <button class="full-preview-btn" onclick="openFullPreview('${encodeURIComponent(
-          tpl.html_content
-        )}', event)">
+        <button class="full-preview-btn" data-html="${encodedHtml}">
           Full Preview
         </button>
       </div>
-      <div class="template-hover-name">${
-        tpl.template_name || "Untitled Template"
-      }</div>
+      <div class="template-hover-name">
+        ${tpl.template_name || "Untitled Template"}
+      </div>
     </div>
   `;
 
-      div.addEventListener("click", () => {
+      // Attach safe event listener
+      const fullPreviewBtn = div.querySelector(".full-preview-btn");
+      fullPreviewBtn.addEventListener("click", (event) => {
+        const encoded = event.currentTarget.dataset.html;
+        openFullPreview(event, encoded);
+      });
+
+      // Template selection logic
+      div.addEventListener("click", (e) => {
+        if (e.target.closest("button")) return;
         document
           .querySelectorAll(".template-card")
           .forEach((el) => el.classList.remove("selected"));
         div.classList.add("selected");
         window.currentEditingTemplateId = tpl.id;
-        uploadedPdfUrl = null; // Clear PDF when template selected
-
-        // ✅ UPDATE BUTTON STATES WHEN TEMPLATE SELECTED
+        uploadedPdfUrl = null;
         updateButtonStates();
-
         console.log("✅ Template selected:", tpl.id);
       });
 
@@ -1087,20 +1105,35 @@ async function loadTemplates() {
   }
 }
 
-function openFullPreview(encodedHtml, event) {
+// Updated openFullPreview - prevent event propagation
+function openFullPreview(event, encodedHtml) {
+  event.preventDefault();
   event.stopPropagation();
-  const html = decodeURIComponent(encodedHtml);
 
+  console.log("Opening preview...");
+
+  const html = decodeURIComponent(encodedHtml);
   const overlay = document.getElementById("previewOverlay");
   const body = document.getElementById("previewBody");
 
+  if (!overlay || !body) {
+    console.error("Preview elements not found in DOM");
+    return;
+  }
+
   body.innerHTML = html;
   overlay.style.display = "flex";
+
+  console.log("✅ Preview opened");
 }
 
+// Updated closePreview function
 function closePreview() {
-  document.getElementById("previewOverlay").style.display = "none";
-  document.getElementById("previewBody").innerHTML = "";
+  const overlay = document.getElementById("previewOverlay");
+  if (overlay) {
+    overlay.style.display = "none";
+    document.getElementById("previewBody").innerHTML = "";
+  }
 }
 
 // Update createAndSendLetter to validate PDF or template
@@ -1643,6 +1676,22 @@ if (performance.getEntriesByType("navigation")[0].type === "reload") {
 
 // Initialize button states on page load
 document.addEventListener("DOMContentLoaded", async () => {
+  const overlay = document.getElementById("previewOverlay");
+  if (overlay) {
+    // Close overlay when clicking outside the content box
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) {
+        closePreview();
+      }
+    });
+
+    // Close preview with ESC key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && overlay.style.display === "flex") {
+        closePreview();
+      }
+    });
+  }
   restoreState();
 
   // ✅ Initialize button states
@@ -1650,6 +1699,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("campaignName")?.addEventListener("input", saveState);
   document.getElementById("mailerName")?.addEventListener("input", saveState);
+
   document
     .getElementById("mailerNameOnlyInput")
     ?.addEventListener("input", saveState);
@@ -1658,7 +1708,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.currentEditingTemplateId = null;
   sessionStorage.removeItem("Restored template");
 
-  if (path.includes("templateGallery")) {
+  if (path.includes("templategallery")) {
     loadGalleryTemplates();
   } else if (path.includes("campaign_builder")) {
     await loadTemplates();

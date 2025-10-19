@@ -482,7 +482,7 @@
         position: relative;
         background: white;
         border-radius: 16px;
-        max-width: 900px;
+        max-width: 800px;
         width: 100%;
         max-height: 90vh;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -1104,6 +1104,7 @@ async function loadTemplates(selectedTemplateId = null) {
 
     templatesGrid.innerHTML = "";
 
+    // Function to render each template card safely
     function renderTemplateCard(tpl) {
       const div = document.createElement("div");
       div.classList.add("template-card");
@@ -1114,17 +1115,25 @@ async function loadTemplates(selectedTemplateId = null) {
         window.currentEditingTemplateId = tpl.id;
       }
 
+      const encodedHtml = encodeURIComponent(tpl.html_content || "");
+
       div.innerHTML = `
         <div class="template-preview">${tpl.html_content}</div>
-        <button class="full-preview-btn" onclick="openFullPreview('${encodeURIComponent(
-          tpl.html_content
-        )}', event)">
+        <button class="full-preview-btn" data-html="${encodedHtml}">
           Full Preview
         </button>
       `;
 
+      // Handle full preview safely (no inline JS)
+      const previewBtn = div.querySelector(".full-preview-btn");
+      previewBtn.addEventListener("click", (event) => {
+        const encoded = event.currentTarget.dataset.html;
+        openFullPreview(event, encoded);
+      });
+
+      // Handle template selection
       div.addEventListener("click", (e) => {
-        if (e.target.classList.contains("full-preview-btn")) return;
+        if (e.target.closest("button")) return;
 
         document
           .querySelectorAll(".template-card")
@@ -1136,10 +1145,12 @@ async function loadTemplates(selectedTemplateId = null) {
       return div;
     }
 
+    // Render first 6 templates
     templates.slice(0, 6).forEach((tpl) => {
       templatesGrid.appendChild(renderTemplateCard(tpl));
     });
 
+    // Add "Show All Templates" button if needed
     if (templates.length > 6) {
       const showAllBtn = document.createElement("button");
       showAllBtn.textContent = "Show All Templates";
@@ -1160,15 +1171,27 @@ async function loadTemplates(selectedTemplateId = null) {
   }
 }
 
-function openFullPreview(encodedHtml, event) {
+// Updated openFullPreview - prevent event propagation
+function openFullPreview(event, encodedHtml) {
+  event.preventDefault();
   event.stopPropagation();
+
+  console.log("Opening preview...");
+
   const html = decodeURIComponent(encodedHtml);
   const overlay = document.getElementById("previewOverlay");
   const body = document.getElementById("previewBody");
+
+  if (!overlay || !body) {
+    console.error("Preview elements not found in DOM");
+    return;
+  }
+
   body.innerHTML = html;
   overlay.style.display = "flex";
-}
 
+  console.log("✅ Preview opened");
+}
 function closePreview() {
   document.getElementById("previewOverlay").style.display = "none";
   document.getElementById("previewBody").innerHTML = "";
