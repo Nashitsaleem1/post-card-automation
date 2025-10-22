@@ -656,10 +656,12 @@ async function searchProperties() {
   const state = document.getElementById("stateInput").value.trim();
   const zip = document.getElementById("zipInput").value.trim();
   const street = document.getElementById("streetInput").value.trim();
+  const minYearBuilt = document.getElementById("minYearBuilt").value.trim();
+  const maxYearBuilt = document.getElementById("maxYearBuilt").value.trim();
   const neighborhood = document
     .getElementById("neighborhoodInput")
     .value.trim();
-  console.log(neighborhood);
+  // console.log(neighborhood);
   const minValue = document.getElementById("minValue").value.trim();
   const maxValue = document.getElementById("maxValue").value.trim();
 
@@ -683,9 +685,9 @@ async function searchProperties() {
   // ✅ Build query (for neighborhood searches)
   let queryValue = "";
   if (neighborhood) {
-    queryValue = `${neighborhood}`;
+    queryValue = `${neighborhood}, ${state}`;
   }
-
+  console.log(queryValue)
   // ✅ Use different payloads depending on street input
   let payload;
   if (street) {
@@ -734,13 +736,21 @@ async function searchProperties() {
   if (Object.keys(building).length > 0) {
     payload.searchCriteria.building = building;
   }
-
+  // Year built filter
+  if (minYearBuilt || maxYearBuilt) {
+    if (!payload.searchCriteria.building) {
+      payload.searchCriteria.building = {};
+    }
+    payload.searchCriteria.building.yearBuilt = {};
+    if (minYearBuilt) payload.searchCriteria.building.yearBuilt.min = parseInt(minYearBuilt);
+    if (maxYearBuilt) payload.searchCriteria.building.yearBuilt.max = parseInt(maxYearBuilt);
+  }
   // Quick list filter
   if (quickList) {
     payload.searchCriteria.orQuickLists = [quickList];
   }
 
-  console.log("Payload:", payload);
+  // console.log("Payload:", payload);
 
   try {
     const response = await fetch(
@@ -757,7 +767,7 @@ async function searchProperties() {
     );
 
     const data = await response.json();
-    console.log("API Response:", data);
+    // console.log("API Response:", data);
 
     let records = [];
     if (data && data.results && Array.isArray(data.results.properties)) {
@@ -775,6 +785,7 @@ async function searchProperties() {
       "<p style='color:red'>Error fetching properties</p>";
   }
 }
+
 
 function loadZipCodes(cityName, stateCode) {
   const geocoder = new google.maps.Geocoder();
@@ -844,27 +855,73 @@ function populateZipDropdown(zipCodes) {
   });
 }
 
-function loadNeighborhoods(cityName, stateCode) {
-  const service = new google.maps.places.PlacesService(
-    document.createElement("div")
-  );
-  const query = `neighborhoods in ${cityName}, ${stateCode}`;
+async function loadNeighborhoods(cityName, stateCode) {
+  const neighborhoodSelect = document.getElementById("neighborhoodInput");
+  neighborhoodSelect.innerHTML =
+    '<option value="">Loading neighborhoods...</option>';
 
-  service.textSearch({ query }, (results, status) => {
-    if (status === google.maps.places.PlacesServiceStatus.OK) {
-      const neighborhoods = results.map((r) => r.name);
+  // Build the Overpass QL query for exact neighborhood matches
+  const query = `
+    [out:json][timeout:25];
+    area["name"="${cityName}"]["admin_level"="8"]->.city;
+    (
+      node["place"="neighbourhood"](area.city);
+      way["place"="neighbourhood"](area.city);
+      relation["place"="neighbourhood"](area.city);
+      node["place"="suburb"](area.city);
+      way["place"="suburb"](area.city);
+      relation["place"="suburb"](area.city);
+      node["place"="quarter"](area.city);
+      way["place"="quarter"](area.city);
+      relation["place"="quarter"](area.city);
+    );
+    out tags;
+  `;
 
-      const neighborhoodSelect = document.getElementById("neighborhoodInput");
-      neighborhoodSelect.innerHTML =
-        '<option value="">-- Select Neighborhood --</option>';
-      neighborhoods.forEach((nb) => {
-        const option = document.createElement("option");
-        option.value = nb;
-        option.textContent = nb;
-        neighborhoodSelect.appendChild(option);
-      });
-    }
-  });
+  try {
+    const response = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      body: query,
+    });
+    const data = await response.json();
+
+    // Extract unique neighborhood names
+    const neighborhoods = [
+      ...new Set(
+        data.elements
+          .map((el) => el.tags && el.tags.name)
+          .filter((name) => !!name)
+      ),
+    ];
+    console.log(neighborhoods)
+
+    // Clear dropdown and populate
+    neighborhoodSelect.innerHTML =
+      '<option value="">-- Select Neighborhood --</option>';
+    
+    // Always add city name as first option
+    const cityOption = document.createElement("option");
+    cityOption.value = cityName;
+    cityOption.textContent = cityName;
+    neighborhoodSelect.appendChild(cityOption);
+    
+    // Add neighborhoods if found
+    neighborhoods.forEach((nb) => {
+      const option = document.createElement("option");
+      option.value = nb;
+      option.textContent = nb;
+      neighborhoodSelect.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Error fetching neighborhoods:", error);
+    // On error, still add city name
+    neighborhoodSelect.innerHTML =
+      '<option value="">-- Select Neighborhood --</option>';
+    const option = document.createElement("option");
+    option.value = cityName;
+    option.textContent = cityName;
+    neighborhoodSelect.appendChild(option);
+  }
 }
 
 function showAlert(message) {
