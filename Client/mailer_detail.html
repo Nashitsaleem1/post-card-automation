@@ -8,7 +8,7 @@
       class="taskbar-icon"
       rel="icon"
       type="image/png"
-      href="./assets/images/p_icon_with_gradient.png"
+      href="./assets/images/p_icon_with_gradient-removebg-preview.png"
     />
     <style>
       * {
@@ -598,7 +598,7 @@
           <input type="time" id="scheduleTime" required />
 
           <button type="submit" class="btn btn-primary">
-            ✅ Confirm Schedule
+            Confirm Schedule
           </button>
         </form>
       </div>
@@ -661,7 +661,7 @@ async function confirmSchedule() {
 
     await res.json();
 
-    alert("Mailer scheduled successfully!");
+    alert("Mailer scheduled successfully! (Currently in TESTING phase scheduling)");
     closeScheduleModal();
     location.reload();
   } catch (err) {
@@ -706,21 +706,41 @@ async function openTemplatePreview(templateId) {
   }
 }
 
-async function getToken() {
-  const payload = {
+async function getToken(env = "testing") {
+  // Define credentials for both environments
+  const credentials = {
+    testing: {
     apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
     apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
-    childRefNbr: "myAccountReference",
+      childRefNbr: "myAccountReference",
+      url: "https://v3.pcmintegrations.com/auth/login"
+    },
+    production: {
+    apiKey: "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy",
+    apiSecret: "MzNhYTBjZTktYmVkZS00MDdkLTg1MDAtMTc4Y2ZiMWM5YWI5",
+      childRefNbr: "myAccountReference",
+      url: "https://v3.pcmintegrations.com/auth/login"
+    }
   };
-  const res = await fetch("https://v3.pcmintegrations.com/auth/login", {
+
+  const creds = credentials[env];
+  const payload = {
+    apiKey: creds.apiKey,
+    apiSecret: creds.apiSecret,
+    childRefNbr: creds.childRefNbr
+  };
+
+  const res = await fetch(creds.url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error("Auth failed");
+
+  if (!res.ok) throw new Error(`Auth failed for ${env.toUpperCase()} environment`);
   const data = await res.json();
   return data.token;
 }
+
 
 async function orderDesign(templateId, button) {
   const originalText = button.textContent;
@@ -739,13 +759,20 @@ async function orderDesign(templateId, button) {
       day: "numeric",
     });
 
+    // --- Step 1: Load template content ---
     const tplRes = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`);
     if (!tplRes.ok) throw new Error("Failed to load template content");
     const tpl = await tplRes.json();
     const finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
 
-    const token = await getToken();
+    // --- Step 2: Ask user for environment ---
+    const useProd = confirm("Do you want to send the letter for REAL?\nPress 'Cancel' for Testing mode.");
+    const env = useProd ? "production" : "testing";
 
+    // --- Step 3: Get PCM token ---
+    const token = await getToken(env);
+
+    // --- Step 4: Send letter via PCM ---
     const pcmPayload = {
       extRefNbr: "12345",
       designID: 0,
@@ -778,6 +805,7 @@ async function orderDesign(templateId, button) {
 
     alert("✅ Letter sent successfully!");
 
+    // --- Step 5: Update backend only after PCM succeeds ---
     const updatePayload = {
       status: "sent",
       send_date: new Date().toISOString(),
@@ -796,6 +824,8 @@ async function orderDesign(templateId, button) {
     }
 
     const updatedMailer = await updateRes.json();
+
+    // --- Step 6: Update frontend ---
     currentMailer = { ...updatedMailer };
     renderMailerInfo(currentMailer);
 
@@ -810,6 +840,7 @@ async function orderDesign(templateId, button) {
     button.disabled = false;
   }
 }
+
 
 async function deleteMailer(mailerId) {
   if (!confirm("Are you sure you want to delete this mailer? This action cannot be undone.")) {
@@ -841,7 +872,7 @@ function attachMailerActions(mailer) {
 
   const schedBtn = document.createElement("button");
   schedBtn.className = "btn btn-secondary";
-  schedBtn.innerHTML = "📅 Schedule";
+  schedBtn.innerHTML = "Schedule";
   schedBtn.onclick = () => {
     if (!window.currentEditingTemplateId) {
       alert("Please select a template before scheduling.");
@@ -997,7 +1028,7 @@ function handlePendingMailer(mailer) {
   costItem.className = "info-item";
   costItem.innerHTML = `
     <strong>Estimated Cost</strong>
-    <span>${totalCost}</span>
+    <span>$${totalCost}</span>
   `;
   infoContent.appendChild(costItem);
 
@@ -1009,7 +1040,7 @@ function handlePendingMailer(mailer) {
 async function fetchScannedRecipients(qrCodeId) {
   if (!qrCodeId) return [];
   
-  const token = await getToken();
+  const token = await getToken("production");
   if (!token) return [];
 
   try {
@@ -1076,7 +1107,7 @@ function handleSentMailer(mailer) {
   costItem.className = "info-item";
   costItem.innerHTML = `
     <strong>Expected Cost</strong>
-    <span>${totalCost}</span>
+    <span>$${totalCost}</span>
   `;
   infoContent.appendChild(costItem);
 

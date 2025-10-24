@@ -22,6 +22,17 @@ const uploadsection = document.getElementById("uploadsection");
 const batchsection = document.getElementById("batchdatasearch");
 let cityAutocomplete;
 let recipientsList = [];
+// ---- API Credentials ----
+const API_KEYS = {
+  testing: {
+    apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
+    apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
+  },
+  production: {
+    apiKey: "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy",
+    apiSecret: "MzNhYTBjZTktYmVkZS00MDdkLTg1MDAtMTc4Y2ZiMWM5YWI5",
+  },
+};
 
 let uploadedPdfUrl = null;
 
@@ -134,7 +145,6 @@ function setupPdfUpload() {
 
   // Check if already initialized to prevent duplicate listeners
   if (pdfUploadBox.dataset.initialized === "true") {
-    console.log("PDF upload already initialized");
     return;
   }
   pdfUploadBox.dataset.initialized = "true";
@@ -183,12 +193,9 @@ function setupPdfUpload() {
       e.target.value = ""; // Clear input
     }
   });
-
-  console.log("✅ PDF upload initialized");
 }
 
 // Upload PDF to backend
-// Call updateButtonStates() after PDF upload succeeds
 async function uploadPdfFile(file) {
   if (file.size > 10 * 1024 * 1024) {
     showAlert("File size exceeds 10MB limit");
@@ -255,7 +262,7 @@ async function uploadPdfFile(file) {
     // ✅ UPDATE BUTTON STATES AFTER PDF UPLOAD
     updateButtonStates();
 
-    console.log("✅ PDF uploaded:", uploadedPdfUrl);
+    // console.log("✅ PDF uploaded:", uploadedPdfUrl);
   } catch (error) {
     console.error("PDF upload error:", error);
     showAlert("Error uploading PDF: " + error.message);
@@ -263,7 +270,7 @@ async function uploadPdfFile(file) {
   }
 }
 
-// ✅ Helper function to reset PDF upload box
+// Helper function to reset PDF upload box
 function resetPdfUploadBox() {
   const pdfUploadBox = document.getElementById("pdfUploadBox");
   if (!pdfUploadBox) return;
@@ -299,8 +306,6 @@ function resetPdfUploadBox() {
   setupPdfUpload();
 }
 
-// Remove uploaded PDF
-// Call updateButtonStates() after PDF removal
 async function removePdf(filename) {
   try {
     const response = await fetch(
@@ -349,7 +354,7 @@ async function removePdf(filename) {
     // ✅ UPDATE BUTTON STATES AFTER PDF REMOVAL
     updateButtonStates();
 
-    console.log("✅ PDF removed");
+    // console.log("✅ PDF removed");
   } catch (error) {
     console.error("Error removing PDF:", error);
     showAlert("Error removing PDF: " + error.message);
@@ -383,7 +388,7 @@ uploadcsvCard.addEventListener("click", () => {
 BatchsearchCard.addEventListener("click", () => {
   BatchsearchCard.classList.add("selected");
   uploadcsvCard.classList.remove("selected");
-  batchsection.style.display = "block";
+  batchsection.style.display = "flex";
   uploadsection.style.display = "none";
   updateButtonStates();
 });
@@ -463,7 +468,7 @@ function restoreState() {
     document.getElementById("mailerNameOnlyInput").value = state.mailerNameonly;
   if (state.recipients && state.recipients.length) {
     recipientsList = state.recipients;
-    console.log("Restored recipients:", recipientsList);
+    // console.log("Restored recipients:", recipientsList);
     document.getElementById("uploadBox").innerHTML = `
       <div class="upload-icon" style="color: #28a745;">✓</div>
       <div class="upload-main-text" style="color: #28a745;">File uploaded successfully!</div>
@@ -645,13 +650,25 @@ function renderAddresses(addressData) {
       recipientsList.push(recipient);
     });
 
-    console.log("Recipients List:", recipientsList);
+    // console.log("Recipients List:", recipientsList);
     saveState();
     container.innerHTML = "";
   });
 }
 
-async function searchProperties() {
+// Global variables for pagination
+let allRecords = [];
+let filteredRecords = [];
+let selectedRecords = new Set();
+let currentPage = 1;
+let recordsPerPage = 20;
+let totalResultsFound = 0;
+let totalPages = 0;
+let currentSearchPayload = null;
+let allLoadedRecords = []; // Store all records loaded from API across pages
+
+async function searchProperties(event, pageNum = 1) {
+  if (event) event.preventDefault();
   const city = document.getElementById("cityApiValue").value.trim();
   const state = document.getElementById("stateInput").value.trim();
   const zip = document.getElementById("zipInput").value.trim();
@@ -661,7 +678,6 @@ async function searchProperties() {
   const neighborhood = document
     .getElementById("neighborhoodInput")
     .value.trim();
-  // console.log(neighborhood);
   const minValue = document.getElementById("minValue").value.trim();
   const maxValue = document.getElementById("maxValue").value.trim();
 
@@ -669,26 +685,33 @@ async function searchProperties() {
   const maxBedrooms = document.getElementById("maxBedrooms").value;
   const minBathrooms = document.getElementById("minBathrooms").value;
   const maxBathrooms = document.getElementById("maxBathrooms").value;
-  const minStories = document.getElementById("minStories").value;
-  const maxStories = document.getElementById("maxStories").value;
 
   const quickList = document.getElementById("quickList").value;
 
+  // Get selected page size from dropdown
+  const pageSizeSelect = document.getElementById("pageSizeSelect");
+  if (pageSizeSelect) {
+    recordsPerPage = parseInt(pageSizeSelect.value);
+  }
+
   // Validation
   if (!((street && zip) || (street && city && state) || neighborhood)) {
-    showAlert(
+    alert(
       "Please enter either 'Street + Zip Code' or 'Street + City + State' or 'Neighborhood'."
     );
     return;
   }
 
-  // ✅ Build query (for neighborhood searches)
+  // Build query (for neighborhood searches)
   let queryValue = "";
   if (neighborhood) {
     queryValue = `${neighborhood}, ${state}`;
   }
-  console.log(queryValue)
-  // ✅ Use different payloads depending on street input
+
+  // Calculate skip parameter based on page number
+  const skip = (pageNum - 1) * recordsPerPage;
+
+  // Use different payloads depending on street input
   let payload;
   if (street) {
     payload = {
@@ -696,14 +719,24 @@ async function searchProperties() {
         query: queryValue,
         compAddress: { street, city, state, zip },
       },
-      options: { useYearBuilt: true, skip: 0, take: 20, projection: "all" },
+      options: {
+        useYearBuilt: true,
+        skip: skip,
+        take: recordsPerPage,
+        projection: "all",
+      },
     };
   } else {
     payload = {
       searchCriteria: {
         query: queryValue,
       },
-      options: { useYearBuilt: true, skip: 0, take: 20, projection: "all" },
+      options: {
+        useYearBuilt: true,
+        skip: skip,
+        take: recordsPerPage,
+        projection: "all",
+      },
     };
   }
 
@@ -728,31 +761,37 @@ async function searchProperties() {
     if (minBathrooms) building.bathroomCount.min = parseInt(minBathrooms);
     if (maxBathrooms) building.bathroomCount.max = parseInt(maxBathrooms);
   }
-  if (minStories || maxStories) {
-    building.storyCount = {};
-    if (minStories) building.storyCount.min = parseInt(minStories);
-    if (maxStories) building.storyCount.max = parseInt(maxStories);
-  }
   if (Object.keys(building).length > 0) {
     payload.searchCriteria.building = building;
   }
+
   // Year built filter
   if (minYearBuilt || maxYearBuilt) {
     if (!payload.searchCriteria.building) {
       payload.searchCriteria.building = {};
     }
     payload.searchCriteria.building.yearBuilt = {};
-    if (minYearBuilt) payload.searchCriteria.building.yearBuilt.min = parseInt(minYearBuilt);
-    if (maxYearBuilt) payload.searchCriteria.building.yearBuilt.max = parseInt(maxYearBuilt);
+    if (minYearBuilt)
+      payload.searchCriteria.building.yearBuilt.min = parseInt(minYearBuilt);
+    if (maxYearBuilt)
+      payload.searchCriteria.building.yearBuilt.max = parseInt(maxYearBuilt);
   }
+
   // Quick list filter
   if (quickList) {
     payload.searchCriteria.orQuickLists = [quickList];
   }
 
-  // console.log("Payload:", payload);
+  // Store payload for page navigation
+  currentSearchPayload = payload;
 
   try {
+    // Show loading state only in table container
+    const tableContainer = document.querySelector(".table-container");
+    if (tableContainer) {
+      tableContainer.innerHTML = "<div>Loading properties...</div>";
+    }
+
     const response = await fetch(
       "https://api.batchdata.com/api/v1/property/search",
       {
@@ -766,26 +805,563 @@ async function searchProperties() {
       }
     );
 
-    const data = await response.json();
-    // console.log("API Response:", data);
+    const responseData = await response.json();
+    console.log("Full Response:", responseData);
+
+    // Handle array wrapper - API returns data in array format
+    const data = Array.isArray(responseData) ? responseData[0] : responseData;
+
+    // Extract metadata from correct path
+    if (
+      data &&
+      data.results &&
+      data.results.meta &&
+      data.results.meta.results
+    ) {
+      totalResultsFound = data.results.meta.results.resultsFound || 0;
+      totalPages = Math.ceil(totalResultsFound / recordsPerPage);
+      console.log("Total Results Found:", totalResultsFound);
+      console.log("Total Pages:", totalPages);
+    }
 
     let records = [];
     if (data && data.results && Array.isArray(data.results.properties)) {
       records = data.results.properties;
     }
 
+    console.log("Records:", records);
+
+    // Filter by zip code if selected
+    if (zip && records.length > 0) {
+      records = records.filter((record) => {
+        const recordZip =
+          record?.address?.zip || record?.address?.zipCode || "";
+        return recordZip.toString().startsWith(zip);
+      });
+    }
+
+    allRecords = records;
+    filteredRecords = records;
+    currentPage = pageNum;
+
+    // Add current page records to allLoadedRecords
+    records.forEach((record) => {
+      const recordId =
+        record._id || `${record.address?.street}_${record.address?.zip}`;
+      // Check if record already exists in allLoadedRecords
+      const exists = allLoadedRecords.some((r) => {
+        const existingId = r._id || `${r.address?.street}_${r.address?.zip}`;
+        return existingId === recordId;
+      });
+      if (!exists) {
+        allLoadedRecords.push(record);
+      }
+    });
+
     if (records.length > 0) {
-      renderAddresses(records);
+      renderResults();
     } else {
-      document.getElementById("results").innerHTML = "<p>No results found.</p>";
+      renderNoResults();
     }
   } catch (error) {
     console.error("Error fetching properties:", error);
-    document.getElementById("results").innerHTML =
-      "<p style='color:red'>Error fetching properties</p>";
+    renderError();
   }
 }
 
+function renderResults() {
+  const startIndex = (currentPage - 1) * recordsPerPage;
+  const endIndex = startIndex + filteredRecords.length;
+
+  // Update results header
+  updateResultsHeader();
+
+  // Update pagination info
+  document.querySelector(".pagination-info").textContent = `Showing ${
+    startIndex + 1
+  }-${endIndex} of ${totalResultsFound.toLocaleString()}`;
+
+  // Render table
+  let tableHTML = `
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th class="checkbox-col">
+            <input type="checkbox" id="selectPageCheckbox" onchange="toggleSelectPage()" 
+                   ${isPageFullySelected() ? "checked" : ""}>
+          </th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Address</th>
+          <th>City</th>
+          <th>State</th>
+          <th>Zip Code</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  filteredRecords.forEach((record, index) => {
+    const globalIndex = startIndex + index;
+    const recordId =
+      record._id || `${record.address?.street}_${record.address?.zip}`;
+    const isChecked = selectedRecords.has(recordId);
+
+    let firstName = "";
+    let lastName = "";
+
+    if (record.owner?.names && record.owner.names.length > 0) {
+      firstName = record.owner.names[0].first || "";
+      lastName = record.owner.names[0].last || "";
+
+      if (!firstName && lastName) firstName = lastName;
+      if (!lastName && firstName) lastName = firstName;
+    } else {
+      const fullName =
+        record.owner?.fullName ||
+        record.owner?.firstName ||
+        record.owner?.lastName ||
+        "Unknown";
+      firstName = fullName;
+      lastName = fullName;
+    }
+
+    if (!firstName) firstName = "N/A";
+    if (!lastName) lastName = "N/A";
+
+    const street =
+      record.address?.street || record.address?.streetAddress || "";
+    const city = record.address?.city || "";
+    const state = record.address?.state || "";
+    const zip = record.address?.zip || record.address?.zipCode || "";
+
+    tableHTML += `
+      <tr class="${isChecked ? "selected-row" : ""}">
+        <td class="checkbox-col">
+          <input type="checkbox" class="record-checkbox" 
+                 ${isChecked ? "checked" : ""} 
+                 onchange="toggleRecord('${recordId}')">
+        </td>
+        <td>${firstName}</td>
+        <td>${lastName}</td>
+        <td>${street}</td>
+        <td>${city}</td>
+        <td>${state}</td>
+        <td>${zip}</td>
+      </tr>
+    `;
+  });
+
+  tableHTML += `
+      </tbody>
+    </table>
+  `;
+
+  // Update table container
+  document.querySelector(".table-container").innerHTML = tableHTML;
+
+  // Update pagination controls
+  updatePaginationControls();
+}
+
+function renderNoResults() {
+  // Update results header with zeros
+  updateResultsHeader();
+
+  // Update pagination info
+  document.querySelector(".pagination-info").textContent =
+    "No search results yet";
+
+  // Clear table container
+  document.querySelector(".table-container").innerHTML = `
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th class="checkbox-col"><input type="checkbox" id="selectPageCheckbox" disabled></th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Address</th>
+          <th>City</th>
+          <th>State</th>
+          <th>Zip Code</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="7" class="empty-row">No results found</td></tr>
+      </tbody>
+    </table>
+  `;
+
+  // Disable pagination
+  updatePaginationControls();
+}
+
+function renderError() {
+  // Update results header with zeros
+  updateResultsHeader();
+
+  // Update pagination info
+  document.querySelector(".pagination-info").textContent =
+    "Error loading results";
+
+  // Clear table container
+  document.querySelector(".table-container").innerHTML = `
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th class="checkbox-col"><input type="checkbox" id="selectPageCheckbox" disabled></th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Address</th>
+          <th>City</th>
+          <th>State</th>
+          <th>Zip Code</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="7" class="empty-row">Error fetching properties. Please try again.</td></tr>
+      </tbody>
+    </table>
+  `;
+
+  // Disable pagination
+  updatePaginationControls();
+}
+
+function updateResultsHeader() {
+  const allRecordsSelected =
+    allLoadedRecords.length > 0 &&
+    allLoadedRecords.every((record) => {
+      const recordId =
+        record._id || `${record.address?.street}_${record.address?.zip}`;
+      return selectedRecords.has(recordId);
+    });
+
+  document.querySelector(".result-counts").innerHTML = `
+    <span class="count-item">Total Results Found: <strong>${totalResultsFound.toLocaleString()}</strong></span>
+  `;
+}
+
+function updatePaginationControls() {
+  const pageNumbers = document.getElementById("pageNumbers");
+  pageNumbers.innerHTML = generatePageNumbers(currentPage, totalPages);
+
+  // Update pagination buttons
+  const paginationBtns = document.querySelectorAll(".pagination-btn");
+  if (paginationBtns.length >= 4) {
+    paginationBtns[0].disabled = currentPage === 1 || totalPages === 0; // First
+    paginationBtns[1].disabled = currentPage === 1 || totalPages === 0; // Previous
+    paginationBtns[2].disabled = currentPage === totalPages || totalPages === 0; // Next
+    paginationBtns[3].disabled = currentPage === totalPages || totalPages === 0; // Last
+  }
+}
+
+function isPageFullySelected() {
+  return (
+    filteredRecords.length > 0 &&
+    filteredRecords.every((record) => {
+      const recordId =
+        record._id || `${record.address?.street}_${record.address?.zip}`;
+      return selectedRecords.has(recordId);
+    })
+  );
+}
+
+function toggleSelectPage() {
+  const checkbox = document.getElementById("selectPageCheckbox");
+
+  if (checkbox.checked) {
+    // Select ALL records that have been loaded from API so far
+    allLoadedRecords.forEach((record) => {
+      const recordId =
+        record._id || `${record.address?.street}_${record.address?.zip}`;
+      selectedRecords.add(recordId);
+    });
+  } else {
+    // Deselect ALL loaded records
+    allLoadedRecords.forEach((record) => {
+      const recordId =
+        record._id || `${record.address?.street}_${record.address?.zip}`;
+      selectedRecords.delete(recordId);
+    });
+  }
+
+  // Re-render only the current page to reflect updated selection
+  renderResults();
+}
+
+
+function generatePageNumbers(current, total) {
+  let html = "";
+  const maxVisible = 5;
+  let start = Math.max(1, current - Math.floor(maxVisible / 2));
+  let end = Math.min(total, start + maxVisible - 1);
+
+  if (end - start < maxVisible - 1) {
+    start = Math.max(1, end - maxVisible + 1);
+  }
+
+  for (let i = start; i <= end; i++) {
+    html += `
+      <button class="page-number ${
+        i === current ? "active" : ""
+      }" onclick="goToPage(${i})">
+        ${i}
+      </button>
+    `;
+  }
+
+  return html;
+}
+
+function goToPage(page) {
+  if (page < 1 || page > totalPages) return;
+  searchProperties(event, page);
+  const tableContainer = document.querySelector(".table-container");
+  if (tableContainer) {
+    tableContainer.scrollTo({ top: 0, behavior: "smooth" });
+  }
+}
+
+function changePageSize() {
+  const newSize = parseInt(document.getElementById("pageSizeSelect").value);
+  recordsPerPage = newSize;
+  totalPages = Math.ceil(totalResultsFound / recordsPerPage);
+  searchProperties(event, 1);
+}
+
+function toggleRecord(recordId) {
+  if (selectedRecords.has(recordId)) {
+    selectedRecords.delete(recordId);
+  } else {
+    selectedRecords.add(recordId);
+  }
+  renderResults();
+}
+
+function toggleSelectAll() {
+  const checkbox = document.getElementById("selectAllCheckbox");
+
+  if (checkbox.checked) {
+    // Select all loaded records from API
+    allLoadedRecords.forEach((record) => {
+      const recordId =
+        record._id || `${record.address?.street}_${record.address?.zip}`;
+      selectedRecords.add(recordId);
+    });
+  } else {
+    // Deselect all loaded records
+    allLoadedRecords.forEach((record) => {
+      const recordId =
+        record._id || `${record.address?.street}_${record.address?.zip}`;
+      selectedRecords.delete(recordId);
+    });
+  }
+
+  // Re-render to update checkboxes on current page
+  renderResults();
+}
+
+function exportToCSV() {
+  if (selectedRecords.size === 0) {
+    alert("Please select at least one property to export.");
+    return;
+  }
+
+  const recordsToExport = allLoadedRecords.filter((record) => {
+    const recordId =
+      record._id || `${record.address?.street}_${record.address?.zip}`;
+    return selectedRecords.has(recordId);
+  });
+
+  // CSV headers
+  const headers = [
+    "FirstName",
+    "LastName",
+    "Address",
+    "City",
+    "State",
+    "ZipCode",
+  ];
+
+  // Build CSV content
+  let csvContent = headers.join(",") + "\n";
+
+  recordsToExport.forEach((record) => {
+    let firstName = "";
+    let lastName = "";
+
+    if (record.owner?.names && record.owner.names.length > 0) {
+      firstName = record.owner.names[0].first || "";
+      lastName = record.owner.names[0].last || "";
+
+      if (!firstName && lastName) firstName = lastName;
+      if (!lastName && firstName) lastName = firstName;
+    } else {
+      const fullName =
+        record.owner?.fullName ||
+        record.owner?.firstName ||
+        record.owner?.lastName ||
+        "Unknown";
+      firstName = fullName;
+      lastName = fullName;
+    }
+
+    if (!firstName) firstName = "N/A";
+    if (!lastName) lastName = "N/A";
+
+    const street =
+      record.address?.street || record.address?.streetAddress || "";
+    const city = record.address?.city || "";
+    const state = record.address?.state || "";
+    const zip = record.address?.zip || record.address?.zipCode || "";
+
+    const row = [
+      `"${firstName}"`,
+      `"${lastName}"`,
+      `"${street}"`,
+      `"${city}"`,
+      `"${state}"`,
+      `"${zip}"`,
+    ];
+    csvContent += row.join(",") + "\n";
+  });
+
+  // Download CSV
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+
+  link.setAttribute("href", url);
+  link.setAttribute(
+    "download",
+    `properties_export_${new Date().getTime()}.csv`
+  );
+  link.style.visibility = "hidden";
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function clearfilters() {
+  document.getElementById("cityInput").value = "";
+  document.getElementById("cityApiValue").value = "";
+  document.getElementById("stateInput").value = "";
+  document.getElementById("zipInput").value = "";
+  document.getElementById("neighborhoodInput").value = "";
+  document.getElementById("streetInput").value = "";
+  document.getElementById("minYearBuilt").value = "";
+  document.getElementById("maxYearBuilt").value = "";
+  document.getElementById("minValue").value = "";
+  document.getElementById("maxValue").value = "";
+  document.getElementById("minBedrooms").value = "";
+  document.getElementById("maxBedrooms").value = "";
+  document.getElementById("minBathrooms").value = "";
+  document.getElementById("maxBathrooms").value = "";
+  document.getElementById("quickList").value = "";
+
+  allRecords = [];
+  filteredRecords = [];
+  allLoadedRecords = [];
+  selectedRecords.clear();
+  currentPage = 1;
+  totalResultsFound = 0;
+  totalPages = 0;
+  currentSearchPayload = null;
+
+  // Reset results header
+  document.querySelector(".result-counts").innerHTML = `
+    <span class="count-item">Total Results Found: <strong>0</strong></span>
+  `;
+
+  // Reset pagination info
+  document.querySelector(".pagination-info").textContent =
+    "No search results yet";
+
+  // Reset table
+  document.querySelector(".table-container").innerHTML = `
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th class="checkbox-col"><input type="checkbox" id="selectPageCheckbox" disabled></th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Address</th>
+          <th>City</th>
+          <th>State</th>
+          <th>Zip Code</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="7" class="empty-row">Click "Search" to load properties</td></tr>
+      </tbody>
+    </table>
+  `;
+
+  // Disable pagination buttons
+  const paginationBtns = document.querySelectorAll(".pagination-btn");
+  paginationBtns.forEach((btn) => (btn.disabled = true));
+
+  // Clear page numbers
+  document.getElementById("pageNumbers").innerHTML = "";
+}
+
+function saveAudience() {
+  if (selectedRecords.size === 0) {
+    alert("Please select at least one property.");
+    return;
+  }
+
+  // Get all selected records from allLoadedRecords
+  allLoadedRecords.forEach((record) => {
+    const recordId =
+      record._id || `${record.address?.street}_${record.address?.zip}`;
+
+    if (selectedRecords.has(recordId)) {
+      let firstName = "";
+      let lastName = "";
+
+      if (record.owner?.names && record.owner.names.length > 0) {
+        firstName = record.owner.names[0].first || "";
+        lastName = record.owner.names[0].last || "";
+
+        if (!firstName && lastName) firstName = lastName;
+        if (!lastName && firstName) lastName = firstName;
+      } else {
+        const fullName =
+          record.owner?.fullName ||
+          record.owner?.firstName ||
+          record.owner?.lastName ||
+          "Unknown";
+        firstName = fullName;
+        lastName = fullName;
+      }
+
+      if (!firstName) firstName = "N/A";
+      if (!lastName) lastName = "N/A";
+
+      const recipient = {
+        firstName: firstName,
+        lastName: lastName,
+        address: record.address?.street || record.address?.streetAddress || "",
+        city: record.address?.city || "",
+        state: record.address?.state || "",
+        zipcode: record.address?.zip || record.address?.zipCode || "",
+      };
+      recipientsList.push(recipient);
+    }
+  });
+
+  console.log("Recipients List:", recipientsList);
+  alert(
+    `Audience saved successfully! Total selected: ${recipientsList.length}`
+  );
+}
+
+function showAlert(message) {
+  alert(message);
+}
 
 function loadZipCodes(cityName, stateCode) {
   const geocoder = new google.maps.Geocoder();
@@ -893,18 +1469,18 @@ async function loadNeighborhoods(cityName, stateCode) {
           .filter((name) => !!name)
       ),
     ];
-    console.log(neighborhoods)
+    console.log(neighborhoods);
 
     // Clear dropdown and populate
     neighborhoodSelect.innerHTML =
       '<option value="">-- Select Neighborhood --</option>';
-    
+
     // Always add city name as first option
     const cityOption = document.createElement("option");
     cityOption.value = cityName;
     cityOption.textContent = cityName;
     neighborhoodSelect.appendChild(cityOption);
-    
+
     // Add neighborhoods if found
     neighborhoods.forEach((nb) => {
       const option = document.createElement("option");
@@ -965,7 +1541,7 @@ function initAutocomplete() {
 }
 
 async function parseCSV(file) {
-  console.log("In parse function");
+  // console.log("In parse function");
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
@@ -974,6 +1550,7 @@ async function parseCSV(file) {
         const row = Object.fromEntries(
           Object.entries(r).map(([k, v]) => [k.toLowerCase(), v])
         );
+        console.log(row)
         return {
           firstName: row.firstname || "Test",
           lastName: row.lastname || "Name",
@@ -1123,7 +1700,7 @@ async function loadTemplates() {
         window.currentEditingTemplateId = tpl.id;
         uploadedPdfUrl = null;
         updateButtonStates();
-        console.log("✅ Template selected:", tpl.id);
+        // console.log("✅ Template selected:", tpl.id);
       });
 
       return div;
@@ -1167,7 +1744,7 @@ function openFullPreview(event, encodedHtml) {
   event.preventDefault();
   event.stopPropagation();
 
-  console.log("Opening preview...");
+  // console.log("Opening preview...");
 
   const html = decodeURIComponent(encodedHtml);
   const overlay = document.getElementById("previewOverlay");
@@ -1181,7 +1758,7 @@ function openFullPreview(event, encodedHtml) {
   body.innerHTML = html;
   overlay.style.display = "flex";
 
-  console.log("✅ Preview opened");
+  // console.log("✅ Preview opened");
 }
 
 // Updated closePreview function
@@ -1461,29 +2038,40 @@ async function createAndSave() {
   }
 }
 
-async function getToken() {
+// ---- Get Token Function ----
+async function getToken(mode) {
+  const creds = API_KEYS[mode];
+  if (!creds) throw new Error("Invalid mode for token generation");
+
   const payload = {
-    apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
-    apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
+    apiKey: creds.apiKey,
+    apiSecret: creds.apiSecret,
     childRefNbr: "myAccountReference",
   };
+
   const res = await fetch("https://v3.pcmintegrations.com/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(payload),
   });
+
   if (!res.ok) throw new Error("Auth failed");
   const data = await res.json();
   return data.token;
 }
 
-// Modified orderDesign function to handle PDF URL
 async function orderDesign(templateId, button) {
   const originalText = button.textContent;
   button.textContent = "Processing...";
   button.disabled = true;
 
   try {
+    // Ask user for mode (Test or Real)
+    const userChoice = confirm(
+      "Do you want to send the letter for REAL?\nPress 'Cancel' for Testing mode."
+    );
+    const mode = userChoice ? "production" : "testing";
+
     const todayObj = new Date();
     const todayISO = todayObj.toISOString().split("T")[0];
     const formattedDate = todayObj.toLocaleDateString("en-US", {
@@ -1496,24 +2084,21 @@ async function orderDesign(templateId, button) {
 
     // Check if PDF is uploaded
     if (uploadedPdfUrl) {
-      // Use PDF URL directly
       finalHtml = uploadedPdfUrl;
-      console.log("📄 Using uploaded PDF:", finalHtml);
     } else if (templateId) {
-      // Use template HTML
       const tplRes = await fetch(
         `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
       );
       if (!tplRes.ok) throw new Error("Failed to load template content");
       const tpl = await tplRes.json();
       finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
-      console.log("📝 Using template HTML");
     } else {
       throw new Error("Please select a template or upload a PDF");
     }
 
-    // --- Place Order with PCM ---
-    const token = await getToken();
+    // Get token based on user choice
+    const token = await getToken(mode);
+
     const payload = {
       extRefNbr: "12345",
       designID: 0,
@@ -1528,7 +2113,7 @@ async function orderDesign(templateId, button) {
         fontColor: "Black",
       },
       recipients: recipientsList,
-      letter: finalHtml, // This will be either PDF URL or HTML content
+      letter: finalHtml,
     };
 
     const res = await fetch("https://v3.pcmintegrations.com/order/letter", {
@@ -1542,10 +2127,11 @@ async function orderDesign(templateId, button) {
     });
 
     const data = await res.json().catch(() => ({}));
-    console.log(data);
     if (!res.ok) throw new Error(data.message || "API request failed");
 
-    console.log("✅ Order placed:", data);
+    showAlert(
+      `✅ Letter order placed successfully in ${mode.toUpperCase()} mode.`
+    );
     return true;
   } catch (err) {
     console.error("Order Design Error:", err);
@@ -1632,17 +2218,17 @@ function updateButtonStates() {
     "button[onclick='createAndSendLetter()']"
   );
 
-  console.log("🔍 updateButtonStates called");
-  console.log("Save button:", createAndSaveBtn);
-  console.log("Send button:", createAndSendBtn);
-  console.log("Recipients:", recipientsList.length);
-  console.log("Template ID:", window.currentEditingTemplateId);
-  console.log("PDF URL:", uploadedPdfUrl);
-  console.log(
-    "Campaign selected:",
-    campaignCard?.classList.contains("selected")
-  );
-  console.log("Mailer selected:", mailerCard?.classList.contains("selected"));
+  // console.log("🔍 updateButtonStates called");
+  // console.log("Save button:", createAndSaveBtn);
+  // console.log("Send button:", createAndSendBtn);
+  // console.log("Recipients:", recipientsList.length);
+  // console.log("Template ID:", window.currentEditingTemplateId);
+  // console.log("PDF URL:", uploadedPdfUrl);
+  // console.log(
+  //   "Campaign selected:",
+  //   campaignCard?.classList.contains("selected")
+  // );
+  // console.log("Mailer selected:", mailerCard?.classList.contains("selected"));
 
   if (!createAndSaveBtn || !createAndSendBtn) {
     console.warn(
@@ -1682,9 +2268,9 @@ function updateButtonStates() {
     createAndSaveBtn.title =
       "Disabled: Cannot save drafts when using PDF uploads. Use 'Send Letter' instead.";
 
-    console.log(
-      "PDF uploaded: 'Create and Save' disabled, 'Create and Send' state updated"
-    );
+    // console.log(
+    //   "PDF uploaded: 'Create and Save' disabled, 'Create and Send' state updated"
+    // );
   }
   // If template is selected (no PDF)
   else if (window.currentEditingTemplateId) {
@@ -1700,7 +2286,7 @@ function updateButtonStates() {
       createAndSendBtn.style.cursor = "pointer";
       createAndSendBtn.title = "";
 
-      console.log("Template selected with recipients: Both buttons enabled");
+      // console.log("Template selected with recipients: Both buttons enabled");
     } else {
       // Disable both if missing recipients or mode selection
       createAndSaveBtn.disabled = true;
@@ -1711,7 +2297,7 @@ function updateButtonStates() {
       createAndSendBtn.style.opacity = "0.5";
       createAndSendBtn.style.cursor = "not-allowed";
 
-      console.log("Template selected but missing recipients or mode");
+      // console.log("Template selected but missing recipients or mode");
     }
   }
 }
@@ -1751,7 +2337,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   restoreState();
 
-  // ✅ Initialize button states
   updateButtonStates();
 
   document.getElementById("campaignName")?.addEventListener("input", saveState);
@@ -1771,7 +2356,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadTemplates();
     setTimeout(() => {
       setupPdfUpload();
-      updateButtonStates(); // ✅ Update after PDF upload section is ready
+      updateButtonStates();
     }, 100);
   }
 });

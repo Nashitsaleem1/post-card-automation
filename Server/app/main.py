@@ -494,7 +494,6 @@ async def upload_pdf(file: UploadFile = File(...)):
         with open(file_path, "wb") as f:
             f.write(content)
         
-        # ✅ Change the URL to use /uploads instead of /static
         file_url = f"https://pcm-app-h8mn8.ondigitalocean.app/uploads/pdfs/{unique_filename}"
         
         return {

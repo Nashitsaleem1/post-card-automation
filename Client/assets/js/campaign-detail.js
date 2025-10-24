@@ -15,19 +15,37 @@ function getQueryParam(key) {
   return new URLSearchParams(window.location.search).get(key);
 }
 
-/* ---------- PCM Auth & scanned recipients ---------- */
-async function getToken() {
-  const payload = {
+async function getToken(env = "testing") {
+  // Define credentials for both environments
+  const credentials = {
+    testing: {
     apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
     apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
-    childRefNbr: "myAccountReference",
+      childRefNbr: "myAccountReference",
+      url: "https://v3.pcmintegrations.com/auth/login"
+    },
+    production: {
+    apiKey: "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy",
+    apiSecret: "MzNhYTBjZTktYmVkZS00MDdkLTg1MDAtMTc4Y2ZiMWM5YWI5",
+      childRefNbr: "myAccountReference",
+      url: "https://v3.pcmintegrations.com/auth/login"
+    }
   };
-  const res = await fetch("https://v3.pcmintegrations.com/auth/login", {
+
+  const creds = credentials[env];
+  const payload = {
+    apiKey: creds.apiKey,
+    apiSecret: creds.apiSecret,
+    childRefNbr: creds.childRefNbr
+  };
+
+  const res = await fetch(creds.url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error("Auth failed");
+
+  if (!res.ok) throw new Error(`Auth failed for ${env.toUpperCase()} environment`);
   const data = await res.json();
   return data.token;
 }
@@ -35,7 +53,9 @@ async function getToken() {
 async function fetchScannedRecipients(qrCodeId) {
   if (!qrCodeId) return [];
   try {
-    const token = await getToken();
+    // Always fetch a production token
+    const token = await getToken("production");
+
     const res = await fetch(
       `https://v3.pcmintegrations.com/qr-code/${qrCodeId}/tracking`,
       {
@@ -45,9 +65,12 @@ async function fetchScannedRecipients(qrCodeId) {
         },
       }
     );
+
     if (!res.ok) return [];
     const data = await res.json();
+
     if (!Array.isArray(data.results)) return [];
+
     return data.results.map((item) => ({
       firstName: item.recipient.firstName,
       lastName: item.recipient.lastName,
@@ -61,6 +84,7 @@ async function fetchScannedRecipients(qrCodeId) {
     return [];
   }
 }
+
 
 async function getQrCodeIdFromTemplate(templateId) {
   if (!templateId) return null;
@@ -376,9 +400,6 @@ function renderMailers(mailers) {
     mailersSection.appendChild(card);
   });
 }
-// Add these functions to your existing campaign-detail.js
-
-// Add these functions to your existing campaign-detail.js
 
 /* ---------- Delete Mailer ---------- */
 async function deleteMailer(mailerId) {
@@ -746,7 +767,7 @@ async function confirmSchedule() {
       const txt = await res.text();
       throw new Error(txt || "Failed to schedule");
     }
-    alert("Mailer scheduled successfully!");
+    alert("Mailer scheduled successfully! (Currently in TESTING phase scheduling)");
     closeScheduleModal();
     await loadCampaignDetail();
   } catch (err) {
@@ -758,9 +779,7 @@ async function confirmSchedule() {
 /* ---------- Send mailer ---------- */
 async function sendMailer(mailerId, button) {
   if (!window.currentEditingTemplateId) {
-    alert(
-      "Please select a template first by clicking 'Select Template' button."
-    );
+    alert("Please select a template first by clicking 'Select Template' button.");
     return;
   }
 
@@ -769,15 +788,21 @@ async function sendMailer(mailerId, button) {
   button.disabled = true;
 
   try {
+    // --- Ask user for mode (Test or Real) ---
+    const userChoice = confirm("Do you want to send the letter for REAL?\nPress 'Cancel' for Testing mode.");
+    const env = userChoice ? "production" : "testing";
+    console.log(`📦 Sending mailer using ${env.toUpperCase()} environment...`);
+
+    // --- Find mailer info ---
     const mailer = allMailers.find((m) => m.id === mailerId);
     if (!mailer) throw new Error("Mailer not found");
 
-    const tplRes = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/templates/${window.currentEditingTemplateId}`
-    );
+    // --- Fetch template HTML ---
+    const tplRes = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${window.currentEditingTemplateId}`);
     if (!tplRes.ok) throw new Error("Failed to load template content");
     const tpl = await tplRes.json();
 
+    // --- Prepare HTML content with date ---
     const todayObj = new Date();
     const todayISO = todayObj.toISOString().split("T")[0];
     const formattedDate = todayObj.toLocaleDateString("en-US", {
@@ -787,9 +812,13 @@ async function sendMailer(mailerId, button) {
     });
     const finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
 
-    const token = await getToken();
+    // --- Get PCM Token ---
+    const token = await getToken(env);
+
+    // --- Parse recipients ---
     const mailerRecipients = JSON.parse(mailer.address_list || "[]");
 
+    // --- Build PCM payload ---
     const pcmPayload = {
       extRefNbr: "12345",
       designID: 0,
@@ -807,7 +836,11 @@ async function sendMailer(mailerId, button) {
       letter: finalHtml,
     };
 
-    const res = await fetch("https://v3.pcmintegrations.com/order/letter", {
+    // --- Use correct API base URL ---
+    const baseUrl = "https://v3.pcmintegrations.com"
+
+    // --- Send to PCM API ---
+    const res = await fetch(`${baseUrl}/order/letter`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -820,25 +853,26 @@ async function sendMailer(mailerId, button) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || "PCM API error");
 
-    alert("Mailer sent successfully!");
+    alert(`Mailer sent successfully using ${env.toUpperCase()} environment!`);
 
+    // --- Update backend (only after success) ---
     const updatePayload = {
       status: "sent",
       send_date: new Date().toISOString(),
       template_id: window.currentEditingTemplateId,
     };
-    const updateRes = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${mailerId}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatePayload),
-      }
-    );
+
+    const updateRes = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${mailerId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatePayload),
+    });
+
     if (!updateRes.ok) {
       const errData = await updateRes.json().catch(() => ({}));
-      throw new Error(errData.detail || "Failed to update mailer");
+      throw new Error(errData.detail || "Failed to update mailer record");
     }
+
     await loadCampaignDetail();
   } catch (err) {
     console.error("sendMailer error:", err);
@@ -848,6 +882,7 @@ async function sendMailer(mailerId, button) {
     button.disabled = false;
   }
 }
+
 
 /* ---------- Create mailer modal ---------- */
 async function openCreateMailerModal() {

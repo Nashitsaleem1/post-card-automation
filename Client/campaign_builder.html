@@ -9,7 +9,7 @@
       class="taskbar-icon"
       rel="icon"
       type="image/png"
-      href="./assets/images/p_icon_with_gradient.png"
+      href="./assets/images/p_icon_with_gradient-removebg-preview.png"
     />
     <link rel="stylesheet" href="./assets/css/index.css" />
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGHD38AZ4tLZzd7T-D0wR0uOpdSM6ceG0&libraries=places"></script>
@@ -18,7 +18,7 @@
     <nav class="navbar">
       <div class="logo">
         <img
-          src="./assets/images/p_icon_with_gradient.png"
+          src="./assets/images/p_icon_with_gradient-removebg-preview.png"
           alt="Logo"
           class="logo-img"
         />
@@ -31,6 +31,7 @@
         <li><a href="campaign_builder.html">Campaign Builder</a></li>
         <li><a href="dashboard.html">Dashboard</a></li>
       </ul>
+
       <div class="hamburger" id="hamburger">☰</div>
     </nav>
 
@@ -152,227 +153,267 @@
           </div>
         </div>
       </div>
-      <div class="batch-search" id="batchdatasearch" style="display: none">
-        <h3>Property Search</h3>
-        <!-- User Guide Note -->
+
+      <div class="main-container" id="batchdatasearch" style="display: none;">
         <div class="search-note">
-          🛈 <strong>Note:</strong> Start by typing the
+          <span style="font-size: 16px">💡</span>
+          <strong>Tip:</strong> Start by typing the
           <strong>city name</strong> first. Once the city is selected, the
           <strong>neighborhood</strong> and <strong>zip code</strong> fields
-          will automatically populate with correct options.
+          will automatically update with valid options. <br /><br />
+          ▪ If only a <strong>neighborhood</strong> is selected, the search will
+          include <em>all zip codes</em> in that area. If a <strong>zip code</strong> is selected, the results will be
+          <em>filtered</em> specifically for that zip code. <br/>
+          ▪ The default pagination value is 20. You can change it to your preferred number, and all subsequent API calls will use that value automatically.
         </div>
-        <!-- Fixed Filter Box -->
-        <div class="filter-box">
-          <!-- Location Filters -->
-          <div class="form-group">
-            <label for="cityInput">City:</label>
-            <input
-              type="text"
-              id="cityInput"
-              class="form-input"
-              placeholder="Start typing a city..."
-            />
+
+        <div class="content-sections">
+          <!-- LEFT SIDE - SEARCH FILTERS -->
+          <div class="search-container">
+            <div class="filters-scroll">
+              <div class="filter-box">
+                <div class="form-group">
+                  <label for="cityInput">City:</label>
+                  <input
+                    type="text"
+                    id="cityInput"
+                    class="form-input"
+                    placeholder="Start typing a city..."
+                  />
+                  <input type="hidden" id="cityApiValue" />
+                </div>
+
+                <div class="form-group">
+                  <label for="stateInput">State:</label>
+                  <input
+                    type="text"
+                    id="stateInput"
+                    class="form-input"
+                    placeholder="Auto-filled"
+                    readonly
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="zipInput">Zip Code:</label>
+                  <select id="zipInput" class="form-input">
+                    <option value="">-- Select Zip --</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="neighborhoodInput">Neighborhood:</label>
+                  <select id="neighborhoodInput" class="form-input">
+                    <option value="">-- Select Neighborhood --</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="streetInput">Street:</label>
+                  <input
+                    type="text"
+                    id="streetInput"
+                    class="form-input"
+                    placeholder="Enter street"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label>Year Built (Min - Max):</label>
+                  <input
+                    type="number"
+                    id="minYearBuilt"
+                    class="form-input small-input"
+                    placeholder="Min Year"
+                  />
+                  <input
+                    type="number"
+                    id="maxYearBuilt"
+                    class="form-input small-input"
+                    placeholder="Max Year"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label>Estimated Value (Min - Max):</label>
+                  <input
+                    type="number"
+                    id="minValue"
+                    class="form-input small-input"
+                    placeholder="Min $"
+                  />
+                  <input
+                    type="number"
+                    id="maxValue"
+                    class="form-input small-input"
+                    placeholder="Max $"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label>Bedrooms (Min - Max):</label>
+                  <select id="minBedrooms" class="form-input small-input">
+                    <option value="">Min</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                  </select>
+                  <select id="maxBedrooms" class="form-input small-input">
+                    <option value="">Max</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Bathrooms (Min - Max):</label>
+                  <select id="minBathrooms" class="form-input small-input">
+                    <option value="">Min</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                  </select>
+                  <select id="maxBathrooms" class="form-input small-input">
+                    <option value="">Max</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="quickList">Special Filters:</label>
+                  <select id="quickList" class="form-input">
+                    <option value="">-- Select --</option>
+                    <option value="absentee-owner">Absentee Owner</option>
+                    <option value="active-listing">Active Listing</option>
+                    <option value="vacant">Vacant</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="search-actions">
+              <button class="search-btn" onclick="searchProperties(event)">
+                Search
+              </button>
+              <button class="clear-btn" onclick="clearfilters()">
+                Clear Filters
+              </button>
+            </div>
           </div>
 
-          <!-- State -->
-          <div class="form-group">
-            <label for="stateInput">State:</label>
-            <input
-              type="text"
-              id="stateInput"
-              class="form-input"
-              placeholder="Auto-filled"
-              readonly
-            />
-          </div>
+          <!-- RIGHT SIDE - RESULTS -->
+          <div class="results-container">
+            <div id="results" class="results">
+              <div class="results-header">
+                <div class="results-info">
+                  <div class="result-counts">
+                    <span class="count-item"
+                      >Total Results Found: <strong>0</strong></span
+                    >
+                    <!-- <span class="count-item"
+                      >Current Page Results: <strong>0</strong></span
+                    >
+                    <span class="count-item">Selected: <strong>0</strong></span>
+                    <label class="select-all-container">
+                      <input type="checkbox" id="selectAllCheckbox" disabled />
+                      <span>Select All on Page</span>
+                    </label> -->
+                  </div>
+                </div>
 
-          <!-- Zip Codes -->
-          <div class="form-group">
-            <label for="zipInput">Zip Code:</label>
-            <select id="zipInput" class="form-input">
-              <option value="">-- Select Zip --</option>
-            </select>
-          </div>
+                <div class="results-actions">
+                  <div class="pagination-controls">
+                    <label>Results per page:</label>
+                    <select id="pageSizeSelect" class="pagination-select">
+                      <option value="20" selected>20</option>
+                      <option value="50">50</option>
+                      <option value="100">100</option>
+                      <option value="150">150</option>
+                      <option value="250">250</option>
+                      <option value="300">300</option>
+                      <option value="350">350</option>
+                      <option value="400">400</option>
+                    </select>
+                  </div>
 
-          <!-- Neighborhoods -->
-          <div class="form-group">
-            <label for="neighborhoodInput">Neighborhood:</label>
-            <select id="neighborhoodInput" class="form-input">
-              <option value="">-- Select Neighborhood --</option>
-            </select>
-          </div>
+                  <button class="action-btn export-btn" onclick="exportToCSV()">
+                    <span class="btn-icon">📊</span> Export CSV
+                  </button>
+                  <button class="action-btn save-btn" onclick="saveAudience()">
+                    <span class="btn-icon">💾</span> Save Audience
+                  </button>
+                </div>
+              </div>
 
-          <div class="form-group">
-            <label for="streetInput">Street:</label>
-            <input
-              type="text"
-              id="streetInput"
-              class="form-input"
-              placeholder="Enter street"
-            />
-          </div>
+              <div class="pagination-info">No search results yet</div>
 
-          <!-- Year Built -->
-          <div class="form-group">
-            <label>Year Built (Min - Max):</label>
-            <input
-              type="number"
-              id="minYearBuilt"
-              class="form-input small-input"
-              placeholder="Min Year"
-            />
-            <input
-              type="number"
-              id="maxYearBuilt"
-              class="form-input small-input"
-              placeholder="Max Year"
-            />
-          </div>
-          <!-- Estimated Value -->
-          <div class="form-group">
-            <label>Estimated Value (Min - Max):</label>
-            <input
-              type="number"
-              id="minValue"
-              class="form-input small-input"
-              placeholder="Min $"
-            />
-            <input
-              type="number"
-              id="maxValue"
-              class="form-input small-input"
-              placeholder="Max $"
-            />
-          </div>
+              <div class="table-container">
+                <table class="results-table">
+                  <thead>
+                    <tr>
+                      <th class="checkbox-col">
+                        <input
+                          type="checkbox"
+                          id="selectPageCheckbox"
+                          disabled
+                        />
+                      </th>
+                      <th>First Name</th>
+                      <th>Last Name</th>
+                      <th>Address</th>
+                      <th>City</th>
+                      <th>State</th>
+                      <th>Zip Code</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td colspan="7" class="empty-row">
+                        Click "Search" to load properties
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
 
-          <!-- Bedroom Count -->
-          <div class="form-group">
-            <label>Bedrooms (Min - Max):</label>
-            <select id="minBedrooms" class="form-input small-input">
-              <option value="">Min</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="6">6</option>
-              <option value="7">7</option>
-            </select>
-            <select id="maxBedrooms" class="form-input small-input">
-              <option value="">Max</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="6">6</option>
-              <option value="7">7</option>
-            </select>
-          </div>
-
-          <!-- Bathroom Count -->
-          <div class="form-group">
-            <label>Bathrooms (Min - Max):</label>
-            <select id="minBathrooms" class="form-input small-input">
-              <option value="">Min</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-            </select>
-            <select id="maxBathrooms" class="form-input small-input">
-              <option value="">Max</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-            </select>
-          </div>
-
-          <!-- Story Count -->
-          <div class="form-group">
-            <label>Stories (Min - Max):</label>
-            <select id="minStories" class="form-input small-input">
-              <option value="">Min</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-            </select>
-            <select id="maxStories" class="form-input small-input">
-              <option value="">Max</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-            </select>
-          </div>
-
-          <!-- Quick Lists -->
-          <div class="form-group">
-            <label for="quickList">Special Filters:</label>
-            <select id="quickList" class="form-input">
-              <option value="">-- Select --</option>
-              <option value="absentee-owner">Absentee Owner</option>
-              <option value="active-auction">Active Auction</option>
-              <option value="active-listing">Active Listing</option>
-              <option value="canceled-listing">Canceled Listing</option>
-              <option value="cash-buyer">Cash Buyer</option>
-              <option value="corporate-owned">Corporate Owned</option>
-              <option value="expired-listing">Expired Listing</option>
-              <option value="failed-listing">Failed Listing</option>
-              <option value="fix-and-flip">Fix & Flip</option>
-              <option value="free-and-clear">Free & Clear</option>
-              <option value="for-sale-by-owner">For Sale By Owner</option>
-              <option value="has-hoa">Has HOA</option>
-              <option value="has-hoa-fees">Has HOA Fees</option>
-              <option value="high-equity">High Equity</option>
-              <option value="inherited">Inherited</option>
-              <option value="involuntary-lien">Involuntary Lien</option>
-              <option value="in-state-absentee-owner">
-                In-State Absentee Owner
-              </option>
-              <option value="listed-below-market-price">
-                Listed Below Market Price
-              </option>
-              <option value="low-equity">Low Equity</option>
-              <option value="mailing-address-vacant">
-                Mailing Address Vacant
-              </option>
-              <option value="notice-of-default">Notice of Default</option>
-              <option value="notice-of-lis-pendens">
-                Notice of Lis Pendens
-              </option>
-              <option value="notice-of-sale">Notice of Sale</option>
-              <option value="on-market">On Market</option>
-              <option value="out-of-state-absentee-owner">
-                Out-of-State Absentee Owner
-              </option>
-              <option value="out-of-state-owner">Out-of-State Owner</option>
-              <option value="owner-occupied">Owner Occupied</option>
-              <option value="pending-listing">Pending Listing</option>
-              <option value="preforeclosure">Preforeclosure</option>
-              <option value="recently-sold">Recently Sold</option>
-              <option value="same-property-and-mailing-address">
-                Same Property and Mailing Address
-              </option>
-              <option value="tax-default">Tax Default</option>
-              <option value="tired-landlord">Tired Landlord</option>
-              <option value="unknown-equity">Unknown Equity</option>
-              <option value="vacant">Vacant</option>
-              <option value="vacant-lot">Vacant Lot</option>
-            </select>
-          </div>
-          <div class="batchactionbuttons">
-            <button class="search-btn" onclick="searchProperties()">
-              Search
-            </button>
-            <button class="search-btn" onclick="clearfilters()">
-              Clear Filters
-            </button>
+              <div class="pagination">
+                <!-- <button class="pagination-btn" onclick="goToPage(1)" disabled>
+                  First
+                </button> -->
+                <button
+                  class="pagination-btn"
+                  onclick="goToPage(currentPage - 1)"
+                  disabled
+                >
+                  Previous
+                </button>
+                <div class="page-numbers" id="pageNumbers"></div>
+                <button
+                  class="pagination-btn"
+                  onclick="goToPage(currentPage + 1)"
+                  disabled
+                >
+                  Next
+                </button>
+                <!-- <button
+                  class="pagination-btn"
+                  onclick="goToPage(totalPages)"
+                  disabled
+                >
+                  Last
+                </button> -->
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <!-- Results Section -->
-      <div id="results" class="results"></div>
 
       <h1 class="heading3">
         <i> Choose the Template you want to send </i>
