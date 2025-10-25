@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.date import DateTrigger
 import requests
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
@@ -466,7 +466,9 @@ def root():
 def healthz():
     return {"status": "ok"}
 
+
 # ---------- PDF Upload ----------
+
 
 @app.post("/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...)):
@@ -476,34 +478,36 @@ async def upload_pdf(file: UploadFile = File(...)):
     # Validate file type
     if not file.content_type == "application/pdf":
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
-    
+
     # Validate file size (max 10MB)
     file_size = 0
     chunk_size = 1024 * 1024  # 1MB chunks
     content = await file.read()
     file_size = len(content)
-    
+
     if file_size > 10 * 1024 * 1024:  # 10MB
         raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
-    
+
     try:
         file_extension = os.path.splitext(file.filename)[1]
         unique_filename = f"{uuid.uuid4()}{file_extension}"
         file_path = STATIC_DIR / unique_filename
-        
+
         with open(file_path, "wb") as f:
             f.write(content)
-        
+
+        # Change the URL to use /uploads instead of /static
         file_url = f"https://pcm-app-h8mn8.ondigitalocean.app/uploads/pdfs/{unique_filename}"
-        
+
         return {
             "success": True,
             "filename": unique_filename,
             "url": file_url,
-            "size": file_size
+            "size": file_size,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error uploading file: {str(e)}")
+
 
 # ---------- Delete PDF ----------
 @app.delete("/delete-pdf/{filename}")
@@ -513,20 +517,17 @@ async def delete_pdf(filename: str):
     """
     try:
         file_path = STATIC_DIR / filename
-        
+
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="File not found")
-        
+
         os.remove(file_path)
-        
-        return {
-            "success": True,
-            "message": f"File {filename} deleted successfully"
-        }
-    
+
+        return {"success": True, "message": f"File {filename} deleted successfully"}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
-    
+
 
 # ---------- Start Campaign Watcher ----------
 scheduler.add_job(
@@ -545,9 +546,9 @@ def get_templates(db: Session = Depends(get_db)):
     return [
         {
             "id": t.id,
-            "html_content": t.template, 
+            "html_content": t.template,
             "qr_code_id": t.qr_code_id,
-            "template_name": t.template_name
+            "template_name": t.template_name,
         }
         for t in templates
     ]
@@ -556,7 +557,9 @@ def get_templates(db: Session = Depends(get_db)):
 @app.post("/templates", response_model=schemas.TemplateRead)
 def create_template(template: schemas.TemplateCreate, db: Session = Depends(get_db)):
     new_template = Template(
-        template=template.html_content, qr_code_id=template.qr_code_id, template_name=template.template_name
+        template=template.html_content,
+        qr_code_id=template.qr_code_id,
+        template_name=template.template_name,
     )
     db.add(new_template)
     db.commit()
@@ -564,9 +567,9 @@ def create_template(template: schemas.TemplateCreate, db: Session = Depends(get_
 
     return {
         "id": new_template.id,
-        "html_content": new_template.template, 
+        "html_content": new_template.template,
         "qr_code_id": new_template.qr_code_id,
-        "template_name":new_template.template_name
+        "template_name": new_template.template_name,
     }
 
 
@@ -602,7 +605,7 @@ def get_template(template_id: int, db: Session = Depends(get_db)):
         "id": template.id,
         "html_content": template.template,
         "qr_code_id": template.qr_code_id,
-        "template_name": template.template_name
+        "template_name": template.template_name,
     }
 
 
@@ -634,9 +637,7 @@ def create_campaign_data(
     campaign = db.query(Campaign).filter(Campaign.id == data.campaign_id).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
-
-    run_time = data.schedule_time
-    send_date = data.send_date
+    print(data)
 
     # Create CampaignData
     new_data = CampaignData(
@@ -644,16 +645,18 @@ def create_campaign_data(
         mailer_name=data.mailer_name,
         template_id=data.template_id,
         address_list=data.address_list,
-        schedule_time=run_time,
-        send_date=send_date,
+        schedule_time=data.schedule_time,
+        send_date=data.send_date,
         status=data.status or "pending",
+        env_mode=data.env_mode,
     )
+
     db.add(new_data)
     db.commit()
     db.refresh(new_data)
 
+    # Schedule QR tracking only if sent immediately
     if new_data.status == "sent":
-        # Schedule first QR check after 1 hour (not full 24h)
         track_time = datetime.utcnow() + timedelta(hours=1)
         scheduler.add_job(
             qr_tracking_job,
@@ -667,25 +670,11 @@ def create_campaign_data(
     return new_data
 
 
-@app.get("/campaigns/latest", response_model=schemas.CampaignRead)
-def get_latest_campaign(db: Session = Depends(get_db)):
-    latest_campaign = db.query(Campaign).order_by(desc(Campaign.id)).first()
-    if not latest_campaign:
-        raise HTTPException(status_code=404, detail="No campaigns found")
-    return latest_campaign
-
-
 @app.get("/campaigns", response_model=List[schemas.CampaignRead])
 def get_all_campaigns(db: Session = Depends(get_db)):
     campaigns = db.query(Campaign).order_by(desc(Campaign.id)).all()
     if not campaigns:
         raise HTTPException(status_code=404, detail="No campaigns found")
-    return campaigns
-
-
-@app.get("/campaigns/dashboard", response_model=list[schemas.CampaignRead])
-def get_campaign_dashboard(db: Session = Depends(get_db)):
-    campaigns = db.query(Campaign).all()
     return campaigns
 
 
@@ -704,28 +693,41 @@ def get_campaign_data_by_campaign(campaign_id: int, db: Session = Depends(get_db
     response_model=List[schemas.CampaignDataWithCampaignName],
 )
 def get_campaign_data_with_name(campaign_id: int, db: Session = Depends(get_db)):
-    # Query CampaignData joined with Campaign to get campaign_name
+    # Query CampaignData joined with Campaign to get campaign_name and env_mode
     data = (
-        db.query(CampaignData, Campaign.campaign_name.label("campaign_name"))
+        db.query(
+            CampaignData,
+            Campaign.campaign_name.label("campaign_name"),
+            CampaignData.env_mode.label("env_mode"),
+        )
         .join(Campaign, Campaign.id == CampaignData.campaign_id)
         .filter(CampaignData.campaign_id == campaign_id)
         .all()
     )
+
     if not data:
         raise HTTPException(status_code=404, detail="CampaignData not found")
 
     # Convert to list of dicts for response
     result = []
-    for cd, cname in data:
-        row = cd.__dict__.copy()  # all CampaignData columns
-        row.pop("_sa_instance_state", None)  # remove internal SQLAlchemy attr
-        row["campaign_name"] = cname  # add campaign_name
+    for cd, cname, env_mode in data:
+        row = cd.__dict__.copy()
+        row.pop("_sa_instance_state", None)
+        row["campaign_name"] = cname
+        row["env_mode"] = env_mode  # ✅ include env_mode
         result.append(row)
     return result
 
 
 @app.get("/dashboard/all")
-def get_dashboard_all(db: Session = Depends(get_db)):
+def get_dashboard_all(mode: str, db: Session = Depends(get_db)):
+    """
+    mode: 'testing' or 'production' (query param from frontend)
+    Example: /dashboard/all?mode=testing
+    """
+    if mode not in ["testing", "production"]:
+        raise HTTPException(status_code=400, detail="Invalid mode value")
+
     # Get all campaigns
     campaigns = db.query(Campaign).order_by(desc(Campaign.id)).all()
     if not campaigns:
@@ -734,10 +736,11 @@ def get_dashboard_all(db: Session = Depends(get_db)):
     # Get the latest campaign
     latest_campaign = campaigns[0]
 
-    # Get all campaign_data records with joined template + campaign
+    # ✅ Filter CampaignData based on env_mode
     all_campaign_data = (
         db.query(CampaignData)
         .options(joinedload(CampaignData.template), joinedload(CampaignData.campaign))
+        .filter(CampaignData.env_mode == mode)
         .order_by(desc(CampaignData.id))
         .all()
     )
@@ -783,6 +786,7 @@ def get_dashboard_all(db: Session = Depends(get_db)):
                 "template_id": d.template_id,
                 "template_preview": d.template.template if d.template else None,
                 "qr_code_id": d.template.qr_code_id if d.template else None,
+                "env_mode": d.env_mode,  # ✅ Include mode info
             }
             for d in all_campaign_data
         ],
@@ -852,6 +856,7 @@ def create_mailer_one_off(
     payload: schemas.MailerOneOffCreate, db: Session = Depends(get_db)
 ):
     try:
+        # Create new MailerOneOff entry
         mailer = MailerOneOff(
             mailer_name=payload.mailer_name,
             template_id=payload.template_id,
@@ -859,31 +864,35 @@ def create_mailer_one_off(
             schedule_time=payload.schedule_time,
             send_date=payload.send_date,
             status=payload.status or "pending",
+            env_mode=payload.env_mode or "testing",
         )
+
         db.add(mailer)
         db.commit()
         db.refresh(mailer)
 
-        # ✅ Schedule job if schedule_time is provided
-        if payload.schedule_time:
+        # Schedule job if schedule_time is provided
+        if mailer.schedule_time:
             scheduler.add_job(
                 send_oneoff_job,
-                trigger=DateTrigger(run_date=payload.schedule_time),
+                trigger=DateTrigger(run_date=mailer.schedule_time),
                 args=[mailer.id],
                 id=f"oneoff_{mailer.id}",
                 replace_existing=True,
             )
-            print(f"✅ Scheduled one-off mailer {mailer.id} at {payload.schedule_time}")
+            print(f"Scheduled one-off mailer {mailer.id} at {mailer.schedule_time}")
         else:
             print(
-                f"⏩ Mailer {mailer.id} has no schedule_time, sending immediately or waiting."
+                f"Mailer {mailer.id} has no schedule_time — sending immediately or waiting."
             )
 
         return mailer
 
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to save mailer: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to create mailer: {str(e)}"
+        )
 
 
 @app.get("/mailer-one-off/count")
@@ -898,9 +907,16 @@ def get_one_off_mailers_count(db: Session = Depends(get_db)):
 
 
 @app.get("/mailer-one-off/all", response_model=list[schemas.MailerOneOffResponse])
-def get_all_one_off_mailers(db: Session = Depends(get_db)):
+def get_all_one_off_mailers(mode: str, db: Session = Depends(get_db)):
+    """
+    mode: 'testing' or 'production'
+    Example: /mailer-one-off/all?mode=production
+    """
+    if mode not in ["testing", "production"]:
+        raise HTTPException(status_code=400, detail="Invalid mode value")
+
     try:
-        mailers = db.query(MailerOneOff).all()
+        mailers = db.query(MailerOneOff).filter(MailerOneOff.env_mode == mode).all()
         return mailers
     except Exception as e:
         raise HTTPException(
@@ -963,21 +979,39 @@ def update_mailer_one_off(
 
 @app.delete("/mailer-one-off/{mailer_id}")
 def delete_mailer_one_off(mailer_id: int, db: Session = Depends(get_db)):
+    """
+    Delete a one-off mailer with rules based on env_mode stored in database
+    - TESTING mode (env_mode='testing'): all statuses can be deleted
+    - PRODUCTION mode (env_mode='production'): only 'pending' and 'scheduled' can be deleted (NOT 'sent')
+    """
     try:
         mailer = db.query(MailerOneOff).filter(MailerOneOff.id == mailer_id).first()
         if not mailer:
             raise HTTPException(status_code=404, detail="Mailer not found")
 
-        # Only allow deletion for 'scheduled' or 'pending' statuses
-        if mailer.status not in ["scheduled", "pending"]:
+        # Get the env_mode from the mailer record (when it was created)
+        mailer_env_mode = mailer.env_mode or "testing"
+
+        # Define allowed deletion statuses based on mailer's env_mode
+        if mailer_env_mode == "production":
+            # Production: only allow deletion for 'scheduled' or 'pending' (NOT 'sent')
+            if mailer.status not in ["scheduled", "pending"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot delete mailer with status '{mailer.status}' created in PRODUCTION mode. Only 'scheduled' or 'pending' mailers can be deleted in production.",
+                )
+        elif mailer_env_mode == "testing":
+            # Testing: allow deletion for all statuses - 'scheduled', 'pending', and 'sent'
+            if mailer.status not in ["scheduled", "pending", "sent"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot delete mailer with status '{mailer.status}'. Valid statuses for testing mode are 'scheduled', 'pending', or 'sent'.",
+                )
+        else:
             raise HTTPException(
                 status_code=400,
-                detail=f"Cannot delete mailer with status '{mailer.status}'. Only 'scheduled' or 'pending' mailers can be deleted.",
+                detail=f"Invalid env_mode '{mailer_env_mode}' on mailer. Must be 'testing' or 'production'.",
             )
-
-        # Define EST timezone
-        est = pytz.timezone("America/New_York")
-        now_est = datetime.now(est)
 
         # Remove scheduled job if it exists
         if mailer.status == "scheduled":
@@ -985,7 +1019,9 @@ def delete_mailer_one_off(mailer_id: int, db: Session = Depends(get_db)):
                 scheduler.remove_job(f"oneoff_{mailer.id}")
                 print(f"✅ Removed scheduled job for mailer {mailer.id}")
             except Exception as e:
-                print(f"⚠️ Could not remove scheduled job: {str(e)}")
+                print(
+                    f"⚠️ Could not remove scheduled job for mailer {mailer.id}: {str(e)}"
+                )
 
         # Proceed with deletion
         db.delete(mailer)
@@ -993,32 +1029,56 @@ def delete_mailer_one_off(mailer_id: int, db: Session = Depends(get_db)):
 
         return {
             "success": True,
-            "message": f"Mailer {mailer.id} deleted successfully.",
+            "message": f"Mailer {mailer.id} deleted successfully (created in {mailer_env_mode.upper()} mode).",
+            "env_mode": mailer_env_mode,
+            "status": mailer.status,
         }
 
     except HTTPException:
         raise  # re-raise known errors
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to delete mailer: {str(e)}")
+        print(f"Error deleting mailer {mailer_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete mailer: {str(e)}"
+        )
 
 
 @app.delete("/campaign-data/{mailer_id}")
 def delete_mailer(mailer_id: int, db: Session = Depends(get_db)):
     """
     Delete a mailer and cancel any associated scheduled jobs
-    Only allows deletion for 'pending' or 'scheduled' statuses
+    Uses env_mode from the CampaignData record:
+    - TESTING: all statuses ('pending', 'scheduled', 'sent') can be deleted
+    - PRODUCTION: only 'pending' or 'scheduled' can be deleted (NOT 'sent')
     """
     try:
         mailer = db.query(CampaignData).filter(CampaignData.id == mailer_id).first()
         if not mailer:
             raise HTTPException(status_code=404, detail="Mailer not found")
 
-        # Only allow deletion for 'scheduled' or 'pending' statuses
-        if mailer.status not in ["scheduled", "pending"]:
+        # Get env_mode from the CampaignData record itself
+        mailer_env_mode = mailer.env_mode or "testing"
+
+        # Define allowed deletion statuses based on mailer's env_mode
+        if mailer_env_mode == "production":
+            # Production: only allow deletion for 'scheduled' or 'pending' (NOT 'sent')
+            if mailer.status not in ["scheduled", "pending"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot delete mailer with status '{mailer.status}' in PRODUCTION mode. Only 'scheduled' or 'pending' mailers can be deleted.",
+                )
+        elif mailer_env_mode == "testing":
+            # Testing: allow deletion for all statuses - 'scheduled', 'pending', and 'sent'
+            if mailer.status not in ["scheduled", "pending", "sent"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot delete mailer with status '{mailer.status}'. Only 'scheduled', 'pending', or 'sent' mailers can be deleted in TESTING mode.",
+                )
+        else:
             raise HTTPException(
                 status_code=400,
-                detail=f"Cannot delete mailer with status '{mailer.status}'. Only 'scheduled' or 'pending' mailers can be deleted.",
+                detail=f"Invalid env_mode '{mailer_env_mode}'. Must be 'testing' or 'production'.",
             )
 
         # Remove scheduled job if it exists
@@ -1027,7 +1087,9 @@ def delete_mailer(mailer_id: int, db: Session = Depends(get_db)):
                 scheduler.remove_job(f"campaign_data_{mailer.id}")
                 print(f"✅ Removed scheduled job for mailer {mailer.id}")
             except Exception as e:
-                print(f"⚠️ Could not remove scheduled job for mailer {mailer.id}: {str(e)}")
+                print(
+                    f"⚠️ Could not remove scheduled job for mailer {mailer.id}: {str(e)}"
+                )
 
         # Proceed with deletion
         db.delete(mailer)
@@ -1035,74 +1097,100 @@ def delete_mailer(mailer_id: int, db: Session = Depends(get_db)):
 
         return {
             "success": True,
-            "message": f"Mailer {mailer.id} deleted successfully.",
+            "message": f"Mailer {mailer.id} deleted successfully (campaign env_mode: {mailer_env_mode}).",
+            "env_mode": mailer_env_mode,
+            "status": mailer.status,
         }
 
     except HTTPException:
-        raise  # re-raise known errors
+        raise
     except Exception as e:
         db.rollback()
         print(f"Error deleting mailer {mailer_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to delete mailer: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete mailer: {str(e)}"
+        )
 
 
 @app.delete("/campaigns/{campaign_id}")
 def delete_campaign(campaign_id: int, db: Session = Depends(get_db)):
     """
-    Delete a campaign and all associated mailers
-    Cancels any scheduled jobs for all mailers in the campaign
-    Only allows deletion if first mailer is 'pending' or 'scheduled'
+    Delete an entire campaign
+    Uses env_mode from the first CampaignData record for this campaign:
+    - TESTING: all first mailer statuses can be deleted ('pending', 'scheduled', 'sent')
+    - PRODUCTION: only 'pending' or 'scheduled' first mailer statuses can be deleted
     """
     try:
-        # Fetch all mailers for this campaign
-        mailers = db.query(CampaignData).filter(
-            CampaignData.campaign_id == campaign_id
-        ).all()
-
-        if not mailers:
+        # Get the campaign
+        campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+        if not campaign:
             raise HTTPException(status_code=404, detail="Campaign not found")
 
-        # Check first mailer status
+        # Get all mailers for this campaign
+        mailers = (
+            db.query(CampaignData).filter(CampaignData.campaign_id == campaign_id).all()
+        )
+
+        if not mailers:
+            raise HTTPException(status_code=404, detail="Campaign has no mailers")
+
         first_mailer = mailers[0]
-        if first_mailer.status not in ["pending", "scheduled"]:
+
+        # Get env_mode from the first CampaignData record
+        campaign_env_mode = first_mailer.env_mode or "testing"
+
+        # Define allowed deletion statuses based on first mailer's env_mode
+        if campaign_env_mode == "production":
+            if first_mailer.status not in ["scheduled", "pending"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot delete campaign with first mailer status '{first_mailer.status}' in PRODUCTION mode. Only campaigns with 'scheduled' or 'pending' first mailers can be deleted.",
+                )
+        elif campaign_env_mode == "testing":
+            if first_mailer.status not in ["scheduled", "pending", "sent"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot delete campaign with first mailer status '{first_mailer.status}'. Only campaigns with 'scheduled', 'pending', or 'sent' first mailers can be deleted in TESTING mode.",
+                )
+        else:
             raise HTTPException(
                 status_code=400,
-                detail=f"Cannot delete campaign. First mailer has status '{first_mailer.status}'. Only campaigns with 'pending' or 'scheduled' first mailers can be deleted.",
+                detail=f"Invalid env_mode '{campaign_env_mode}'. Must be 'testing' or 'production'.",
             )
 
-        # Remove all scheduled jobs for this campaign's mailers
+        # Remove all scheduled jobs for all mailers in this campaign
         for mailer in mailers:
             if mailer.status == "scheduled":
                 try:
                     scheduler.remove_job(f"campaign_data_{mailer.id}")
-                    print(
-                        f"✅ Removed scheduled job for mailer {mailer.id} in campaign {campaign_id}"
-                    )
+                    print(f"✅ Removed scheduled job for mailer {mailer.id}")
                 except Exception as e:
                     print(
                         f"⚠️ Could not remove scheduled job for mailer {mailer.id}: {str(e)}"
                     )
 
-        # Delete all mailers for this campaign
-        db.query(CampaignData).filter(
-            CampaignData.campaign_id == campaign_id
-        ).delete()
+        # Delete all mailers in the campaign
+        for mailer in mailers:
+            db.delete(mailer)
 
-        # Delete the campaign
-        campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-        if campaign:
-            db.delete(campaign)
+        # Delete the campaign itself
+        db.delete(campaign)
+        print(f"✅ Deleted campaign {campaign_id}")
 
         db.commit()
 
         return {
             "success": True,
-            "message": f"Campaign {campaign_id} and all associated mailers deleted successfully.",
+            "message": f"Campaign {campaign_id} and all its mailers deleted successfully (env_mode: {campaign_env_mode}).",
+            "env_mode": campaign_env_mode,
+            "mailers_deleted": len(mailers),
         }
 
     except HTTPException:
-        raise  # re-raise known errors
+        raise
     except Exception as e:
         db.rollback()
         print(f"Error deleting campaign {campaign_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to delete campaign: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete campaign: {str(e)}"
+        )

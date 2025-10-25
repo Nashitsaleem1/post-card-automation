@@ -10,29 +10,41 @@ window.currentEditingMailerId = null;
 window.currentSideMailerId = null;
 let templatesCache = [];
 
+// Get mode from session storage
+let currentMode = sessionStorage.getItem('apiMode') || 'testing';
+console.log('Current API Mode:', currentMode);
+
+// Function to get current mode
+function getCurrentMode() {
+  return sessionStorage.getItem('apiMode') || 'testing';
+}
+
 // Helper to get query param
 function getQueryParam(key) {
   return new URLSearchParams(window.location.search).get(key);
 }
 
-async function getToken(env = "testing") {
+async function getToken(env = null) {
+  // Use provided env or fall back to current mode from session
+  const selectedEnv = env || getCurrentMode();
+  
   // Define credentials for both environments
   const credentials = {
     testing: {
-    apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
-    apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
+      apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
+      apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
       childRefNbr: "myAccountReference",
       url: "https://v3.pcmintegrations.com/auth/login"
     },
     production: {
-    apiKey: "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy",
-    apiSecret: "MzNhYTBjZTktYmVkZS00MDdkLTg1MDAtMTc4Y2ZiMWM5YWI5",
+      apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
+      apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
       childRefNbr: "myAccountReference",
       url: "https://v3.pcmintegrations.com/auth/login"
     }
   };
 
-  const creds = credentials[env];
+  const creds = credentials[selectedEnv];
   const payload = {
     apiKey: creds.apiKey,
     apiSecret: creds.apiSecret,
@@ -45,16 +57,18 @@ async function getToken(env = "testing") {
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) throw new Error(`Auth failed for ${env.toUpperCase()} environment`);
+  if (!res.ok) throw new Error(`Auth failed for ${selectedEnv.toUpperCase()} environment`);
   const data = await res.json();
   return data.token;
 }
+
 
 async function fetchScannedRecipients(qrCodeId) {
   if (!qrCodeId) return [];
   try {
     // Always fetch a production token
-    const token = await getToken("production");
+    const mode = getCurrentMode();
+    const token = await getToken(mode);
 
     const res = await fetch(
       `https://v3.pcmintegrations.com/qr-code/${qrCodeId}/tracking`,
@@ -401,6 +415,7 @@ function renderMailers(mailers) {
   });
 }
 
+
 /* ---------- Delete Mailer ---------- */
 async function deleteMailer(mailerId) {
   const mailer = allMailers.find((m) => m.id === mailerId);
@@ -409,37 +424,47 @@ async function deleteMailer(mailerId) {
     return;
   }
 
-  // If only one mailer and it's pending or scheduled, offer to delete entire campaign
-  if (allMailers.length === 1 && (mailer.status === "pending" || mailer.status === "scheduled")) {
+  const mailerEnvMode = mailer.env_mode || "testing";
+
+  // ❌ Prevent deletion if sent in production
+  if (mailer.status === "sent" && mailerEnvMode === "production") {
+    alert(`❌ Cannot delete sent mailers in PRODUCTION mode.`);
+    return;
+  }
+
+  // If only one mailer and deletable, confirm full campaign deletion
+  const canDeleteSent = mailerEnvMode === "testing" && mailer.status === "sent";
+  if (
+    allMailers.length === 1 &&
+    ["pending", "scheduled"].includes(mailer.status) ||
+    canDeleteSent
+  ) {
     const confirmDelete = confirm(
       `This is the only mailer in this campaign.\n\nWould you like to:\nOK = Delete entire campaign and mailer\nCancel = Keep campaign`
     );
     if (!confirmDelete) return;
-
-    // Delete entire campaign
     await deleteCampaign();
     return;
   }
 
-  // Otherwise, just delete the individual mailer
+  // Confirm deletion of individual mailer
   const confirmDelete = confirm(
-    `Are you sure you want to delete "${mailer.mailer_name}"? This action cannot be undone.`
+    `Are you sure you want to delete "${mailer.mailer_name}"?\nThis action cannot be undone.`
   );
   if (!confirmDelete) return;
 
   try {
-    const res = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${mailerId}`,
-      {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${mailerId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
+
     if (!res.ok) {
       const txt = await res.text();
       throw new Error(txt || "Failed to delete mailer");
     }
-    alert("Mailer deleted successfully!");
+
+    alert(`Mailer deleted successfully!`);
     closeSidePanel();
     await loadCampaignDetail();
   } catch (err) {
@@ -456,8 +481,20 @@ async function deleteCampaign() {
     return;
   }
 
+  // Get env_mode from the first mailer
+  const firstMailerEnvMode = allMailers.length > 0 ? (allMailers[0].env_mode || "testing") : "testing";
+
+  // Check if first mailer is sent and env_mode is production
+  if (allMailers.length > 0) {
+    const firstMailerStatus = allMailers[0].status || "pending";
+    if (firstMailerStatus === "sent" && firstMailerEnvMode === "production") {
+      alert(`Cannot delete campaigns with sent mailers in PRODUCTION mode.\n\nFirst mailer environment: ${firstMailerEnvMode.toUpperCase()}`);
+      return;
+    }
+  }
+
   const confirmDelete = confirm(
-    `Are you sure you want to delete this entire campaign? This action cannot be undone.`
+    `Are you sure you want to delete this entire campaign? This action cannot be undone.\n\nCampaign environment: ${firstMailerEnvMode.toUpperCase()}`
   );
   if (!confirmDelete) return;
 
@@ -469,11 +506,13 @@ async function deleteCampaign() {
         headers: { "Content-Type": "application/json" },
       }
     );
+
     if (!res.ok) {
       const txt = await res.text();
       throw new Error(txt || "Failed to delete campaign");
     }
-    alert("Campaign deleted successfully!");
+
+    alert(`Campaign deleted successfully!`);
     // Redirect to campaigns list or home page
     window.location.href = "dashboard.html";
   } catch (err) {
@@ -486,17 +525,44 @@ async function deleteCampaign() {
 function updateDeleteCampaignButtonVisibility() {
   const deleteBtn = document.getElementById("deleteCampaignBtn");
   if (!deleteBtn) return;
+  console.log(allMailers)
 
-  // Show button only if first mailer is pending or scheduled
   if (allMailers && allMailers.length > 0) {
-    const firstMailerStatus = allMailers[0].status || "pending";
-    const shouldShow =
-      firstMailerStatus === "pending" || firstMailerStatus === "scheduled";
-    deleteBtn.style.display = shouldShow ? "block" : "none";
-  } else {
-    // If no mailers, show the button
-    deleteBtn.style.display = "block";
+    const firstMailer = allMailers[0];
+    const firstMailerStatus = firstMailer.status || "pending";
+    const firstMailerEnvMode = firstMailer.env_mode || "testing";
+
+    // ✅ TESTING mode → always show delete button
+    if (firstMailerEnvMode === "testing") {
+      deleteBtn.style.display = "block";
+      return;
+    }
+
+    // ✅ PRODUCTION mode → only show if status = pending or scheduled
+    if (firstMailerEnvMode === "production") {
+      const canDelete = ["pending", "scheduled"].includes(firstMailerStatus);
+      deleteBtn.style.display = canDelete ? "block" : "none";
+      return;
+    }
   }
+
+  // ✅ If no mailers found, allow campaign deletion
+  deleteBtn.style.display = "block";
+}
+
+/* ---------- Update delete mailer button visibility in side panel ---------- */
+function updateDeleteMailerButtonVisibility(mailer) {
+  if (!mailer) return false;
+  const mailerEnvMode = mailer.env_mode || "testing";
+
+  // ✅ Always allow delete for pending/scheduled
+  if (["pending", "scheduled"].includes(mailer.status)) return true;
+
+  // ✅ Allow delete for sent only in TESTING mode
+  if (mailer.status === "sent" && mailerEnvMode === "testing") return true;
+
+  // ❌ Block delete for sent mailers in PRODUCTION
+  return false;
 }
 
 
@@ -788,10 +854,21 @@ async function sendMailer(mailerId, button) {
   button.disabled = true;
 
   try {
-    // --- Ask user for mode (Test or Real) ---
-    const userChoice = confirm("Do you want to send the letter for REAL?\nPress 'Cancel' for Testing mode.");
-    const env = userChoice ? "production" : "testing";
-    console.log(`📦 Sending mailer using ${env.toUpperCase()} environment...`);
+    // --- Use the selected mode from session storage ---
+    const mode = getCurrentMode();
+
+    // --- Confirm with user about the current mode ---
+    const confirmSend = confirm(
+      `You are about to send the letter in ${mode.toUpperCase()} mode.\n\nDo you want to proceed?`
+    );
+
+    if (!confirmSend) {
+      button.textContent = originalText;
+      button.disabled = false;
+      return false;
+    }
+
+    console.log(`📦 Sending mailer using ${mode.toUpperCase()} environment...`);
 
     // --- Find mailer info ---
     const mailer = allMailers.find((m) => m.id === mailerId);
@@ -813,7 +890,7 @@ async function sendMailer(mailerId, button) {
     const finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
 
     // --- Get PCM Token ---
-    const token = await getToken(env);
+    const token = await getToken(mode);
 
     // --- Parse recipients ---
     const mailerRecipients = JSON.parse(mailer.address_list || "[]");
@@ -837,7 +914,7 @@ async function sendMailer(mailerId, button) {
     };
 
     // --- Use correct API base URL ---
-    const baseUrl = "https://v3.pcmintegrations.com"
+    const baseUrl = "https://v3.pcmintegrations.com";
 
     // --- Send to PCM API ---
     const res = await fetch(`${baseUrl}/order/letter`, {
@@ -853,7 +930,7 @@ async function sendMailer(mailerId, button) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || "PCM API error");
 
-    alert(`Mailer sent successfully using ${env.toUpperCase()} environment!`);
+    alert(`Mailer sent successfully using ${mode.toUpperCase()} environment!`);
 
     // --- Update backend (only after success) ---
     const updatePayload = {
@@ -910,6 +987,7 @@ function closeCreateMailerModal() {
 }
 
 async function createMailer() {
+  mode = getCurrentMode();
   const mailerName = document
     .getElementById("createNewmailerName")
     .value.trim();
@@ -955,6 +1033,7 @@ async function createMailer() {
     template_id: window.currentEditingTemplateId,
     expected_send_date: expectedSendDateIso,
     expected_delivery: expectedDeliveryIso,
+    mode:mode
   };
 
   try {

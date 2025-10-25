@@ -35,6 +35,7 @@ class CampaignData(Base):
     send_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=True, default="pending")
     is_qr_scanned_complete: Mapped[bool] = mapped_column(Boolean, default=False)
+    env_mode: Mapped[str] = mapped_column(String(20), nullable=False, default="testing")
 
     # Relationships
     campaign: Mapped["Campaign"] = relationship(back_populates="items")
@@ -51,8 +52,13 @@ class MailerOneOff(Base):
     )
     address_list: Mapped[str] = mapped_column(String, nullable=False)
     schedule_time: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    send_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)   # ✅ New column
+    send_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=True, default="pending")
+
+    # New column for environment mode
+    env_mode: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="testing"
+    )  # Allowed values: "testing" or "production"
 
     template: Mapped["Template"] = relationship(back_populates="mailer_one_offs")
 
@@ -73,7 +79,9 @@ class Template(Base):
     __tablename__ = "templates"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    template_name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)  # <-- Added field
+    template_name: Mapped[str] = mapped_column(
+        String(255), unique=True, nullable=False
+    )  # <-- Added field
     template: Mapped[str] = mapped_column(Text, nullable=False)  # HTML content
     qr_code_id: Mapped[int] = mapped_column(
         ForeignKey("qr_code_info.id", ondelete="SET NULL"), nullable=True
@@ -90,4 +98,3 @@ class Template(Base):
     )
     # Relationship to QR code
     qr_code: Mapped["QRCodeInfo"] = relationship(back_populates="templates")
-

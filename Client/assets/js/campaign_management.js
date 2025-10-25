@@ -9,6 +9,7 @@
 //   e.returnValue = confirmationMessage; // Some browsers use this
 //   return confirmationMessage; // For older ones
 // });
+// ---- Mode Management ----
 
 const campaignCard = document.getElementById("newCampaignCard");
 const mailerCard = document.getElementById("newMailerCard");
@@ -29,8 +30,8 @@ const API_KEYS = {
     apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
   },
   production: {
-    apiKey: "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy",
-    apiSecret: "MzNhYTBjZTktYmVkZS00MDdkLTg1MDAtMTc4Y2ZiMWM5YWI5",
+    apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
+    apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
   },
 };
 
@@ -665,7 +666,84 @@ let recordsPerPage = 20;
 let totalResultsFound = 0;
 let totalPages = 0;
 let currentSearchPayload = null;
-let allLoadedRecords = []; // Store all records loaded from API across pages
+let allLoadedRecords = [];
+
+// Page cache to store already loaded pages
+let pageCache = new Map(); // Key: page number, Value: {records, timestamp}
+let currentSearchHash = null; // To detect if search criteria changed
+
+function generateSearchHash(payload) {
+  // Remove skip/take from hash since those change per page
+  const hashPayload = JSON.parse(JSON.stringify(payload));
+  if (hashPayload.options) {
+    delete hashPayload.options.skip;
+    delete hashPayload.options.take;
+  }
+  return JSON.stringify(hashPayload);
+}
+
+// Check if we have cached data for this page
+function getCachedPage(pageNum) {
+  if (!currentSearchHash) {
+    console.log("No search hash available yet");
+    return null;
+  }
+
+  const cacheKey = `${currentSearchHash}_page_${pageNum}`;
+  console.log("Looking for cache key:", cacheKey);
+
+  // First try memory cache
+  const memoryCache = pageCache.get(cacheKey);
+  if (memoryCache) {
+    console.log("Found in memory cache");
+    return memoryCache;
+  }
+
+  console.log("No cache found for page", pageNum);
+  return null;
+}
+
+// Store page data in cache
+function setCachedPage(pageNum, records) {
+  if (!currentSearchHash) {
+    console.warn("Cannot cache without search hash");
+    return;
+  }
+
+  const cacheKey = `${currentSearchHash}_page_${pageNum}`;
+  console.log("Caching page", pageNum, "with key:", cacheKey);
+
+  const cacheData = {
+    records: records,
+    timestamp: Date.now(),
+  };
+
+  // Store in memory
+  pageCache.set(cacheKey, cacheData);
+  console.log("Cached in memory. Total cached pages:", pageCache.size);
+}
+
+// Clear cache when search criteria changes
+function clearPageCache() {
+  console.log("Clearing page cache");
+  pageCache.clear();
+  allLoadedRecords = [];
+
+  // Optional: Clear sessionStorage
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && key.includes("_page_")) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => sessionStorage.removeItem(key));
+    console.log("Cleared", keysToRemove.length, "items from sessionStorage");
+  } catch (e) {
+    console.warn("Could not clear sessionStorage:", e);
+  }
+}
 
 async function searchProperties(event, pageNum = 1) {
   if (event) event.preventDefault();
@@ -782,9 +860,50 @@ async function searchProperties(event, pageNum = 1) {
     payload.searchCriteria.orQuickLists = [quickList];
   }
 
+  // Generate search hash to track if search criteria changed
+  const newSearchHash = generateSearchHash(payload);
+
+  // If search criteria changed, clear cache
+  if (currentSearchHash !== newSearchHash) {
+    clearPageCache();
+    currentSearchHash = newSearchHash;
+  }
+
   // Store payload for page navigation
   currentSearchPayload = payload;
 
+  // NEW: Check if we have cached data for this page
+  const cachedData = getCachedPage(pageNum);
+
+  if (cachedData && cachedData.records) {
+    console.log(`Using cached data for page ${pageNum}`);
+
+    // Use cached records
+    let records = cachedData.records;
+
+    // Filter by zip code if selected (apply same filter as fresh data)
+    if (zip && records.length > 0) {
+      records = records.filter((record) => {
+        const recordZip =
+          record?.address?.zip || record?.address?.zipCode || "";
+        return recordZip.toString().startsWith(zip);
+      });
+    }
+
+    allRecords = records;
+    filteredRecords = records;
+    currentPage = pageNum;
+
+    // Render immediately with cached data
+    if (records.length > 0) {
+      renderResults();
+    } else {
+      renderNoResults();
+    }
+    return; // Exit early, no API call needed
+  }
+
+  // If no cache, proceed with API call
   try {
     // Show loading state only in table container
     const tableContainer = document.querySelector(".table-container");
@@ -830,6 +949,9 @@ async function searchProperties(event, pageNum = 1) {
     }
 
     console.log("Records:", records);
+
+    // NEW: Cache the raw records before filtering
+    setCachedPage(pageNum, records);
 
     // Filter by zip code if selected
     if (zip && records.length > 0) {
@@ -1048,11 +1170,9 @@ function updatePaginationControls() {
 
   // Update pagination buttons
   const paginationBtns = document.querySelectorAll(".pagination-btn");
-  if (paginationBtns.length >= 4) {
-    paginationBtns[0].disabled = currentPage === 1 || totalPages === 0; // First
-    paginationBtns[1].disabled = currentPage === 1 || totalPages === 0; // Previous
-    paginationBtns[2].disabled = currentPage === totalPages || totalPages === 0; // Next
-    paginationBtns[3].disabled = currentPage === totalPages || totalPages === 0; // Last
+  if (paginationBtns.length >= 2) {
+    paginationBtns[0].disabled = currentPage === 1 || totalPages === 0; // Previous
+    paginationBtns[1].disabled = currentPage === totalPages || totalPages === 0; // Next
   }
 }
 
@@ -1090,7 +1210,6 @@ function toggleSelectPage() {
   renderResults();
 }
 
-
 function generatePageNumbers(current, total) {
   let html = "";
   const maxVisible = 5;
@@ -1116,7 +1235,7 @@ function generatePageNumbers(current, total) {
 
 function goToPage(page) {
   if (page < 1 || page > totalPages) return;
-  searchProperties(event, page);
+  searchProperties(null, page);
   const tableContainer = document.querySelector(".table-container");
   if (tableContainer) {
     tableContainer.scrollTo({ top: 0, behavior: "smooth" });
@@ -1550,7 +1669,7 @@ async function parseCSV(file) {
         const row = Object.fromEntries(
           Object.entries(r).map(([k, v]) => [k.toLowerCase(), v])
         );
-        console.log(row)
+        console.log(row);
         return {
           firstName: row.firstname || "Test",
           lastName: row.lastname || "Name",
@@ -1770,7 +1889,6 @@ function closePreview() {
   }
 }
 
-// Update createAndSendLetter to validate PDF or template
 async function createAndSendLetter() {
   const btn = document.querySelector("button[onclick='createAndSendLetter()']");
   const isCampaign = campaignCard.classList.contains("selected");
@@ -1780,6 +1898,10 @@ async function createAndSendLetter() {
     showAlert("Please select either 'New Campaign' or 'New Mailer' option.");
     return;
   }
+
+  // ✅ Get mode RIGHT HERE
+  const mode = getCurrentMode();
+  console.log("📮 createAndSendLetter - Current mode:", mode);
 
   try {
     if (isCampaign) {
@@ -1800,13 +1922,11 @@ async function createAndSendLetter() {
         return;
       }
 
-      // Check if either PDF or template is selected
       if (!uploadedPdfUrl && !window.currentEditingTemplateId) {
         showAlert("Please select a template or upload a PDF.");
         return;
       }
 
-      // Step 1: Place PCM order
       const orderSuccess = await orderDesign(
         uploadedPdfUrl ? null : window.currentEditingTemplateId,
         btn
@@ -1816,7 +1936,6 @@ async function createAndSendLetter() {
         return;
       }
 
-      // Step 2: Create campaign
       const campaignResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1829,7 +1948,6 @@ async function createAndSendLetter() {
       }
       const campaign = await campaignResp.json();
 
-      // Step 3: Save campaign data
       const campaignDataPayload = {
         campaign_id: campaign.id,
         mailer_name: mailerName,
@@ -1838,7 +1956,8 @@ async function createAndSendLetter() {
         schedule_time: null,
         send_date: new Date().toISOString(),
         status: "sent",
-        pdf_url: uploadedPdfUrl || null, // Store PDF URL if used
+        pdf_url: uploadedPdfUrl || null,
+        env_mode: mode, // ✅ Pass env_mode instead of mode
       };
 
       const dataResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
@@ -1895,6 +2014,7 @@ async function createAndSendLetter() {
         send_date: new Date().toISOString(),
         status: "sent",
         pdf_url: uploadedPdfUrl || null,
+        env_mode: mode, // ✅ Pass env_mode instead of mode
       };
 
       const mailerResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
@@ -1919,10 +2039,15 @@ async function createAndSendLetter() {
   }
 }
 
+// ✅ FIXED: Update createAndSave to use getCurrentMode()
 async function createAndSave() {
   const btn = document.querySelector("button[onclick='createAndSendLetter()']");
   const isCampaign = campaignCard.classList.contains("selected");
   const isMailer = mailerCard.classList.contains("selected");
+
+  // ✅ Get mode RIGHT HERE
+  const mode = getCurrentMode();
+  console.log("💾 createAndSave - Current mode:", mode);
 
   if (!isCampaign && !isMailer) {
     showAlert("Please select either 'New Campaign' or 'New Mailer' option.");
@@ -1931,7 +2056,6 @@ async function createAndSave() {
 
   try {
     if (isCampaign) {
-      // 👉 Campaign workflow
       const campaignName = document
         .getElementById("campaignNameInput")
         .value.trim();
@@ -1949,7 +2073,6 @@ async function createAndSave() {
         return;
       }
 
-      // Step 2: Create campaign
       const campaignResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1962,7 +2085,6 @@ async function createAndSave() {
       }
       const campaign = await campaignResp.json();
 
-      // Step 3: Save campaign data
       const campaignDataPayload = {
         campaign_id: campaign.id,
         mailer_name: mailerName,
@@ -1971,6 +2093,7 @@ async function createAndSave() {
         schedule_time: null,
         send_date: null,
         status: "pending",
+        env_mode: mode, // ✅ Pass env_mode instead of mode
       };
 
       const dataResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
@@ -1991,7 +2114,6 @@ async function createAndSave() {
     }
 
     if (isMailer) {
-      // 👉 Mailer One-Off workflow
       const mailerName = document
         .getElementById("mailerNameOnlyInput")
         .value.trim();
@@ -2006,14 +2128,14 @@ async function createAndSave() {
         return;
       }
 
-      // Step 2: Save mailer one-off
       const mailerPayload = {
         mailer_name: mailerName,
         template_id: null,
         address_list: JSON.stringify(recipientsList),
         schedule_time: null,
-        send_date: null, // ✅ Not sending, keep null
+        send_date: null,
         status: "pending",
+        env_mode: mode, // ✅ Pass env_mode instead of mode
       };
 
       const mailerResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
@@ -2037,7 +2159,6 @@ async function createAndSave() {
     showAlert(error.message || "Something went wrong.");
   }
 }
-
 // ---- Get Token Function ----
 async function getToken(mode) {
   const creds = API_KEYS[mode];
@@ -2060,17 +2181,27 @@ async function getToken(mode) {
   return data.token;
 }
 
+
 async function orderDesign(templateId, button) {
   const originalText = button.textContent;
   button.textContent = "Processing...";
   button.disabled = true;
 
   try {
-    // Ask user for mode (Test or Real)
-    const userChoice = confirm(
-      "Do you want to send the letter for REAL?\nPress 'Cancel' for Testing mode."
+    // ✅ Get current mode from sessionStorage RIGHT HERE
+    const mode = getCurrentMode();
+    console.log("📦 orderDesign - Current mode:", mode);
+
+    // Confirm with user about the current mode
+    const confirmSend = confirm(
+      `You are about to send the letter in ${mode.toUpperCase()} mode.\n\nDo you want to proceed?`
     );
-    const mode = userChoice ? "production" : "testing";
+
+    if (!confirmSend) {
+      button.textContent = originalText;
+      button.disabled = false;
+      return false;
+    }
 
     const todayObj = new Date();
     const todayISO = todayObj.toISOString().split("T")[0];
@@ -2096,8 +2227,9 @@ async function orderDesign(templateId, button) {
       throw new Error("Please select a template or upload a PDF");
     }
 
-    // Get token based on user choice
+    // Get token based on CURRENT mode
     const token = await getToken(mode);
+    console.log("🔑 Got token for", mode.toUpperCase(), "mode");
 
     const payload = {
       extRefNbr: "12345",
@@ -2142,7 +2274,6 @@ async function orderDesign(templateId, button) {
     button.disabled = false;
   }
 }
-
 // ========= Helper functions =========
 function saveFormState() {
   const formState = {
@@ -2317,31 +2448,70 @@ if (performance.getEntriesByType("navigation")[0].type === "reload") {
   sessionStorage.clear();
 }
 
-// Initialize button states on page load
+// ✅ FIXED: Function to get current mode from sessionStorage
+function getCurrentMode() {
+  const mode = sessionStorage.getItem("apiMode");
+  console.log("getCurrentMode() called - mode from storage:", mode);
+  return mode || "testing";
+}
+
+// ✅ UPDATE: Mode Management at DOMContentLoaded
 document.addEventListener("DOMContentLoaded", async () => {
+  const testingBtn = document.getElementById("testingModeBtn");
+  const productionBtn = document.getElementById("productionModeBtn");
+
+  // ✅ Get initial mode from storage
+  let currentMode = getCurrentMode();
+  console.log("🔍 Initial mode on page load:", currentMode);
+
+  // ✅ Set initial button states based on storage
+  if (currentMode === "production") {
+    testingBtn.classList.remove("active");
+    productionBtn.classList.add("active");
+  } else {
+    testingBtn.classList.add("active");
+    productionBtn.classList.remove("active");
+  }
+
+  // ✅ Testing mode button click
+  testingBtn.addEventListener("click", () => {
+    currentMode = "testing";
+    sessionStorage.setItem("apiMode", "testing");
+    console.log("✅ Switched to TESTING mode");
+    testingBtn.classList.add("active");
+    productionBtn.classList.remove("active");
+    showAlert("Switched to TESTING mode");
+  });
+
+  // ✅ Production mode button click
+  productionBtn.addEventListener("click", () => {
+    currentMode = "production";
+    sessionStorage.setItem("apiMode", "production");
+    console.log("✅ Switched to PRODUCTION mode");
+    productionBtn.classList.add("active");
+    testingBtn.classList.remove("active");
+    showAlert("Switched to PRODUCTION mode");
+  });
+
+  // Rest of the initialization...
   const overlay = document.getElementById("previewOverlay");
   if (overlay) {
-    // Close overlay when clicking outside the content box
     overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) {
-        closePreview();
-      }
+      if (e.target === overlay) closePreview();
     });
 
-    // Close preview with ESC key
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && overlay.style.display === "flex") {
         closePreview();
       }
     });
   }
-  restoreState();
 
+  restoreState();
   updateButtonStates();
 
   document.getElementById("campaignName")?.addEventListener("input", saveState);
   document.getElementById("mailerName")?.addEventListener("input", saveState);
-
   document
     .getElementById("mailerNameOnlyInput")
     ?.addEventListener("input", saveState);

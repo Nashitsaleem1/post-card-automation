@@ -34,8 +34,13 @@
 
       <div class="hamburger" id="hamburger">☰</div>
     </nav>
-
+<!-- MODE SELECTOR - Place RIGHT AFTER nav, BEFORE container -->
+<div class="mode-selector">
+  <button id="testingModeBtn" class="mode-btn active">Testing</button>
+  <button id="productionModeBtn" class="mode-btn">Production</button>
+</div>
     <div class="container">
+
       <h1 class="heading3">
         <i>
           To get started, first create a Campaign<br />
@@ -154,7 +159,7 @@
         </div>
       </div>
 
-      <div class="main-container" id="batchdatasearch" style="display: none;">
+      <div class="main-container" id="batchdatasearch" style="display: none">
         <div class="search-note">
           <span style="font-size: 16px">💡</span>
           <strong>Tip:</strong> Start by typing the
@@ -162,9 +167,12 @@
           <strong>neighborhood</strong> and <strong>zip code</strong> fields
           will automatically update with valid options. <br /><br />
           ▪ If only a <strong>neighborhood</strong> is selected, the search will
-          include <em>all zip codes</em> in that area. If a <strong>zip code</strong> is selected, the results will be
-          <em>filtered</em> specifically for that zip code. <br/>
-          ▪ The default pagination value is 20. You can change it to your preferred number, and all subsequent API calls will use that value automatically.
+          include <em>all zip codes</em> in that area. If a
+          <strong>zip code</strong> is selected, the results will be
+          <em>filtered</em> specifically for that zip code. <br />
+          ▪ The default pagination value is 20. You can change it to your
+          preferred number, and all subsequent API calls will use that value
+          automatically.
         </div>
 
         <div class="content-sections">
@@ -291,8 +299,55 @@
                   <select id="quickList" class="form-input">
                     <option value="">-- Select --</option>
                     <option value="absentee-owner">Absentee Owner</option>
+                    <option value="active-auction">Active Auction</option>
                     <option value="active-listing">Active Listing</option>
+                    <option value="canceled-listing">Canceled Listing</option>
+                    <option value="cash-buyer">Cash Buyer</option>
+                    <option value="corporate-owned">Corporate Owned</option>
+                    <option value="expired-listing">Expired Listing</option>
+                    <option value="failed-listing">Failed Listing</option>
+                    <option value="fix-and-flip">Fix & Flip</option>
+                    <option value="free-and-clear">Free & Clear</option>
+                    <option value="for-sale-by-owner">For Sale By Owner</option>
+                    <option value="has-hoa">Has HOA</option>
+                    <option value="has-hoa-fees">Has HOA Fees</option>
+                    <option value="high-equity">High Equity</option>
+                    <option value="inherited">Inherited</option>
+                    <option value="involuntary-lien">Involuntary Lien</option>
+                    <option value="in-state-absentee-owner">
+                      In-State Absentee Owner
+                    </option>
+                    <option value="listed-below-market-price">
+                      Listed Below Market Price
+                    </option>
+                    <option value="low-equity">Low Equity</option>
+                    <option value="mailing-address-vacant">
+                      Mailing Address Vacant
+                    </option>
+                    <option value="notice-of-default">Notice of Default</option>
+                    <option value="notice-of-lis-pendens">
+                      Notice of Lis Pendens
+                    </option>
+                    <option value="notice-of-sale">Notice of Sale</option>
+                    <option value="on-market">On Market</option>
+                    <option value="out-of-state-absentee-owner">
+                      Out-of-State Absentee Owner
+                    </option>
+                    <option value="out-of-state-owner">
+                      Out-of-State Owner
+                    </option>
+                    <option value="owner-occupied">Owner Occupied</option>
+                    <option value="pending-listing">Pending Listing</option>
+                    <option value="preforeclosure">Preforeclosure</option>
+                    <option value="recently-sold">Recently Sold</option>
+                    <option value="same-property-and-mailing-address">
+                      Same Property and Mailing Address
+                    </option>
+                    <option value="tax-default">Tax Default</option>
+                    <option value="tired-landlord">Tired Landlord</option>
+                    <option value="unknown-equity">Unknown Equity</option>
                     <option value="vacant">Vacant</option>
+                    <option value="vacant-lot">Vacant Lot</option>
                   </select>
                 </div>
               </div>

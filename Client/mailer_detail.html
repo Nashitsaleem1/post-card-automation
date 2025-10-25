@@ -604,11 +604,20 @@
       </div>
     </div>
 
-    <script>
+<script>
 let recipients = [];
 let currentMailer = null;
 let currentSchedulingTemplate = null;
 window.currentEditingTemplateId = null;
+
+// Get mode from session storage
+let currentMode = sessionStorage.getItem('apiMode') || 'testing';
+console.log('Current API Mode:', currentMode);
+
+// Function to get current mode
+function getCurrentMode() {
+  return sessionStorage.getItem('apiMode') || 'testing';
+}
 
 function getQueryParam(key) {
   const params = new URLSearchParams(window.location.search);
@@ -661,7 +670,8 @@ async function confirmSchedule() {
 
     await res.json();
 
-    alert("Mailer scheduled successfully! (Currently in TESTING phase scheduling)");
+    const mode = getCurrentMode();
+    alert(`Mailer scheduled successfully in ${mode.toUpperCase()} mode!`);
     closeScheduleModal();
     location.reload();
   } catch (err) {
@@ -706,24 +716,27 @@ async function openTemplatePreview(templateId) {
   }
 }
 
-async function getToken(env = "testing") {
+async function getToken(env = null) {
+  // Use provided env or fall back to current mode from session
+  const selectedEnv = env || getCurrentMode();
+  
   // Define credentials for both environments
   const credentials = {
     testing: {
-    apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
-    apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
+      apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
+      apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
       childRefNbr: "myAccountReference",
       url: "https://v3.pcmintegrations.com/auth/login"
     },
     production: {
-    apiKey: "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy",
-    apiSecret: "MzNhYTBjZTktYmVkZS00MDdkLTg1MDAtMTc4Y2ZiMWM5YWI5",
+      apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
+      apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
       childRefNbr: "myAccountReference",
       url: "https://v3.pcmintegrations.com/auth/login"
     }
   };
 
-  const creds = credentials[env];
+  const creds = credentials[selectedEnv];
   const payload = {
     apiKey: creds.apiKey,
     apiSecret: creds.apiSecret,
@@ -736,7 +749,7 @@ async function getToken(env = "testing") {
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) throw new Error(`Auth failed for ${env.toUpperCase()} environment`);
+  if (!res.ok) throw new Error(`Auth failed for ${selectedEnv.toUpperCase()} environment`);
   const data = await res.json();
   return data.token;
 }
@@ -750,6 +763,20 @@ async function orderDesign(templateId, button) {
   try {
     const mailerId = getQueryParam("id");
     if (!mailerId) throw new Error("Mailer ID not found");
+
+    // Use the selected mode from session storage
+    const mode = getCurrentMode();
+    
+    // Confirm with user about the current mode
+    const confirmSend = confirm(
+      `You are about to send the letter in ${mode.toUpperCase()} mode.\n\nDo you want to proceed?`
+    );
+    
+    if (!confirmSend) {
+      button.textContent = originalText;
+      button.disabled = false;
+      return false;
+    }
 
     const todayObj = new Date();
     const todayISO = todayObj.toISOString().split("T")[0];
@@ -765,14 +792,10 @@ async function orderDesign(templateId, button) {
     const tpl = await tplRes.json();
     const finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
 
-    // --- Step 2: Ask user for environment ---
-    const useProd = confirm("Do you want to send the letter for REAL?\nPress 'Cancel' for Testing mode.");
-    const env = useProd ? "production" : "testing";
+    // --- Step 2: Get PCM token using selected mode ---
+    const token = await getToken(mode);
 
-    // --- Step 3: Get PCM token ---
-    const token = await getToken(env);
-
-    // --- Step 4: Send letter via PCM ---
+    // --- Step 3: Send letter via PCM ---
     const pcmPayload = {
       extRefNbr: "12345",
       designID: 0,
@@ -803,9 +826,9 @@ async function orderDesign(templateId, button) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || "PCM API request failed");
 
-    alert("✅ Letter sent successfully!");
+    alert(` Letter sent successfully in ${mode.toUpperCase()} mode!`);
 
-    // --- Step 5: Update backend only after PCM succeeds ---
+    // --- Step 4: Update backend only after PCM succeeds ---
     const updatePayload = {
       status: "sent",
       send_date: new Date().toISOString(),
@@ -825,7 +848,7 @@ async function orderDesign(templateId, button) {
 
     const updatedMailer = await updateRes.json();
 
-    // --- Step 6: Update frontend ---
+    // --- Step 5: Update frontend ---
     currentMailer = { ...updatedMailer };
     renderMailerInfo(currentMailer);
 
@@ -841,24 +864,48 @@ async function orderDesign(templateId, button) {
   }
 }
 
-
 async function deleteMailer(mailerId) {
-  if (!confirm("Are you sure you want to delete this mailer? This action cannot be undone.")) {
+  if (!currentMailer) {
+    alert("No mailer loaded");
+    return;
+  }
+
+  const mailerEnvMode = currentMailer.env_mode || "testing";
+  const mailerStatus = currentMailer.status || "pending";
+  const isTestingMode = mailerEnvMode === "testing";
+
+  // Check if deletion is allowed based on env_mode
+  if (mailerEnvMode === "production" && mailerStatus === "sent") {
+    alert(
+      `Cannot delete sent mailers created in PRODUCTION mode.\n\nMailer was created in: ${mailerEnvMode.toUpperCase()} mode\nCurrent status: ${mailerStatus}\n\nOnly 'pending' or 'scheduled' mailers can be deleted in production.`
+    );
+    return;
+  }
+
+  let confirmMessage = `Are you sure you want to delete this mailer?\n\nMailer Status: ${mailerStatus}\nCreated in: ${mailerEnvMode.toUpperCase()} mode\n\nThis action cannot be undone.`;
+
+  if (!confirm(confirmMessage)) {
     return;
   }
 
   try {
-    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${mailerId}`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-    });
+    const res = await fetch(
+      `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${mailerId}`,
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
 
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
       throw new Error(errorData.detail || "Failed to delete mailer");
     }
 
-    alert("✅ Mailer deleted successfully!");
+    const result = await res.json();
+    alert(
+      `✅ Mailer deleted successfully!\n\nCreated in: ${result.env_mode.toUpperCase()} mode\nStatus was: ${result.status}`
+    );
     window.location.href = "dashboard.html";
   } catch (err) {
     console.error("Delete mailer error:", err);
@@ -985,9 +1032,20 @@ function handleScheduledMailer(mailer) {
   costItem.className = "info-item";
   costItem.innerHTML = `
     <strong>Expected Cost</strong>
-    <span>${totalCost}</span>
+    <span>$${totalCost}</span>
   `;
   infoContent.appendChild(costItem);
+
+  // Display env_mode info
+  const envModeItem = document.createElement("div");
+  envModeItem.className = "info-item";
+  envModeItem.innerHTML = `
+    <strong>Created in Mode</strong>
+    <span style="text-transform: uppercase; font-weight: 600; color: ${
+      mailer.env_mode === "production" ? "#ef4444" : "#22c55e"
+    }">${mailer.env_mode || "testing"}</span>
+  `;
+  infoContent.appendChild(envModeItem);
 
   const actions = document.getElementById("actionButtons");
   actions.innerHTML = "";
@@ -1040,7 +1098,9 @@ function handlePendingMailer(mailer) {
 async function fetchScannedRecipients(qrCodeId) {
   if (!qrCodeId) return [];
   
-  const token = await getToken("production");
+  // Always use current mode for fetching scanned recipients
+  const mode = getCurrentMode();
+  const token = await getToken(mode);
   if (!token) return [];
 
   try {
@@ -1111,6 +1171,17 @@ function handleSentMailer(mailer) {
   `;
   infoContent.appendChild(costItem);
 
+  // Display env_mode info
+  const envModeItem = document.createElement("div");
+  envModeItem.className = "info-item";
+  envModeItem.innerHTML = `
+    <strong>Created in Mode</strong>
+    <span style="text-transform: uppercase; font-weight: 600; color: ${
+      mailer.env_mode === "production" ? "#ef4444" : "#22c55e"
+    }">${mailer.env_mode || "testing"}</span>
+  `;
+  infoContent.appendChild(envModeItem);
+
   const actions = document.getElementById("actionButtons");
   actions.innerHTML = "";
 
@@ -1122,9 +1193,33 @@ function handleSentMailer(mailer) {
     actions.appendChild(viewTemplateBtn);
   }
 
+  // Show delete button only if mailer was created in testing mode
+  const mailerEnvMode = mailer.env_mode || "testing";
+  if (mailerEnvMode === "testing") {
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "btn btn-outline";
+    deleteBtn.innerHTML = "🗑️ Delete (Testing Mode)";
+    deleteBtn.style.color = "#ef4444";
+    deleteBtn.style.borderColor = "#ef4444";
+    deleteBtn.onclick = () => deleteMailer(mailer.id);
+    actions.appendChild(deleteBtn);
+  } else {
+    // Show disabled delete button for production mode
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "btn btn-outline";
+    deleteBtn.innerHTML = "🗑️ Delete (Production - Disabled)";
+    deleteBtn.style.color = "#9ca3af";
+    deleteBtn.style.borderColor = "#9ca3af";
+    deleteBtn.disabled = true;
+    deleteBtn.title =
+      "Cannot delete sent mailers created in production mode";
+    actions.appendChild(deleteBtn);
+  }
+
   document.getElementById("templateSection").classList.remove("visible");
   document.getElementById("filterBar").style.display = "flex";
 }
+
 
 async function loadTemplates(selectedTemplateId = null) {
   const templatesGrid = document.getElementById("templatesGrid");
@@ -1207,8 +1302,6 @@ function openFullPreview(event, encodedHtml) {
   event.preventDefault();
   event.stopPropagation();
 
-  console.log("Opening preview...");
-
   const html = decodeURIComponent(encodedHtml);
   const overlay = document.getElementById("previewOverlay");
   const body = document.getElementById("previewBody");
@@ -1220,9 +1313,8 @@ function openFullPreview(event, encodedHtml) {
 
   body.innerHTML = html;
   overlay.style.display = "flex";
-
-  console.log("✅ Preview opened");
 }
+
 function closePreview() {
   document.getElementById("previewOverlay").style.display = "none";
   document.getElementById("previewBody").innerHTML = "";
@@ -1333,10 +1425,52 @@ async function loadMailerDetail() {
   }
 }
 
+// Initialize mode selector on page load
+function initializeModeSelector() {
+  const testingBtn = document.getElementById('testingModeBtn');
+  const productionBtn = document.getElementById('productionModeBtn');
+  
+  if (!testingBtn || !productionBtn) return;
+  
+  // Update current mode from session
+  currentMode = getCurrentMode();
+  
+  // Set initial active state
+  if (currentMode === 'production') {
+    testingBtn.classList.remove('active');
+    productionBtn.classList.add('active');
+  } else {
+    testingBtn.classList.add('active');
+    productionBtn.classList.remove('active');
+  }
+  
+  // Testing mode button click
+  testingBtn.addEventListener('click', () => {
+    currentMode = 'testing';
+    sessionStorage.setItem('apiMode', 'testing');
+    testingBtn.classList.add('active');
+    productionBtn.classList.remove('active');
+    alert('Switched to TESTING mode');
+  });
+  
+  // Production mode button click
+  productionBtn.addEventListener('click', () => {
+    currentMode = 'production';
+    sessionStorage.setItem('apiMode', 'production');
+    productionBtn.classList.add('active');
+    testingBtn.classList.remove('active');
+    alert('Switched to PRODUCTION mode');
+  });
+}
+
 document
   .getElementById("filterScanned")
   .addEventListener("change", updateRecipients);
-window.onload = loadMailerDetail;
-    </script>
+
+window.onload = () => {
+  initializeModeSelector();
+  loadMailerDetail();
+};
+</script>
   </body>
 </html>

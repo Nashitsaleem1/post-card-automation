@@ -187,19 +187,27 @@ async function fetchScannedAddresses(qrCodeId) {
 // ----------------------
 // Dashboard Loader
 // ----------------------
+let currentMode = sessionStorage.getItem('apiMode') || 'testing';
+console.log('Current API Mode:', currentMode);
+
+// Function to get current mode
+function getCurrentMode() {
+  return sessionStorage.getItem('apiMode') || 'testing';
+}
 
 async function loadDashboard() {
   try {
     const dashboardEl = document.querySelector(".dashboard");
+    mode = getCurrentMode();
 
     // ---- Fetch Campaign Data ----
-    const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/dashboard/all");
+    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/dashboard/all?mode=${mode}`);
     if (!res.ok && res.status !== 404)
       throw new Error("Failed to load campaigns");
     const data = res.status === 404 ? { data: [] } : await res.json();
 
     // ---- Fetch One-Off Mailers ----
-    const oneOffRes = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/all");
+    const oneOffRes = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/all?mode=${mode}`);
     let oneOffData = { data: [] };
     if (oneOffRes.ok) {
       const json = await oneOffRes.json();
