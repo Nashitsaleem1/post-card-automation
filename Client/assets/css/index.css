@@ -84,7 +84,7 @@ a {
   align-items: center;
 }
 
-i{
+i {
   color: var(--text-secondary);
 }
 .nav-links li a {
@@ -1722,7 +1722,7 @@ table tbody tr:hover,
 }
 
 .save-btn:hover {
-  background:var(--primary-gradient);
+  background: var(--primary-gradient);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
@@ -1899,29 +1899,29 @@ table tbody tr:hover,
   .filter-box {
     grid-template-columns: 1fr;
   }
-  
+
   .results-header {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .results-actions {
     flex-direction: column;
   }
-  
+
   .action-btn {
     width: 100%;
     justify-content: center;
   }
-  
+
   .property-details {
     grid-template-columns: 1fr;
   }
-  
+
   .batchactionbuttons {
     flex-direction: column;
   }
-  
+
   .result-counts {
     flex-direction: column;
     align-items: flex-start;
@@ -2982,22 +2982,21 @@ input:disabled {
 }
 
 .clear-btn {
- background: var(--primary-gradient);
+  background: var(--primary-gradient);
   color: #fff;
 }
 
 .search-btn:hover {
   background-color: #1565c0;
   box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
-    transform: translateY(-1px);
+  transform: translateY(-1px);
 }
 
 .clear-btn:hover {
   background-color: #d32f2f;
   box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
-    transform: translateY(-1px);
+  transform: translateY(-1px);
 }
-
 
 /* RIGHT SIDE - RESULTS */
 .results-container {
@@ -3096,21 +3095,21 @@ input:disabled {
 }
 
 .export-btn {
-  background-color: #2196F3;
+  background-color: #2196f3;
   color: white;
 }
 
 .export-btn:hover {
-  background-color: #1976D2;
+  background-color: #1976d2;
 }
 
 .save-btn {
-  background-color: #FF9800;
+  background-color: #ff9800;
   color: white;
 }
 
 .save-btn:hover {
-  background-color: #F57C00;
+  background-color: #f57c00;
 }
 
 .btn-icon {
@@ -3174,11 +3173,26 @@ input:disabled {
   color: #333;
   border-bottom: 1px solid #ddd;
   white-space: nowrap;
+  height: 44px;
+}
+
+.results-table th.checkbox-col {
+  padding: 0;
+  width: 50px;
+  text-align: center;
+  vertical-align: middle;
 }
 
 .results-table td {
   padding: 8px;
   border-bottom: 1px solid #f0f0f0;
+}
+
+.results-table td.checkbox-col {
+  padding: 0;
+  width: 50px;
+  text-align: center;
+  vertical-align: middle;
 }
 
 .results-table tbody tr:hover {
@@ -3189,19 +3203,42 @@ input:disabled {
   background-color: #e3f2fd;
 }
 
-.checkbox-col {
-  height: 25px;
-  width: 25px;
-  text-align: center;
-  vertical-align: middle; 
+.select-all-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  width: 100%;
 }
 
+.select-all-label #selectAllLabel {
+  display: none;
+}
+
+.results-table td.checkbox-col {
+  height: 44px;
+  display: table-cell;
+  vertical-align: middle;
+}
+
+.select-all-label input[type="checkbox"],
 .checkbox-col input[type="checkbox"] {
   cursor: pointer;
-  transform: scale(1.6); 
-  accent-color: #1976d2; 
-  margin: 0; 
+  transform: scale(1.6);
+  accent-color: #1976d2;
+  margin: 0;
+  flex-shrink: 0;
 }
+
+#selectAllLabel {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .empty-row {
   text-align: center;
   color: #999;
@@ -3287,9 +3324,9 @@ input:disabled {
 }
 
 .page-number.active {
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: #fff;
-  border-color: #4CAF50;
+  border-color: #4caf50;
 }
 
 @media (max-width: 1200px) {
@@ -3340,7 +3377,7 @@ input:disabled {
   border: 2px solid var(--primary-gradient);
   border-radius: var(--radius-md);
   overflow: hidden;
-  left:75% ;
+  left: 75%;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   z-index: 100;
   height: 45px;
@@ -3370,7 +3407,6 @@ input:disabled {
 
 .mode-btn.active:hover {
   background: var(--primary-gradient);
-  
 }
 
 .mode-btn.active {
@@ -3385,7 +3421,7 @@ input:disabled {
     top: 15px;
     right: 15px;
   }
-  
+
   .mode-btn {
     padding: 0.5rem 1rem;
     font-size: 0.85rem;
@@ -3398,7 +3434,7 @@ input:disabled {
     top: 10px;
     right: 10px;
   }
-  
+
   .mode-btn {
     padding: 0.4rem 0.8rem;
     font-size: 0.8rem;
