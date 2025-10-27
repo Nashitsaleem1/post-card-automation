@@ -525,7 +525,6 @@ async function deleteCampaign() {
 function updateDeleteCampaignButtonVisibility() {
   const deleteBtn = document.getElementById("deleteCampaignBtn");
   if (!deleteBtn) return;
-  console.log(allMailers)
 
   if (allMailers && allMailers.length > 0) {
     const firstMailer = allMailers[0];

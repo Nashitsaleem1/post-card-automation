@@ -496,7 +496,7 @@ async def upload_pdf(file: UploadFile = File(...)):
         with open(file_path, "wb") as f:
             f.write(content)
 
-        # Change the URL to use /uploads instead of /static
+        # ✅ Change the URL to use /uploads instead of /static
         file_url = f"https://pcm-app-h8mn8.ondigitalocean.app/uploads/pdfs/{unique_filename}"
 
         return {
@@ -722,21 +722,39 @@ def get_campaign_data_with_name(campaign_id: int, db: Session = Depends(get_db))
 @app.get("/dashboard/all")
 def get_dashboard_all(mode: str, db: Session = Depends(get_db)):
     """
-    mode: 'testing' or 'production' (query param from frontend)
+    mode: 'testing' or 'production'
     Example: /dashboard/all?mode=testing
     """
     if mode not in ["testing", "production"]:
         raise HTTPException(status_code=400, detail="Invalid mode value")
 
-    # Get all campaigns
-    campaigns = db.query(Campaign).order_by(desc(Campaign.id)).all()
-    if not campaigns:
-        raise HTTPException(status_code=404, detail="No campaigns found")
+    # Get all campaigns that have CampaignData entries in this mode
+    campaign_ids = (
+        db.query(CampaignData.campaign_id)
+        .filter(CampaignData.env_mode == mode)
+        .distinct()
+        .all()
+    )
+    campaign_ids = [cid[0] for cid in campaign_ids]
 
-    # Get the latest campaign
+    campaigns = (
+        db.query(Campaign)
+        .filter(Campaign.id.in_(campaign_ids))
+        .order_by(desc(Campaign.id))
+        .all()
+    )
+
+    if not campaigns:
+        return {
+            "total_campaigns": 0,
+            "latest_campaign": None,
+            "total_recipients": 0,
+            "data": [],
+            "all_campaigns": [],
+        }
+
     latest_campaign = campaigns[0]
 
-    # ✅ Filter CampaignData based on env_mode
     all_campaign_data = (
         db.query(CampaignData)
         .options(joinedload(CampaignData.template), joinedload(CampaignData.campaign))
@@ -745,20 +763,21 @@ def get_dashboard_all(mode: str, db: Session = Depends(get_db)):
         .all()
     )
 
-    # Calculate total recipients
     total_recipients = 0
     for data_record in all_campaign_data:
         address_list = data_record.address_list
-        if address_list:
-            try:
-                if isinstance(address_list, str):
-                    recipients = json.loads(address_list)
-                else:
-                    recipients = address_list
-                if isinstance(recipients, list):
-                    total_recipients += len(recipients)
-            except (json.JSONDecodeError, TypeError):
-                continue
+        if not address_list:
+            continue
+        try:
+            recipients = (
+                json.loads(address_list)
+                if isinstance(address_list, str)
+                else address_list
+            )
+            if isinstance(recipients, list):
+                total_recipients += len(recipients)
+        except (json.JSONDecodeError, TypeError):
+            continue
 
     return {
         "total_campaigns": len(campaigns),
@@ -768,11 +787,7 @@ def get_dashboard_all(mode: str, db: Session = Depends(get_db)):
         },
         "total_recipients": total_recipients,
         "all_campaigns": [
-            {
-                "id": campaign.id,
-                "campaign_name": campaign.campaign_name,
-            }
-            for campaign in campaigns
+            {"id": c.id, "campaign_name": c.campaign_name} for c in campaigns
         ],
         "data": [
             {
@@ -786,7 +801,7 @@ def get_dashboard_all(mode: str, db: Session = Depends(get_db)):
                 "template_id": d.template_id,
                 "template_preview": d.template.template if d.template else None,
                 "qr_code_id": d.template.qr_code_id if d.template else None,
-                "env_mode": d.env_mode,  # ✅ Include mode info
+                "env_mode": d.env_mode,
             }
             for d in all_campaign_data
         ],
@@ -895,18 +910,7 @@ def create_mailer_one_off(
         )
 
 
-@app.get("/mailer-one-off/count")
-def get_one_off_mailers_count(db: Session = Depends(get_db)):
-    try:
-        count = db.query(MailerOneOff).count()
-        return {"total_one_off_mailers": count}
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to fetch one-off mailers count: {str(e)}"
-        )
-
-
-@app.get("/mailer-one-off/all", response_model=list[schemas.MailerOneOffResponse])
+@app.get("/mailer-one-off/all")
 def get_all_one_off_mailers(mode: str, db: Session = Depends(get_db)):
     """
     mode: 'testing' or 'production'
@@ -917,7 +921,10 @@ def get_all_one_off_mailers(mode: str, db: Session = Depends(get_db)):
 
     try:
         mailers = db.query(MailerOneOff).filter(MailerOneOff.env_mode == mode).all()
-        return mailers
+        return {
+            "total_one_off_mailers": len(mailers),
+            "data": mailers,
+        }
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch one-off mailers: {str(e)}"

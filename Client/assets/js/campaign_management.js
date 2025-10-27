@@ -1,15 +1,6 @@
-// // --- Prevent page reload/close confirmation ---
-// window.addEventListener("beforeunload", function (e) {
-//   // Custom confirmation message
-//   const confirmationMessage =
-//     "Are you sure you want to reload or leave this page?";
-
-//   // Standard way to show the confirmation dialog
-//   e.preventDefault();
-//   e.returnValue = confirmationMessage; // Some browsers use this
-//   return confirmationMessage; // For older ones
-// });
-// ---- Mode Management ----
+// ============================================
+// GLOBAL VARIABLES & CONFIGURATION
+// ============================================
 
 const campaignCard = document.getElementById("newCampaignCard");
 const mailerCard = document.getElementById("newMailerCard");
@@ -21,9 +12,11 @@ const uploadcsvCard = document.getElementById("uploadcsv");
 const BatchsearchCard = document.getElementById("batchsearch");
 const uploadsection = document.getElementById("uploadsection");
 const batchsection = document.getElementById("batchdatasearch");
+
 let cityAutocomplete;
 let recipientsList = [];
-// ---- API Credentials ----
+let uploadedPdfUrl = null;
+
 const API_KEYS = {
   testing: {
     apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
@@ -35,9 +28,69 @@ const API_KEYS = {
   },
 };
 
-let uploadedPdfUrl = null;
+// ============================================
+// PAGINATION & SEARCH VARIABLES
+// ============================================
 
-// Add PDF upload section after template selection (add to HTML)
+let allRecords = [];
+let filteredRecords = [];
+let selectedRecords = new Set();
+let currentPage = 1;
+let recordsPerPage = 20;
+let totalResultsFound = 0;
+let totalPages = 0;
+let currentSearchPayload = null;
+let allLoadedRecords = [];
+let pageCache = new Map();
+let currentSearchHash = null;
+
+// ============================================
+// MODE MANAGEMENT
+// ============================================
+
+function getCurrentMode() {
+  const mode = sessionStorage.getItem("apiMode");
+  //console.log("getCurrentMode() called - mode from storage:", mode);
+  return mode || "testing";
+}
+
+function setMode(newMode) {
+  sessionStorage.setItem("apiMode", newMode);
+//  console.log("✅ Switched to", newMode.toUpperCase(), "mode");
+}
+
+// ============================================
+// UI & MODAL FUNCTIONS
+// ============================================
+
+function showAlert(message) {
+  const alertMessage = document.getElementById("alertMessage");
+  alertMessage.textContent = message;
+  const alertModal = document.getElementById("alertModal");
+  alertModal.style.display = "flex";
+  document.getElementById("alertOkBtn").addEventListener("click", () => {
+    alertModal.style.display = "none";
+  });
+}
+
+function scrollToCreateCampaign() {
+  document
+    .getElementById("createcampaign")
+    .scrollIntoView({ behavior: "smooth" });
+}
+
+function closePreview() {
+  const overlay = document.getElementById("previewOverlay");
+  if (overlay) {
+    overlay.style.display = "none";
+    document.getElementById("previewBody").innerHTML = "";
+  }
+}
+
+// ============================================
+// PDF UPLOAD MANAGEMENT
+// ============================================
+
 function createPdfUploadSection() {
   const pdfUploadHtml = `
   <div class="pdf-upload-section" style="margin: 3rem 0; text-align: center;">
@@ -126,7 +179,6 @@ function createPdfUploadSection() {
   </div>
 `;
 
-  // Insert after templates grid
   const templatesGrid = document.getElementById("templatesGrid");
   if (templatesGrid && !document.querySelector(".pdf-upload-section")) {
     templatesGrid.insertAdjacentHTML("afterend", pdfUploadHtml);
@@ -134,7 +186,6 @@ function createPdfUploadSection() {
   }
 }
 
-// Setup PDF upload functionality
 function setupPdfUpload() {
   const pdfUploadBox = document.getElementById("pdfUploadBox");
   const pdfFileInput = document.getElementById("pdfFile");
@@ -144,13 +195,11 @@ function setupPdfUpload() {
     return;
   }
 
-  // Check if already initialized to prevent duplicate listeners
   if (pdfUploadBox.dataset.initialized === "true") {
     return;
   }
   pdfUploadBox.dataset.initialized = "true";
 
-  // Prevent defaults for drag and drop
   ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
     pdfUploadBox.addEventListener(eventName, (e) => {
       e.preventDefault();
@@ -158,7 +207,6 @@ function setupPdfUpload() {
     });
   });
 
-  // Highlight on drag
   ["dragenter", "dragover"].forEach((eventName) => {
     pdfUploadBox.addEventListener(eventName, () => {
       pdfUploadBox.style.borderColor = "#2b7fff";
@@ -173,7 +221,6 @@ function setupPdfUpload() {
     });
   });
 
-  // Handle drop
   pdfUploadBox.addEventListener("drop", async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -185,18 +232,16 @@ function setupPdfUpload() {
     }
   });
 
-  // Handle file input change
   pdfFileInput.addEventListener("change", async (e) => {
     e.preventDefault();
     const file = e.target.files[0];
     if (file) {
       await uploadPdfFile(file);
-      e.target.value = ""; // Clear input
+      e.target.value = "";
     }
   });
 }
 
-// Upload PDF to backend
 async function uploadPdfFile(file) {
   if (file.size > 10 * 1024 * 1024) {
     showAlert("File size exceeds 10MB limit");
@@ -254,16 +299,12 @@ async function uploadPdfFile(file) {
       </div>
     `;
 
-    // Deselect any template when PDF is uploaded
     document.querySelectorAll(".template-card").forEach((card) => {
       card.classList.remove("selected");
     });
     window.currentEditingTemplateId = null;
 
-    // ✅ UPDATE BUTTON STATES AFTER PDF UPLOAD
     updateButtonStates();
-
-    // console.log("✅ PDF uploaded:", uploadedPdfUrl);
   } catch (error) {
     console.error("PDF upload error:", error);
     showAlert("Error uploading PDF: " + error.message);
@@ -271,12 +312,10 @@ async function uploadPdfFile(file) {
   }
 }
 
-// Helper function to reset PDF upload box
 function resetPdfUploadBox() {
   const pdfUploadBox = document.getElementById("pdfUploadBox");
   if (!pdfUploadBox) return;
 
-  // ✅ Remove the initialized flag so we can reinitialize
   delete pdfUploadBox.dataset.initialized;
 
   pdfUploadBox.innerHTML = `
@@ -303,7 +342,6 @@ function resetPdfUploadBox() {
     </div>
   `;
 
-  // ✅ Now reinitialize
   setupPdfUpload();
 }
 
@@ -352,15 +390,16 @@ async function removePdf(filename) {
       setupPdfUpload();
     }
 
-    // ✅ UPDATE BUTTON STATES AFTER PDF REMOVAL
     updateButtonStates();
-
-    // console.log("✅ PDF removed");
   } catch (error) {
     console.error("Error removing PDF:", error);
     showAlert("Error removing PDF: " + error.message);
   }
 }
+
+// ============================================
+// CARD SELECTION HANDLERS
+// ============================================
 
 campaignCard.addEventListener("click", () => {
   campaignCard.classList.add("selected");
@@ -394,13 +433,11 @@ BatchsearchCard.addEventListener("click", () => {
   updateButtonStates();
 });
 
-// Toggle menu when hamburger clicked
 hamburger.addEventListener("click", (e) => {
-  e.stopPropagation(); // prevent triggering document click
+  e.stopPropagation();
   navLinks.classList.toggle("nav-active");
 });
 
-// Close menu if clicking outside
 document.addEventListener("click", (e) => {
   if (
     navLinks.classList.contains("nav-active") &&
@@ -411,7 +448,10 @@ document.addEventListener("click", (e) => {
   }
 });
 
-/* ---------------- STATE PERSISTENCE ---------------- */
+// ============================================
+// STATE PERSISTENCE
+// ============================================
+
 function saveState() {
   const state = {
     mode: campaignCard.classList.contains("selected")
@@ -469,7 +509,6 @@ function restoreState() {
     document.getElementById("mailerNameOnlyInput").value = state.mailerNameonly;
   if (state.recipients && state.recipients.length) {
     recipientsList = state.recipients;
-    // console.log("Restored recipients:", recipientsList);
     document.getElementById("uploadBox").innerHTML = `
       <div class="upload-icon" style="color: #28a745;">✓</div>
       <div class="upload-main-text" style="color: #28a745;">File uploaded successfully!</div>
@@ -480,65 +519,66 @@ function restoreState() {
   }
 }
 
-function scrollToCreateCampaign() {
-  document
-    .getElementById("createcampaign")
-    .scrollIntoView({ behavior: "smooth" });
-}
+// ============================================
+// FILTERS & RESULTS MANAGEMENT
+// ============================================
 
 function clearfilters() {
-  const filterBox = document.querySelector(".filter-box");
-  if (!filterBox) return;
+  document.getElementById("cityInput").value = "";
+  document.getElementById("cityApiValue").value = "";
+  document.getElementById("stateInput").value = "";
+  document.getElementById("zipInput").value = "";
+  document.getElementById("neighborhoodInput").value = "";
+  document.getElementById("streetInput").value = "";
+  document.getElementById("minYearBuilt").value = "";
+  document.getElementById("maxYearBuilt").value = "";
+  document.getElementById("minValue").value = "";
+  document.getElementById("maxValue").value = "";
+  document.getElementById("minBedrooms").value = "";
+  document.getElementById("maxBedrooms").value = "";
+  document.getElementById("minBathrooms").value = "";
+  document.getElementById("maxBathrooms").value = "";
+  document.getElementById("quickList").value = "";
 
-  // 1) Clear all input fields (text, number, hidden, readonly)
-  filterBox.querySelectorAll("input").forEach((input) => {
-    input.value = "";
-  });
+  allRecords = [];
+  filteredRecords = [];
+  allLoadedRecords = [];
+  selectedRecords.clear();
+  currentPage = 1;
+  totalResultsFound = 0;
+  totalPages = 0;
+  currentSearchPayload = null;
 
-  // 2) Reset all selects
-  filterBox.querySelectorAll("select").forEach((select) => {
-    // try to find a placeholder option (empty value or text like "-- Select")
-    let placeholderIndex = -1;
-    for (let i = 0; i < select.options.length; i++) {
-      const opt = select.options[i];
-      if (opt.value === "" || /--\s*Select/i.test(opt.text)) {
-        placeholderIndex = i;
-        break;
-      }
-    }
+  document.querySelector(".result-counts").innerHTML = `
+    <span class="count-item">Total Results Found: <strong>0</strong></span>
+  `;
 
-    if (placeholderIndex >= 0) {
-      select.selectedIndex = placeholderIndex;
-    } else {
-      select.selectedIndex = 0;
-    }
+  document.querySelector(".pagination-info").textContent =
+    "No search results yet";
 
-    // Ensure dependent UI updates: dispatch change
-    select.dispatchEvent(new Event("change", { bubbles: true }));
-  });
+  document.querySelector(".table-container").innerHTML = `
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th class="checkbox-col"><input type="checkbox" id="selectPageCheckbox" disabled></th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Address</th>
+          <th>City</th>
+          <th>State</th>
+          <th>Zip Code</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="7" class="empty-row">Click "Search" to load properties</td></tr>
+      </tbody>
+    </table>
+  `;
 
-  // 3) If you want to completely clear dynamic options and restore only the placeholder:
-  const neighborhood = document.getElementById("neighborhoodInput");
-  if (neighborhood) {
-    neighborhood.innerHTML =
-      '<option value="">-- Select Neighborhood --</option>';
-    neighborhood.selectedIndex = 0;
-    neighborhood.dispatchEvent(new Event("change", { bubbles: true }));
-  }
+  const paginationBtns = document.querySelectorAll(".pagination-btn");
+  paginationBtns.forEach((btn) => (btn.disabled = true));
 
-  const zip = document.getElementById("zipInput");
-  if (zip) {
-    zip.innerHTML = '<option value="">-- Select Zip --</option>';
-    zip.selectedIndex = 0;
-    zip.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-
-  // 4) clear hidden city API value (if used)
-  const cityApi = document.getElementById("cityApiValue");
-  if (cityApi) cityApi.value = "";
-
-  const results = document.getElementById("results");
-  if (results) results.innerHTML = "";
+  document.getElementById("pageNumbers").innerHTML = "";
 }
 
 function renderAddresses(addressData) {
@@ -608,7 +648,7 @@ function renderAddresses(addressData) {
 
   container.innerHTML = html;
   updateButtonStates();
-  // Add Select All functionality
+
   const selectAllCheckbox = document.getElementById("selectAllCheckbox");
   const individualCheckboxes = container.querySelectorAll(".audience-checkbox");
 
@@ -618,7 +658,6 @@ function renderAddresses(addressData) {
     });
   });
 
-  // Update Select All checkbox when individual checkboxes change
   individualCheckboxes.forEach((checkbox) => {
     checkbox.addEventListener("change", function () {
       const allChecked = Array.from(individualCheckboxes).every(
@@ -633,9 +672,8 @@ function renderAddresses(addressData) {
     });
   });
 
-  // Attach event listener for save button
   document.getElementById("saveAudienceBtn").addEventListener("click", () => {
-    recipientsList = []; // reset before saving
+    recipientsList = [];
 
     const checkboxes = container.querySelectorAll(".audience-checkbox:checked");
     checkboxes.forEach((checkbox) => {
@@ -651,29 +689,16 @@ function renderAddresses(addressData) {
       recipientsList.push(recipient);
     });
 
-    // console.log("Recipients List:", recipientsList);
     saveState();
     container.innerHTML = "";
   });
 }
 
-// Global variables for pagination
-let allRecords = [];
-let filteredRecords = [];
-let selectedRecords = new Set();
-let currentPage = 1;
-let recordsPerPage = 20;
-let totalResultsFound = 0;
-let totalPages = 0;
-let currentSearchPayload = null;
-let allLoadedRecords = [];
-
-// Page cache to store already loaded pages
-let pageCache = new Map(); // Key: page number, Value: {records, timestamp}
-let currentSearchHash = null; // To detect if search criteria changed
+// ============================================
+// CACHE MANAGEMENT
+// ============================================
 
 function generateSearchHash(payload) {
-  // Remove skip/take from hash since those change per page
   const hashPayload = JSON.parse(JSON.stringify(payload));
   if (hashPayload.options) {
     delete hashPayload.options.skip;
@@ -682,7 +707,6 @@ function generateSearchHash(payload) {
   return JSON.stringify(hashPayload);
 }
 
-// Check if we have cached data for this page
 function getCachedPage(pageNum) {
   if (!currentSearchHash) {
     console.log("No search hash available yet");
@@ -690,20 +714,18 @@ function getCachedPage(pageNum) {
   }
 
   const cacheKey = `${currentSearchHash}_page_${pageNum}`;
-  console.log("Looking for cache key:", cacheKey);
+ // console.log("Looking for cache key:", cacheKey);
 
-  // First try memory cache
   const memoryCache = pageCache.get(cacheKey);
   if (memoryCache) {
-    console.log("Found in memory cache");
+   // console.log("Found in memory cache");
     return memoryCache;
   }
 
-  console.log("No cache found for page", pageNum);
+ // console.log("No cache found for page", pageNum);
   return null;
 }
 
-// Store page data in cache
 function setCachedPage(pageNum, records) {
   if (!currentSearchHash) {
     console.warn("Cannot cache without search hash");
@@ -718,18 +740,15 @@ function setCachedPage(pageNum, records) {
     timestamp: Date.now(),
   };
 
-  // Store in memory
   pageCache.set(cacheKey, cacheData);
-  console.log("Cached in memory. Total cached pages:", pageCache.size);
+  //console.log("Cached in memory. Total cached pages:", pageCache.size);
 }
 
-// Clear cache when search criteria changes
 function clearPageCache() {
-  console.log("Clearing page cache");
+  //console.log("Clearing page cache");
   pageCache.clear();
   allLoadedRecords = [];
 
-  // Optional: Clear sessionStorage
   try {
     const keysToRemove = [];
     for (let i = 0; i < sessionStorage.length; i++) {
@@ -739,11 +758,19 @@ function clearPageCache() {
       }
     }
     keysToRemove.forEach((key) => sessionStorage.removeItem(key));
-    console.log("Cleared", keysToRemove.length, "items from sessionStorage");
+  //  console.log("Cleared", keysToRemove.length, "items from sessionStorage");
+    document.querySelector(".result-counts").innerHTML = `
+  <span class="count-item">Total Results Found: <strong>0</strong></span>
+  <span class="count-item">Selected: <strong>0</strong></span>
+`;
   } catch (e) {
     console.warn("Could not clear sessionStorage:", e);
   }
 }
+
+// ============================================
+// SEARCH FUNCTIONS
+// ============================================
 
 async function searchProperties(event, pageNum = 1) {
   if (event) event.preventDefault();
@@ -766,13 +793,11 @@ async function searchProperties(event, pageNum = 1) {
 
   const quickList = document.getElementById("quickList").value;
 
-  // Get selected page size from dropdown
   const pageSizeSelect = document.getElementById("pageSizeSelect");
   if (pageSizeSelect) {
     recordsPerPage = parseInt(pageSizeSelect.value);
   }
 
-  // Validation
   if (!((street && zip) || (street && city && state) || neighborhood)) {
     alert(
       "Please enter either 'Street + Zip Code' or 'Street + City + State' or 'Neighborhood'."
@@ -780,16 +805,13 @@ async function searchProperties(event, pageNum = 1) {
     return;
   }
 
-  // Build query (for neighborhood searches)
   let queryValue = "";
   if (neighborhood) {
     queryValue = `${neighborhood}, ${state}`;
   }
 
-  // Calculate skip parameter based on page number
   const skip = (pageNum - 1) * recordsPerPage;
 
-  // Use different payloads depending on street input
   let payload;
   if (street) {
     payload = {
@@ -818,7 +840,6 @@ async function searchProperties(event, pageNum = 1) {
     };
   }
 
-  // Valuation filter
   if (minValue || maxValue) {
     payload.searchCriteria.valuation = { estimatedValue: {} };
     if (minValue)
@@ -827,7 +848,6 @@ async function searchProperties(event, pageNum = 1) {
       payload.searchCriteria.valuation.estimatedValue.max = parseInt(maxValue);
   }
 
-  // Building filter
   const building = {};
   if (minBedrooms || maxBedrooms) {
     building.bedroomCount = {};
@@ -843,7 +863,6 @@ async function searchProperties(event, pageNum = 1) {
     payload.searchCriteria.building = building;
   }
 
-  // Year built filter
   if (minYearBuilt || maxYearBuilt) {
     if (!payload.searchCriteria.building) {
       payload.searchCriteria.building = {};
@@ -855,33 +874,26 @@ async function searchProperties(event, pageNum = 1) {
       payload.searchCriteria.building.yearBuilt.max = parseInt(maxYearBuilt);
   }
 
-  // Quick list filter
   if (quickList) {
     payload.searchCriteria.orQuickLists = [quickList];
   }
 
-  // Generate search hash to track if search criteria changed
   const newSearchHash = generateSearchHash(payload);
 
-  // If search criteria changed, clear cache
   if (currentSearchHash !== newSearchHash) {
     clearPageCache();
     currentSearchHash = newSearchHash;
   }
 
-  // Store payload for page navigation
   currentSearchPayload = payload;
 
-  // NEW: Check if we have cached data for this page
   const cachedData = getCachedPage(pageNum);
 
   if (cachedData && cachedData.records) {
-    console.log(`Using cached data for page ${pageNum}`);
+  //  console.log(`Using cached data for page ${pageNum}`);
 
-    // Use cached records
     let records = cachedData.records;
 
-    // Filter by zip code if selected (apply same filter as fresh data)
     if (zip && records.length > 0) {
       records = records.filter((record) => {
         const recordZip =
@@ -894,18 +906,15 @@ async function searchProperties(event, pageNum = 1) {
     filteredRecords = records;
     currentPage = pageNum;
 
-    // Render immediately with cached data
     if (records.length > 0) {
       renderResults();
     } else {
       renderNoResults();
     }
-    return; // Exit early, no API call needed
+    return;
   }
 
-  // If no cache, proceed with API call
   try {
-    // Show loading state only in table container
     const tableContainer = document.querySelector(".table-container");
     if (tableContainer) {
       tableContainer.innerHTML = "<div>Loading properties...</div>";
@@ -925,12 +934,10 @@ async function searchProperties(event, pageNum = 1) {
     );
 
     const responseData = await response.json();
-    console.log("Full Response:", responseData);
+   // console.log("Full Response:", responseData);
 
-    // Handle array wrapper - API returns data in array format
     const data = Array.isArray(responseData) ? responseData[0] : responseData;
 
-    // Extract metadata from correct path
     if (
       data &&
       data.results &&
@@ -939,8 +946,8 @@ async function searchProperties(event, pageNum = 1) {
     ) {
       totalResultsFound = data.results.meta.results.resultsFound || 0;
       totalPages = Math.ceil(totalResultsFound / recordsPerPage);
-      console.log("Total Results Found:", totalResultsFound);
-      console.log("Total Pages:", totalPages);
+      // console.log("Total Results Found:", totalResultsFound);
+      // console.log("Total Pages:", totalPages);
     }
 
     let records = [];
@@ -948,12 +955,10 @@ async function searchProperties(event, pageNum = 1) {
       records = data.results.properties;
     }
 
-    console.log("Records:", records);
+    // console.log("Records:", records);
 
-    // NEW: Cache the raw records before filtering
     setCachedPage(pageNum, records);
 
-    // Filter by zip code if selected
     if (zip && records.length > 0) {
       records = records.filter((record) => {
         const recordZip =
@@ -966,11 +971,9 @@ async function searchProperties(event, pageNum = 1) {
     filteredRecords = records;
     currentPage = pageNum;
 
-    // Add current page records to allLoadedRecords
     records.forEach((record) => {
       const recordId =
         record._id || `${record.address?.street}_${record.address?.zip}`;
-      // Check if record already exists in allLoadedRecords
       const exists = allLoadedRecords.some((r) => {
         const existingId = r._id || `${r.address?.street}_${r.address?.zip}`;
         return existingId === recordId;
@@ -991,26 +994,39 @@ async function searchProperties(event, pageNum = 1) {
   }
 }
 
+// ============================================
+// RENDER FUNCTIONS
+// ============================================
+
 function renderResults() {
   const startIndex = (currentPage - 1) * recordsPerPage;
-  const endIndex = startIndex + filteredRecords.length;
+  const endIndex = Math.min(
+    startIndex + filteredRecords.length,
+    totalResultsFound
+  );
 
-  // Update results header
   updateResultsHeader();
 
-  // Update pagination info
   document.querySelector(".pagination-info").textContent = `Showing ${
     startIndex + 1
   }-${endIndex} of ${totalResultsFound.toLocaleString()}`;
 
-  // Render table
+  const selectAllText = `Select All (${totalResultsFound.toLocaleString()})`;
+
   let tableHTML = `
     <table class="results-table">
       <thead>
         <tr>
           <th class="checkbox-col">
-            <input type="checkbox" id="selectPageCheckbox" onchange="toggleSelectPage()" 
-                   ${isPageFullySelected() ? "checked" : ""}>
+            <label class="select-all-label">
+              <input
+                type="checkbox"
+                id="selectPageCheckbox"
+                onchange="toggleSelectPage()"
+                ${isPageFullySelected() ? "checked" : ""}
+              />
+              <span id="selectAllLabel">${selectAllText}</span>
+            </label>
           </th>
           <th>First Name</th>
           <th>Last Name</th>
@@ -1079,22 +1095,17 @@ function renderResults() {
     </table>
   `;
 
-  // Update table container
   document.querySelector(".table-container").innerHTML = tableHTML;
 
-  // Update pagination controls
   updatePaginationControls();
 }
 
 function renderNoResults() {
-  // Update results header with zeros
   updateResultsHeader();
 
-  // Update pagination info
   document.querySelector(".pagination-info").textContent =
     "No search results yet";
 
-  // Clear table container
   document.querySelector(".table-container").innerHTML = `
     <table class="results-table">
       <thead>
@@ -1114,19 +1125,15 @@ function renderNoResults() {
     </table>
   `;
 
-  // Disable pagination
   updatePaginationControls();
 }
 
 function renderError() {
-  // Update results header with zeros
   updateResultsHeader();
 
-  // Update pagination info
   document.querySelector(".pagination-info").textContent =
     "Error loading results";
 
-  // Clear table container
   document.querySelector(".table-container").innerHTML = `
     <table class="results-table">
       <thead>
@@ -1146,21 +1153,15 @@ function renderError() {
     </table>
   `;
 
-  // Disable pagination
   updatePaginationControls();
 }
 
 function updateResultsHeader() {
-  const allRecordsSelected =
-    allLoadedRecords.length > 0 &&
-    allLoadedRecords.every((record) => {
-      const recordId =
-        record._id || `${record.address?.street}_${record.address?.zip}`;
-      return selectedRecords.has(recordId);
-    });
+  const totalSelected = selectedRecords.size;
 
   document.querySelector(".result-counts").innerHTML = `
     <span class="count-item">Total Results Found: <strong>${totalResultsFound.toLocaleString()}</strong></span>
+    <span class="count-item">Selected: <strong>${totalSelected.toLocaleString()}</strong></span>
   `;
 }
 
@@ -1168,11 +1169,10 @@ function updatePaginationControls() {
   const pageNumbers = document.getElementById("pageNumbers");
   pageNumbers.innerHTML = generatePageNumbers(currentPage, totalPages);
 
-  // Update pagination buttons
   const paginationBtns = document.querySelectorAll(".pagination-btn");
   if (paginationBtns.length >= 2) {
-    paginationBtns[0].disabled = currentPage === 1 || totalPages === 0; // Previous
-    paginationBtns[1].disabled = currentPage === totalPages || totalPages === 0; // Next
+    paginationBtns[0].disabled = currentPage === 1 || totalPages === 0;
+    paginationBtns[1].disabled = currentPage === totalPages || totalPages === 0;
   }
 }
 
@@ -1191,14 +1191,12 @@ function toggleSelectPage() {
   const checkbox = document.getElementById("selectPageCheckbox");
 
   if (checkbox.checked) {
-    // Select ALL records that have been loaded from API so far
     allLoadedRecords.forEach((record) => {
       const recordId =
         record._id || `${record.address?.street}_${record.address?.zip}`;
       selectedRecords.add(recordId);
     });
   } else {
-    // Deselect ALL loaded records
     allLoadedRecords.forEach((record) => {
       const recordId =
         record._id || `${record.address?.street}_${record.address?.zip}`;
@@ -1206,7 +1204,6 @@ function toggleSelectPage() {
     });
   }
 
-  // Re-render only the current page to reflect updated selection
   renderResults();
 }
 
@@ -1262,14 +1259,12 @@ function toggleSelectAll() {
   const checkbox = document.getElementById("selectAllCheckbox");
 
   if (checkbox.checked) {
-    // Select all loaded records from API
     allLoadedRecords.forEach((record) => {
       const recordId =
         record._id || `${record.address?.street}_${record.address?.zip}`;
       selectedRecords.add(recordId);
     });
   } else {
-    // Deselect all loaded records
     allLoadedRecords.forEach((record) => {
       const recordId =
         record._id || `${record.address?.street}_${record.address?.zip}`;
@@ -1277,7 +1272,6 @@ function toggleSelectAll() {
     });
   }
 
-  // Re-render to update checkboxes on current page
   renderResults();
 }
 
@@ -1293,7 +1287,6 @@ function exportToCSV() {
     return selectedRecords.has(recordId);
   });
 
-  // CSV headers
   const headers = [
     "FirstName",
     "LastName",
@@ -1303,7 +1296,6 @@ function exportToCSV() {
     "ZipCode",
   ];
 
-  // Build CSV content
   let csvContent = headers.join(",") + "\n";
 
   recordsToExport.forEach((record) => {
@@ -1346,7 +1338,6 @@ function exportToCSV() {
     csvContent += row.join(",") + "\n";
   });
 
-  // Download CSV
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
@@ -1363,76 +1354,12 @@ function exportToCSV() {
   document.body.removeChild(link);
 }
 
-function clearfilters() {
-  document.getElementById("cityInput").value = "";
-  document.getElementById("cityApiValue").value = "";
-  document.getElementById("stateInput").value = "";
-  document.getElementById("zipInput").value = "";
-  document.getElementById("neighborhoodInput").value = "";
-  document.getElementById("streetInput").value = "";
-  document.getElementById("minYearBuilt").value = "";
-  document.getElementById("maxYearBuilt").value = "";
-  document.getElementById("minValue").value = "";
-  document.getElementById("maxValue").value = "";
-  document.getElementById("minBedrooms").value = "";
-  document.getElementById("maxBedrooms").value = "";
-  document.getElementById("minBathrooms").value = "";
-  document.getElementById("maxBathrooms").value = "";
-  document.getElementById("quickList").value = "";
-
-  allRecords = [];
-  filteredRecords = [];
-  allLoadedRecords = [];
-  selectedRecords.clear();
-  currentPage = 1;
-  totalResultsFound = 0;
-  totalPages = 0;
-  currentSearchPayload = null;
-
-  // Reset results header
-  document.querySelector(".result-counts").innerHTML = `
-    <span class="count-item">Total Results Found: <strong>0</strong></span>
-  `;
-
-  // Reset pagination info
-  document.querySelector(".pagination-info").textContent =
-    "No search results yet";
-
-  // Reset table
-  document.querySelector(".table-container").innerHTML = `
-    <table class="results-table">
-      <thead>
-        <tr>
-          <th class="checkbox-col"><input type="checkbox" id="selectPageCheckbox" disabled></th>
-          <th>First Name</th>
-          <th>Last Name</th>
-          <th>Address</th>
-          <th>City</th>
-          <th>State</th>
-          <th>Zip Code</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td colspan="7" class="empty-row">Click "Search" to load properties</td></tr>
-      </tbody>
-    </table>
-  `;
-
-  // Disable pagination buttons
-  const paginationBtns = document.querySelectorAll(".pagination-btn");
-  paginationBtns.forEach((btn) => (btn.disabled = true));
-
-  // Clear page numbers
-  document.getElementById("pageNumbers").innerHTML = "";
-}
-
 function saveAudience() {
   if (selectedRecords.size === 0) {
     alert("Please select at least one property.");
     return;
   }
 
-  // Get all selected records from allLoadedRecords
   allLoadedRecords.forEach((record) => {
     const recordId =
       record._id || `${record.address?.street}_${record.address?.zip}`;
@@ -1472,204 +1399,25 @@ function saveAudience() {
     }
   });
 
-  console.log("Recipients List:", recipientsList);
+  // console.log("Recipients List:", recipientsList);
   alert(
     `Audience saved successfully! Total selected: ${recipientsList.length}`
   );
 }
 
-function showAlert(message) {
-  alert(message);
-}
-
-function loadZipCodes(cityName, stateCode) {
-  const geocoder = new google.maps.Geocoder();
-  const query = `${cityName}, ${stateCode}, USA`; // more specific query
-
-  geocoder.geocode({ address: query }, (results, status) => {
-    if (status === google.maps.GeocoderStatus.OK) {
-      const zipCodes = new Set();
-
-      results.forEach((res) => {
-        res.address_components.forEach((comp) => {
-          if (comp.types.includes("postal_code")) {
-            zipCodes.add(comp.long_name);
-          }
-        });
-      });
-
-      // ✅ fallback: if no postal_code directly, expand search using bounds
-      if (zipCodes.size === 0 && results[0].geometry.bounds) {
-        const bounds = results[0].geometry.bounds;
-        fetchZipCodesInBounds(bounds, geocoder, zipCodes);
-      } else {
-        populateZipDropdown(zipCodes);
-      }
-    }
-  });
-}
-
-function fetchZipCodesInBounds(bounds, geocoder, zipCodes) {
-  const latStep = 0.044; // ~5km steps
-  const lngStep = 0.044;
-
-  for (
-    let lat = bounds.getSouthWest().lat();
-    lat <= bounds.getNorthEast().lat();
-    lat += latStep
-  ) {
-    for (
-      let lng = bounds.getSouthWest().lng();
-      lng <= bounds.getNorthEast().lng();
-      lng += lngStep
-    ) {
-      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-        if (status === google.maps.GeocoderStatus.OK) {
-          results.forEach((res) => {
-            res.address_components.forEach((comp) => {
-              if (comp.types.includes("postal_code")) {
-                zipCodes.add(comp.long_name);
-                populateZipDropdown(zipCodes);
-              }
-            });
-          });
-        }
-      });
-    }
-  }
-}
-
-function populateZipDropdown(zipCodes) {
-  const zipSelect = document.getElementById("zipInput");
-  zipSelect.innerHTML = '<option value="">-- Select Zip --</option>';
-  Array.from(zipCodes).forEach((zip) => {
-    const option = document.createElement("option");
-    option.value = zip;
-    option.textContent = zip;
-    zipSelect.appendChild(option);
-  });
-}
-
-async function loadNeighborhoods(cityName, stateCode) {
-  const neighborhoodSelect = document.getElementById("neighborhoodInput");
-  neighborhoodSelect.innerHTML =
-    '<option value="">Loading neighborhoods...</option>';
-
-  // Build the Overpass QL query for exact neighborhood matches
-  const query = `
-    [out:json][timeout:25];
-    area["name"="${cityName}"]["admin_level"="8"]->.city;
-    (
-      node["place"="neighbourhood"](area.city);
-      way["place"="neighbourhood"](area.city);
-      relation["place"="neighbourhood"](area.city);
-      node["place"="suburb"](area.city);
-      way["place"="suburb"](area.city);
-      relation["place"="suburb"](area.city);
-      node["place"="quarter"](area.city);
-      way["place"="quarter"](area.city);
-      relation["place"="quarter"](area.city);
-    );
-    out tags;
-  `;
-
-  try {
-    const response = await fetch("https://overpass-api.de/api/interpreter", {
-      method: "POST",
-      body: query,
-    });
-    const data = await response.json();
-
-    // Extract unique neighborhood names
-    const neighborhoods = [
-      ...new Set(
-        data.elements
-          .map((el) => el.tags && el.tags.name)
-          .filter((name) => !!name)
-      ),
-    ];
-    console.log(neighborhoods);
-
-    // Clear dropdown and populate
-    neighborhoodSelect.innerHTML =
-      '<option value="">-- Select Neighborhood --</option>';
-
-    // Always add city name as first option
-    const cityOption = document.createElement("option");
-    cityOption.value = cityName;
-    cityOption.textContent = cityName;
-    neighborhoodSelect.appendChild(cityOption);
-
-    // Add neighborhoods if found
-    neighborhoods.forEach((nb) => {
-      const option = document.createElement("option");
-      option.value = nb;
-      option.textContent = nb;
-      neighborhoodSelect.appendChild(option);
-    });
-  } catch (error) {
-    console.error("Error fetching neighborhoods:", error);
-    // On error, still add city name
-    neighborhoodSelect.innerHTML =
-      '<option value="">-- Select Neighborhood --</option>';
-    const option = document.createElement("option");
-    option.value = cityName;
-    option.textContent = cityName;
-    neighborhoodSelect.appendChild(option);
-  }
-}
-
-function showAlert(message) {
-  const alertMessage = document.getElementById("alertMessage");
-  alertMessage.textContent = message;
-  const alertModal = document.getElementById("alertModal");
-  alertModal.style.display = "flex";
-  document.getElementById("alertOkBtn").addEventListener("click", () => {
-    alertModal.style.display = "none";
-  });
-}
-
-function initAutocomplete() {
-  cityAutocomplete = new google.maps.places.Autocomplete(
-    document.getElementById("cityInput"),
-    { types: ["(cities)"] }
-  );
-
-  cityAutocomplete.addListener("place_changed", () => {
-    const place = cityAutocomplete.getPlace();
-    if (!place.geometry || !place.address_components) return;
-
-    const stateComponent = place.address_components.find((c) =>
-      c.types.includes("administrative_area_level_1")
-    );
-    const stateCode = stateComponent ? stateComponent.short_name : "";
-    document.getElementById("stateInput").value = stateCode;
-
-    const cityComponent = place.address_components.find((c) =>
-      c.types.includes("locality")
-    );
-    const cityName = cityComponent ? cityComponent.long_name : "";
-
-    document.getElementById("cityApiValue").value = cityName;
-    document.getElementById("cityInput").value = place.formatted_address;
-
-    // Fetch more zips & neighborhoods
-    loadZipCodes(cityName, stateCode);
-    loadNeighborhoods(cityName, stateCode);
-  });
-}
+// ============================================
+// CSV UPLOAD & PARSING
+// ============================================
 
 async function parseCSV(file) {
-  // console.log("In parse function");
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
     complete: (results) => {
-      recipients = results.data.map((r) => {
+      const recipients = results.data.map((r) => {
         const row = Object.fromEntries(
           Object.entries(r).map(([k, v]) => [k.toLowerCase(), v])
         );
-        console.log(row);
         return {
           firstName: row.firstname || "Test",
           lastName: row.lastname || "Name",
@@ -1683,7 +1431,6 @@ async function parseCSV(file) {
       recipientsList = [...recipientsList, ...recipients];
       saveState();
       sessionStorage.setItem("recipients", JSON.stringify(recipientsList));
-      // console.log("Recipients List:", recipientsList);
 
       const uploadBox = document.getElementById("uploadBox");
       uploadBox.innerHTML = `
@@ -1759,11 +1506,15 @@ function resetUpload() {
     <div class="file-size-info">Max file size: 10MB</div>
   `;
 
-  recipients = [];
+  recipientsList = [];
   sessionStorage.removeItem("recipients");
   saveState();
   setupDragAndDrop();
 }
+
+// ============================================
+// TEMPLATE MANAGEMENT
+// ============================================
 
 async function loadTemplates() {
   const templatesGrid = document.getElementById("templatesGrid");
@@ -1773,12 +1524,11 @@ async function loadTemplates() {
     const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates");
     const templates = await response.json();
 
-    templatesGrid.innerHTML = ""; // Clear old templates
+    templatesGrid.innerHTML = "";
     templatesGrid.style.display = "grid";
     templatesGrid.style.gridTemplateColumns = "repeat(3, 1fr)";
     templatesGrid.style.gap = "1.5rem";
 
-    //  Function to render a template card
     function renderTemplateCard(tpl) {
       const div = document.createElement("div");
       div.classList.add("template-card");
@@ -1802,14 +1552,12 @@ async function loadTemplates() {
     </div>
   `;
 
-      // Attach safe event listener
       const fullPreviewBtn = div.querySelector(".full-preview-btn");
       fullPreviewBtn.addEventListener("click", (event) => {
         const encoded = event.currentTarget.dataset.html;
         openFullPreview(event, encoded);
       });
 
-      // Template selection logic
       div.addEventListener("click", (e) => {
         if (e.target.closest("button")) return;
         document
@@ -1819,32 +1567,26 @@ async function loadTemplates() {
         window.currentEditingTemplateId = tpl.id;
         uploadedPdfUrl = null;
         updateButtonStates();
-        // console.log("✅ Template selected:", tpl.id);
       });
 
       return div;
     }
 
-    // 👉 Render first 6 templates
     templates.slice(0, 6).forEach((tpl) => {
       templatesGrid.appendChild(renderTemplateCard(tpl));
     });
 
-    // 👉 If more than 6, add "Show All" button
     if (templates.length > 6) {
       const showAllBtn = document.createElement("button");
       showAllBtn.textContent = "Show All Templates";
       showAllBtn.classList.add("show-all-btn");
-      showAllBtn.style.gridColumn = "span 3"; // center button in grid
+      showAllBtn.style.gridColumn = "span 3";
       showAllBtn.style.padding = "0.75rem 1.5rem";
       showAllBtn.style.margin = "1rem auto";
       showAllBtn.style.cursor = "pointer";
 
       showAllBtn.addEventListener("click", () => {
-        // Remove button after click
         showAllBtn.remove();
-
-        // Render remaining templates
         templates.slice(6).forEach((tpl) => {
           templatesGrid.appendChild(renderTemplateCard(tpl));
         });
@@ -1858,12 +1600,9 @@ async function loadTemplates() {
   }
 }
 
-// Updated openFullPreview - prevent event propagation
 function openFullPreview(event, encodedHtml) {
   event.preventDefault();
   event.stopPropagation();
-
-  // console.log("Opening preview...");
 
   const html = decodeURIComponent(encodedHtml);
   const overlay = document.getElementById("previewOverlay");
@@ -1876,18 +1615,402 @@ function openFullPreview(event, encodedHtml) {
 
   body.innerHTML = html;
   overlay.style.display = "flex";
-
-  // console.log("✅ Preview opened");
 }
 
-// Updated closePreview function
-function closePreview() {
-  const overlay = document.getElementById("previewOverlay");
-  if (overlay) {
-    overlay.style.display = "none";
-    document.getElementById("previewBody").innerHTML = "";
+// ============================================
+// GEOLOCATION FUNCTIONS
+// ============================================
+
+function initAutocomplete() {
+  cityAutocomplete = new google.maps.places.Autocomplete(
+    document.getElementById("cityInput"),
+    { types: ["(cities)"] }
+  );
+
+  cityAutocomplete.addListener("place_changed", () => {
+    const place = cityAutocomplete.getPlace();
+    if (!place.geometry || !place.address_components) return;
+
+    const stateComponent = place.address_components.find((c) =>
+      c.types.includes("administrative_area_level_1")
+    );
+    const stateCode = stateComponent ? stateComponent.short_name : "";
+    document.getElementById("stateInput").value = stateCode;
+
+    const cityComponent = place.address_components.find((c) =>
+      c.types.includes("locality")
+    );
+    const cityName = cityComponent ? cityComponent.long_name : "";
+
+    document.getElementById("cityApiValue").value = cityName;
+    document.getElementById("cityInput").value = place.formatted_address;
+
+    loadZipCodes(cityName, stateCode);
+    loadNeighborhoods(cityName, stateCode);
+  });
+}
+
+function loadZipCodes(cityName, stateCode) {
+  const geocoder = new google.maps.Geocoder();
+  const query = `${cityName}, ${stateCode}, USA`;
+
+  geocoder.geocode({ address: query }, (results, status) => {
+    if (status === google.maps.GeocoderStatus.OK) {
+      const zipCodes = new Set();
+
+      results.forEach((res) => {
+        res.address_components.forEach((comp) => {
+          if (comp.types.includes("postal_code")) {
+            zipCodes.add(comp.long_name);
+          }
+        });
+      });
+
+      if (zipCodes.size === 0 && results[0].geometry.bounds) {
+        const bounds = results[0].geometry.bounds;
+        fetchZipCodesInBounds(bounds, geocoder, zipCodes);
+      } else {
+        populateZipDropdown(zipCodes);
+      }
+    }
+  });
+}
+
+function fetchZipCodesInBounds(bounds, geocoder, zipCodes) {
+  const latStep = 0.044;
+  const lngStep = 0.044;
+
+  for (
+    let lat = bounds.getSouthWest().lat();
+    lat <= bounds.getNorthEast().lat();
+    lat += latStep
+  ) {
+    for (
+      let lng = bounds.getSouthWest().lng();
+      lng <= bounds.getNorthEast().lng();
+      lng += lngStep
+    ) {
+      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === google.maps.GeocoderStatus.OK) {
+          results.forEach((res) => {
+            res.address_components.forEach((comp) => {
+              if (comp.types.includes("postal_code")) {
+                zipCodes.add(comp.long_name);
+                populateZipDropdown(zipCodes);
+              }
+            });
+          });
+        }
+      });
+    }
   }
 }
+
+function populateZipDropdown(zipCodes) {
+  const zipSelect = document.getElementById("zipInput");
+  zipSelect.innerHTML = '<option value="">-- Select Zip --</option>';
+  Array.from(zipCodes).forEach((zip) => {
+    const option = document.createElement("option");
+    option.value = zip;
+    option.textContent = zip;
+    zipSelect.appendChild(option);
+  });
+}
+
+async function loadNeighborhoods(cityName, stateCode) {
+  const neighborhoodSelect = document.getElementById("neighborhoodInput");
+  neighborhoodSelect.innerHTML =
+    '<option value="">Loading neighborhoods...</option>';
+
+  const query = `
+    [out:json][timeout:25];
+    area["name"="${cityName}"]["admin_level"="8"]->.city;
+    (
+      node["place"="neighbourhood"](area.city);
+      way["place"="neighbourhood"](area.city);
+      relation["place"="neighbourhood"](area.city);
+      node["place"="suburb"](area.city);
+      way["place"="suburb"](area.city);
+      relation["place"="suburb"](area.city);
+      node["place"="quarter"](area.city);
+      way["place"="quarter"](area.city);
+      relation["place"="quarter"](area.city);
+    );
+    out tags;
+  `;
+
+  try {
+    const response = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      body: query,
+    });
+    const data = await response.json();
+
+    const neighborhoods = [
+      ...new Set(
+        data.elements
+          .map((el) => el.tags && el.tags.name)
+          .filter((name) => !!name)
+      ),
+    ];
+    // console.log(neighborhoods);
+
+    neighborhoodSelect.innerHTML =
+      '<option value="">-- Select Neighborhood --</option>';
+
+    const cityOption = document.createElement("option");
+    cityOption.value = cityName;
+    cityOption.textContent = cityName;
+    neighborhoodSelect.appendChild(cityOption);
+
+    neighborhoods.forEach((nb) => {
+      const option = document.createElement("option");
+      option.value = nb;
+      option.textContent = nb;
+      neighborhoodSelect.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Error fetching neighborhoods:", error);
+    neighborhoodSelect.innerHTML =
+      '<option value="">-- Select Neighborhood --</option>';
+    const option = document.createElement("option");
+    option.value = cityName;
+    option.textContent = cityName;
+    neighborhoodSelect.appendChild(option);
+  }
+}
+
+// ============================================
+// FORM STATE & BUTTON MANAGEMENT
+// ============================================
+
+function saveFormState() {
+  const formState = {
+    campaignFields: campaignFields
+      ? campaignFields.querySelector("form")?.elements
+        ? Object.fromEntries(new FormData(campaignFields.querySelector("form")))
+        : {}
+      : {},
+    mailerFields: mailerFields
+      ? mailerFields.querySelector("form")?.elements
+        ? Object.fromEntries(new FormData(mailerFields.querySelector("form")))
+        : {}
+      : {},
+    activeCard: document.querySelector(".card.active")?.id || null,
+    uploadedCSV: sessionStorage.getItem("uploadedCSV") || null,
+  };
+
+  sessionStorage.setItem("formState", JSON.stringify(formState));
+}
+
+function loadFormState() {
+  const saved = sessionStorage.getItem("formState");
+  if (!saved) return;
+
+  const formState = JSON.parse(saved);
+
+  if (formState.activeCard) {
+    document.getElementById(formState.activeCard)?.classList.add("active");
+  }
+
+  if (formState.campaignFields && campaignFields) {
+    for (let [key, value] of Object.entries(formState.campaignFields)) {
+      const input = campaignFields.querySelector(`[name="${key}"]`);
+      if (input) input.value = value;
+    }
+  }
+
+  if (formState.mailerFields && mailerFields) {
+    for (let [key, value] of Object.entries(formState.mailerFields)) {
+      const input = mailerFields.querySelector(`[name="${key}"]`);
+      if (input) input.value = value;
+    }
+  }
+
+  if (formState.uploadedCSV && uploadcsvCard) {
+    uploadcsvCard.querySelector(".csv-filename").textContent =
+      formState.uploadedCSV;
+  }
+}
+
+function updateButtonStates() {
+  const createAndSaveBtn = document.querySelector(
+    "button[onclick='createAndSave()']"
+  );
+  const createAndSendBtn = document.querySelector(
+    "button[onclick='createAndSendLetter()']"
+  );
+
+  if (!createAndSaveBtn || !createAndSendBtn) {
+    console.warn(
+      "⚠️ Buttons not found in DOM - make sure button onclick attributes match exactly"
+    );
+    return;
+  }
+
+  const hasRecipients = recipientsList && recipientsList.length > 0;
+  const isCampaignSelected =
+    campaignCard && campaignCard.classList.contains("selected");
+  const isMailerSelected =
+    mailerCard && mailerCard.classList.contains("selected");
+  const isModeSelected = isCampaignSelected || isMailerSelected;
+
+  if (uploadedPdfUrl) {
+    if (hasRecipients && isModeSelected) {
+      createAndSendBtn.disabled = false;
+      createAndSendBtn.style.opacity = "1";
+      createAndSendBtn.style.cursor = "pointer";
+      createAndSendBtn.title = "";
+    } else {
+      createAndSendBtn.disabled = true;
+      createAndSendBtn.style.opacity = "0.5";
+      createAndSendBtn.style.cursor = "not-allowed";
+    }
+
+    createAndSaveBtn.disabled = true;
+    createAndSaveBtn.style.opacity = "0.5";
+    createAndSaveBtn.style.cursor = "not-allowed";
+    createAndSaveBtn.title =
+      "Disabled: Cannot save drafts when using PDF uploads. Use 'Send Letter' instead.";
+  } else if (window.currentEditingTemplateId) {
+    if (hasRecipients && isModeSelected) {
+      createAndSaveBtn.disabled = false;
+      createAndSaveBtn.style.opacity = "1";
+      createAndSaveBtn.style.cursor = "pointer";
+      createAndSaveBtn.title = "";
+
+      createAndSendBtn.disabled = false;
+      createAndSendBtn.style.opacity = "1";
+      createAndSendBtn.style.cursor = "pointer";
+      createAndSendBtn.title = "";
+    } else {
+      createAndSaveBtn.disabled = true;
+      createAndSaveBtn.style.opacity = "0.5";
+      createAndSaveBtn.style.cursor = "not-allowed";
+
+      createAndSendBtn.disabled = true;
+      createAndSendBtn.style.opacity = "0.5";
+      createAndSendBtn.style.cursor = "not-allowed";
+    }
+  }
+}
+
+// ============================================
+// API & TOKEN MANAGEMENT
+// ============================================
+
+async function getToken(mode) {
+  const creds = API_KEYS[mode];
+  if (!creds) throw new Error("Invalid mode for token generation");
+
+  const payload = {
+    apiKey: creds.apiKey,
+    apiSecret: creds.apiSecret,
+    childRefNbr: "myAccountReference",
+  };
+
+  const res = await fetch("https://v3.pcmintegrations.com/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) throw new Error("Auth failed");
+  const data = await res.json();
+  return data.token;
+}
+
+async function orderDesign(templateId, button) {
+  const originalText = button.textContent;
+  button.textContent = "Processing...";
+  button.disabled = true;
+
+  try {
+    const mode = getCurrentMode();
+    // console.log("📦 orderDesign - Current mode:", mode);
+
+    const confirmSend = confirm(
+      `You are about to send the letter in ${mode.toUpperCase()} mode.\n\nDo you want to proceed?`
+    );
+
+    if (!confirmSend) {
+      button.textContent = originalText;
+      button.disabled = false;
+      return false;
+    }
+
+    const todayObj = new Date();
+    const todayISO = todayObj.toISOString().split("T")[0];
+    const formattedDate = todayObj.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    let finalHtml = "";
+
+    if (uploadedPdfUrl) {
+      finalHtml = uploadedPdfUrl;
+    } else if (templateId) {
+      const tplRes = await fetch(
+        `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
+      );
+      if (!tplRes.ok) throw new Error("Failed to load template content");
+      const tpl = await tplRes.json();
+      finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
+    } else {
+      throw new Error("Please select a template or upload a PDF");
+    }
+
+    const token = await getToken(mode);
+
+    const payload = {
+      extRefNbr: "12345",
+      designID: 0,
+      mailClass: "FirstClass",
+      mailDate: todayISO,
+      color: true,
+      printOnBothSides: true,
+      insertAddressingPage: true,
+      envelope: {
+        font: "Bradley Hand",
+        type: "fullWindow",
+        fontColor: "Black",
+      },
+      recipients: recipientsList,
+      letter: finalHtml,
+    };
+
+    const res = await fetch("https://v3.pcmintegrations.com/order/letter", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "API request failed");
+
+    showAlert(
+      `✅ Letter order placed successfully in ${mode.toUpperCase()} mode.`
+    );
+    return true;
+  } catch (err) {
+    console.error("Order Design Error:", err);
+    showAlert("Error ordering letters: " + err.message);
+    return false;
+  } finally {
+    button.textContent = originalText;
+    button.disabled = false;
+  }
+}
+
+// ============================================
+// CREATE & SEND FUNCTIONS
+// ============================================
 
 async function createAndSendLetter() {
   const btn = document.querySelector("button[onclick='createAndSendLetter()']");
@@ -1899,9 +2022,7 @@ async function createAndSendLetter() {
     return;
   }
 
-  // ✅ Get mode RIGHT HERE
   const mode = getCurrentMode();
-  console.log("📮 createAndSendLetter - Current mode:", mode);
 
   try {
     if (isCampaign) {
@@ -1957,7 +2078,7 @@ async function createAndSendLetter() {
         send_date: new Date().toISOString(),
         status: "sent",
         pdf_url: uploadedPdfUrl || null,
-        env_mode: mode, // ✅ Pass env_mode instead of mode
+        env_mode: mode,
       };
 
       const dataResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
@@ -2014,7 +2135,7 @@ async function createAndSendLetter() {
         send_date: new Date().toISOString(),
         status: "sent",
         pdf_url: uploadedPdfUrl || null,
-        env_mode: mode, // ✅ Pass env_mode instead of mode
+        env_mode: mode,
       };
 
       const mailerResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
@@ -2039,15 +2160,13 @@ async function createAndSendLetter() {
   }
 }
 
-// ✅ FIXED: Update createAndSave to use getCurrentMode()
 async function createAndSave() {
   const btn = document.querySelector("button[onclick='createAndSendLetter()']");
   const isCampaign = campaignCard.classList.contains("selected");
   const isMailer = mailerCard.classList.contains("selected");
 
-  // ✅ Get mode RIGHT HERE
   const mode = getCurrentMode();
-  console.log("💾 createAndSave - Current mode:", mode);
+
 
   if (!isCampaign && !isMailer) {
     showAlert("Please select either 'New Campaign' or 'New Mailer' option.");
@@ -2093,7 +2212,7 @@ async function createAndSave() {
         schedule_time: null,
         send_date: null,
         status: "pending",
-        env_mode: mode, // ✅ Pass env_mode instead of mode
+        env_mode: mode,
       };
 
       const dataResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
@@ -2135,7 +2254,7 @@ async function createAndSave() {
         schedule_time: null,
         send_date: null,
         status: "pending",
-        env_mode: mode, // ✅ Pass env_mode instead of mode
+        env_mode: mode,
       };
 
       const mailerResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
@@ -2159,176 +2278,11 @@ async function createAndSave() {
     showAlert(error.message || "Something went wrong.");
   }
 }
-// ---- Get Token Function ----
-async function getToken(mode) {
-  const creds = API_KEYS[mode];
-  if (!creds) throw new Error("Invalid mode for token generation");
 
-  const payload = {
-    apiKey: creds.apiKey,
-    apiSecret: creds.apiSecret,
-    childRefNbr: "myAccountReference",
-  };
+// ============================================
+// PAGE INITIALIZATION & EVENT LISTENERS
+// ============================================
 
-  const res = await fetch("https://v3.pcmintegrations.com/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) throw new Error("Auth failed");
-  const data = await res.json();
-  return data.token;
-}
-
-
-async function orderDesign(templateId, button) {
-  const originalText = button.textContent;
-  button.textContent = "Processing...";
-  button.disabled = true;
-
-  try {
-    // ✅ Get current mode from sessionStorage RIGHT HERE
-    const mode = getCurrentMode();
-    console.log("📦 orderDesign - Current mode:", mode);
-
-    // Confirm with user about the current mode
-    const confirmSend = confirm(
-      `You are about to send the letter in ${mode.toUpperCase()} mode.\n\nDo you want to proceed?`
-    );
-
-    if (!confirmSend) {
-      button.textContent = originalText;
-      button.disabled = false;
-      return false;
-    }
-
-    const todayObj = new Date();
-    const todayISO = todayObj.toISOString().split("T")[0];
-    const formattedDate = todayObj.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-
-    let finalHtml = "";
-
-    // Check if PDF is uploaded
-    if (uploadedPdfUrl) {
-      finalHtml = uploadedPdfUrl;
-    } else if (templateId) {
-      const tplRes = await fetch(
-        `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
-      );
-      if (!tplRes.ok) throw new Error("Failed to load template content");
-      const tpl = await tplRes.json();
-      finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
-    } else {
-      throw new Error("Please select a template or upload a PDF");
-    }
-
-    // Get token based on CURRENT mode
-    const token = await getToken(mode);
-    console.log("🔑 Got token for", mode.toUpperCase(), "mode");
-
-    const payload = {
-      extRefNbr: "12345",
-      designID: 0,
-      mailClass: "FirstClass",
-      mailDate: todayISO,
-      color: true,
-      printOnBothSides: true,
-      insertAddressingPage: true,
-      envelope: {
-        font: "Bradley Hand",
-        type: "fullWindow",
-        fontColor: "Black",
-      },
-      recipients: recipientsList,
-      letter: finalHtml,
-    };
-
-    const res = await fetch("https://v3.pcmintegrations.com/order/letter", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || "API request failed");
-
-    showAlert(
-      `✅ Letter order placed successfully in ${mode.toUpperCase()} mode.`
-    );
-    return true;
-  } catch (err) {
-    console.error("Order Design Error:", err);
-    showAlert("Error ordering letters: " + err.message);
-    return false;
-  } finally {
-    button.textContent = originalText;
-    button.disabled = false;
-  }
-}
-// ========= Helper functions =========
-function saveFormState() {
-  const formState = {
-    campaignFields: campaignFields
-      ? campaignFields.querySelector("form")?.elements
-        ? Object.fromEntries(new FormData(campaignFields.querySelector("form")))
-        : {}
-      : {},
-    mailerFields: mailerFields
-      ? mailerFields.querySelector("form")?.elements
-        ? Object.fromEntries(new FormData(mailerFields.querySelector("form")))
-        : {}
-      : {},
-    activeCard: document.querySelector(".card.active")?.id || null,
-    uploadedCSV: sessionStorage.getItem("uploadedCSV") || null,
-  };
-
-  sessionStorage.setItem("formState", JSON.stringify(formState));
-}
-
-function loadFormState() {
-  const saved = sessionStorage.getItem("formState");
-  if (!saved) return;
-
-  const formState = JSON.parse(saved);
-
-  // Restore active card
-  if (formState.activeCard) {
-    document.getElementById(formState.activeCard)?.classList.add("active");
-  }
-
-  // Restore campaign fields
-  if (formState.campaignFields && campaignFields) {
-    for (let [key, value] of Object.entries(formState.campaignFields)) {
-      const input = campaignFields.querySelector(`[name="${key}"]`);
-      if (input) input.value = value;
-    }
-  }
-
-  // Restore mailer fields
-  if (formState.mailerFields && mailerFields) {
-    for (let [key, value] of Object.entries(formState.mailerFields)) {
-      const input = mailerFields.querySelector(`[name="${key}"]`);
-      if (input) input.value = value;
-    }
-  }
-
-  // Restore uploaded CSV filename (if any)
-  if (formState.uploadedCSV && uploadcsvCard) {
-    uploadcsvCard.querySelector(".csv-filename").textContent =
-      formState.uploadedCSV;
-  }
-}
-
-// Save on CSV upload
 const csvInput = document.getElementById("csvUpload");
 if (csvInput) {
   csvInput.addEventListener("change", (e) => {
@@ -2340,103 +2294,8 @@ if (csvInput) {
   });
 }
 
-// Add this function to manage button states based on PDF/template selection
-function updateButtonStates() {
-  const createAndSaveBtn = document.querySelector(
-    "button[onclick='createAndSave()']"
-  );
-  const createAndSendBtn = document.querySelector(
-    "button[onclick='createAndSendLetter()']"
-  );
-
-  // console.log("🔍 updateButtonStates called");
-  // console.log("Save button:", createAndSaveBtn);
-  // console.log("Send button:", createAndSendBtn);
-  // console.log("Recipients:", recipientsList.length);
-  // console.log("Template ID:", window.currentEditingTemplateId);
-  // console.log("PDF URL:", uploadedPdfUrl);
-  // console.log(
-  //   "Campaign selected:",
-  //   campaignCard?.classList.contains("selected")
-  // );
-  // console.log("Mailer selected:", mailerCard?.classList.contains("selected"));
-
-  if (!createAndSaveBtn || !createAndSendBtn) {
-    console.warn(
-      "⚠️ Buttons not found in DOM - make sure button onclick attributes match exactly"
-    );
-    return;
-  }
-
-  // Check if recipients are selected
-  const hasRecipients = recipientsList && recipientsList.length > 0;
-
-  // Check if campaign or mailer is selected
-  const isCampaignSelected =
-    campaignCard && campaignCard.classList.contains("selected");
-  const isMailerSelected =
-    mailerCard && mailerCard.classList.contains("selected");
-  const isModeSelected = isCampaignSelected || isMailerSelected;
-
-  // If PDF is uploaded
-  if (uploadedPdfUrl) {
-    // Enable "Create and Send" if recipients and mode are selected
-    if (hasRecipients && isModeSelected) {
-      createAndSendBtn.disabled = false;
-      createAndSendBtn.style.opacity = "1";
-      createAndSendBtn.style.cursor = "pointer";
-      createAndSendBtn.title = "";
-    } else {
-      createAndSendBtn.disabled = true;
-      createAndSendBtn.style.opacity = "0.5";
-      createAndSendBtn.style.cursor = "not-allowed";
-    }
-
-    // Always disable "Create and Save" when PDF is uploaded
-    createAndSaveBtn.disabled = true;
-    createAndSaveBtn.style.opacity = "0.5";
-    createAndSaveBtn.style.cursor = "not-allowed";
-    createAndSaveBtn.title =
-      "Disabled: Cannot save drafts when using PDF uploads. Use 'Send Letter' instead.";
-
-    // console.log(
-    //   "PDF uploaded: 'Create and Save' disabled, 'Create and Send' state updated"
-    // );
-  }
-  // If template is selected (no PDF)
-  else if (window.currentEditingTemplateId) {
-    // Enable both buttons if recipients and mode are selected
-    if (hasRecipients && isModeSelected) {
-      createAndSaveBtn.disabled = false;
-      createAndSaveBtn.style.opacity = "1";
-      createAndSaveBtn.style.cursor = "pointer";
-      createAndSaveBtn.title = "";
-
-      createAndSendBtn.disabled = false;
-      createAndSendBtn.style.opacity = "1";
-      createAndSendBtn.style.cursor = "pointer";
-      createAndSendBtn.title = "";
-
-      // console.log("Template selected with recipients: Both buttons enabled");
-    } else {
-      // Disable both if missing recipients or mode selection
-      createAndSaveBtn.disabled = true;
-      createAndSaveBtn.style.opacity = "0.5";
-      createAndSaveBtn.style.cursor = "not-allowed";
-
-      createAndSendBtn.disabled = true;
-      createAndSendBtn.style.opacity = "0.5";
-      createAndSendBtn.style.cursor = "not-allowed";
-
-      // console.log("Template selected but missing recipients or mode");
-    }
-  }
-}
-
-// Save on every input change
 document.addEventListener("input", saveFormState);
 
-// On page load restore form state
 window.addEventListener("DOMContentLoaded", loadFormState);
 
 window.onload = function () {
@@ -2448,23 +2307,13 @@ if (performance.getEntriesByType("navigation")[0].type === "reload") {
   sessionStorage.clear();
 }
 
-// ✅ FIXED: Function to get current mode from sessionStorage
-function getCurrentMode() {
-  const mode = sessionStorage.getItem("apiMode");
-  console.log("getCurrentMode() called - mode from storage:", mode);
-  return mode || "testing";
-}
-
-// ✅ UPDATE: Mode Management at DOMContentLoaded
 document.addEventListener("DOMContentLoaded", async () => {
   const testingBtn = document.getElementById("testingModeBtn");
   const productionBtn = document.getElementById("productionModeBtn");
 
-  // ✅ Get initial mode from storage
   let currentMode = getCurrentMode();
-  console.log("🔍 Initial mode on page load:", currentMode);
+  // console.log("🔍 Initial mode on page load:", currentMode);
 
-  // ✅ Set initial button states based on storage
   if (currentMode === "production") {
     testingBtn.classList.remove("active");
     productionBtn.classList.add("active");
@@ -2473,27 +2322,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     productionBtn.classList.remove("active");
   }
 
-  // ✅ Testing mode button click
   testingBtn.addEventListener("click", () => {
     currentMode = "testing";
-    sessionStorage.setItem("apiMode", "testing");
-    console.log("✅ Switched to TESTING mode");
+    setMode("testing");
     testingBtn.classList.add("active");
     productionBtn.classList.remove("active");
     showAlert("Switched to TESTING mode");
   });
 
-  // ✅ Production mode button click
   productionBtn.addEventListener("click", () => {
     currentMode = "production";
-    sessionStorage.setItem("apiMode", "production");
-    console.log("✅ Switched to PRODUCTION mode");
+    setMode("production");
     productionBtn.classList.add("active");
     testingBtn.classList.remove("active");
     showAlert("Switched to PRODUCTION mode");
   });
 
-  // Rest of the initialization...
   const overlay = document.getElementById("previewOverlay");
   if (overlay) {
     overlay.addEventListener("click", (e) => {
@@ -2520,7 +2364,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.currentEditingTemplateId = null;
   sessionStorage.removeItem("Restored template");
 
-  if (path.includes("templategallery")) {
+  if (path.includes("templateGallery")) {
     loadGalleryTemplates();
   } else if (path.includes("campaign_builder")) {
     await loadTemplates();
