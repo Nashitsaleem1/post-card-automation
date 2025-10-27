@@ -2364,7 +2364,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.currentEditingTemplateId = null;
   sessionStorage.removeItem("Restored template");
 
-  if (path.includes("templateGallery")) {
+  if (path.includes("templategallery")) {
     loadGalleryTemplates();
   } else if (path.includes("campaign_builder")) {
     await loadTemplates();
