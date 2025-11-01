@@ -175,7 +175,7 @@ function viewAudienceDetails(audienceList, audienceName) {
       <td>${item.address}</td>
       <td>${item.city}</td>
       <td>${item.state}</td>
-      <td>${item.zipcode}</td>
+      <td>${item.zipCode}</td>
     </tr>
   `).join("");
 
