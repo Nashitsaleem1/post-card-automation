@@ -151,7 +151,9 @@ function showRecipientsModal(recipients) {
           .map(
             (r) =>
               `<li style="padding:8px 0; border-bottom:1px solid #eee;">
-                 ${r.firstName || ""} ${r.lastName || ""} - ${r.email || r.address || "N/A"}
+                 ${r.firstName || ""} ${r.lastName || ""} - ${
+                r.email || r.address || "N/A"
+              }
                </li>`
           )
           .join("")}
@@ -266,14 +268,12 @@ async function loadDashboard() {
     console.log("Loading dashboard with mode:", mode);
 
     // Fetch campaign data
-    const res = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/dashboard/all?mode=${mode}`
-    );
+    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/dashboard/all?mode=${mode}`);
     if (!res.ok && res.status !== 404)
       throw new Error("Failed to load campaigns");
     const data = res.status === 404 ? { data: [] } : await res.json();
 
-    // Fetch one-off mailers
+    // Fetch one-off mailers (now includes audience)
     const oneOffRes = await fetch(
       `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/all?mode=${mode}`
     );
@@ -310,27 +310,29 @@ async function loadDashboard() {
       }
     }
 
-    // Combine campaigns and mailers
+    // ✅ Combine campaigns and one-off mailers (now both have audience info)
     const combined = [
       ...uniqueCampaigns.map((d) => ({
         category: "Campaign",
         id: d.campaign_id,
         name: d.campaign_name,
-        recipientsList: safeParseRecipients(d.address_list),
-        recipients: safeParseRecipients(d.address_list).length,
+        audience_name: d.audience_name || "—",
+        audience_id: d.audience_id || null,
+        audience_list: d.audience_list || [],
         type: "campaign",
       })),
       ...oneOffData.data.map((d) => ({
         category: "One-Off Mailer",
         id: d.id,
         name: d.mailer_name,
-        recipientsList: safeParseRecipients(d.address_list || "[]"),
-        recipients: safeParseRecipients(d.address_list || "[]").length,
+        audience_name: d.audience_name || "—",
+        audience_id: d.audience_id || null,
+        audience_list: d.audience_list || [],
         type: "oneoff",
       })),
     ];
 
-    // Render table or empty state
+    // ✅ Render table
     if (!combined.length) {
       detailsDiv.innerHTML = `<p style="margin-top:20px; font-size:16px; color:#555;">No data to show.</p>`;
     } else {
@@ -340,7 +342,7 @@ async function loadDashboard() {
             <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
               <th style="padding:18px;">Type</th>
               <th style="padding:18px;">Name</th>
-              <th style="padding:18px;">Recipients</th>
+              <th style="padding:18px;">Audience</th>
               <th style="padding:18px;">Action</th>
             </tr>
           </thead>
@@ -352,12 +354,17 @@ async function loadDashboard() {
                   <td style="padding:12px;"><strong>${d.category}</strong></td>
                   <td style="padding:12px;">${d.name}</td>
                   <td style="padding:12px;">
-                    <button class="view-recipients-btn" 
-                            data-id="${d.id}" 
+                    ${
+                      d.audience_list && d.audience_list.length
+                        ? `<button class="view-recipients-btn" 
+                            data-id="${d.audience_id || d.id}" 
+                            data-name="${d.audience_name}"
                             data-type="${d.type}"
                             style="padding:7px 12px; background:#10b981; color:white; border:none; border-radius:5px; cursor:pointer;">
-                      View Recipients | ${d.recipients}
-                    </button>
+                            ${d.audience_name}
+                          </button>`
+                        : `<span style="color:#aaa;">—</span>`
+                    }
                   </td>
                   <td style="padding:12px;">
                     <button class="view-details-btn" 
@@ -377,7 +384,7 @@ async function loadDashboard() {
 
     dashboardEl.appendChild(detailsDiv);
 
-    // Attach event listeners
+    // ✅ Attach event listeners
     attachTableEventListeners(combined);
   } catch (err) {
     console.error(err);
@@ -388,17 +395,59 @@ async function loadDashboard() {
 /**
  * Attach event listeners to table buttons
  */
-function attachTableEventListeners(combined) {
-  // Recipients button clicks
+function attachTableEventListeners(data) {
   document.querySelectorAll(".view-recipients-btn").forEach((btn) => {
-    btn.addEventListener("click", (event) => {
-      const id = parseInt(event.target.dataset.id);
-      const type = event.target.dataset.type;
-      const item = combined.find((d) => d.id === id && d.type === type);
-      if (item) showRecipientsModal(item.recipientsList);
+    btn.addEventListener("click", () => {
+      const audienceId = btn.dataset.id;
+      const record = data.find(
+        (d) => String(d.audience_id) === String(audienceId)
+      );
+
+      if (!record || !record.audience_list || !record.audience_list.length) {
+        Swal.fire({
+          icon: "info",
+          title: "No recipients found",
+          text: `No recipients available for ${
+            record?.audience_name || "this audience"
+          }.`,
+        });
+        return;
+      }
+
+      const recipients = record.audience_list
+        .map(
+          (r, i) => `
+          <tr>
+            <td style="padding:6px 10px;">${r.address || ""}</td>
+            <td style="padding:6px 10px;">${r.city || ""}</td>
+            <td style="padding:6px 10px;">${r.state || ""}</td>
+            <td style="padding:6px 10px;">${r.zipCode || ""}</td>
+          </tr>`
+        )
+        .join("");
+
+      Swal.fire({
+        title: `${record.audience_name}`,
+        html: `
+          <div style="max-height:400px; overflow-y:auto; text-align:left;">
+            <table style="width:100%; border-collapse: collapse; margin-top:10px;">
+              <thead>
+                <tr style="background:#764ba2;">
+                  <th style="padding:8px 10px; text-align:left;">Address</th>
+                  <th style="padding:8px 10px; text-align:left;">City</th>
+                  <th style="padding:8px 10px; text-align:left;">State</th>
+                  <th style="padding:8px 10px; text-align:left;">Zip</th>
+                </tr>
+              </thead>
+              <tbody>${recipients}</tbody>
+            </table>
+          </div>
+        `,
+        width: 700,
+        confirmButtonText: "Close",
+      });
     });
   });
-
   // Details button clicks
   document.querySelectorAll(".view-details-btn").forEach((btn) => {
     btn.addEventListener("click", () => {

@@ -50,13 +50,301 @@ let currentSearchHash = null;
 
 function getCurrentMode() {
   const mode = sessionStorage.getItem("apiMode");
-  //console.log("getCurrentMode() called - mode from storage:", mode);
   return mode || "testing";
 }
 
 function setMode(newMode) {
   sessionStorage.setItem("apiMode", newMode);
-//  console.log("✅ Switched to", newMode.toUpperCase(), "mode");
+}
+
+// ============================================
+// AUDIENCE MANAGEMENT FUNCTIONS
+// ============================================
+
+let selectedAudienceId = null;
+let currentAudienceData = null;
+
+const existingaudienceCard = document.getElementById("existingaudience");
+const existingaudiencesection = document.getElementById("existingaudiencesection");
+
+existingaudienceCard.addEventListener("click", () => {
+  existingaudienceCard.classList.add("selected");
+  uploadcsvCard.classList.remove("selected");
+  BatchsearchCard.classList.remove("selected");
+  
+  existingaudiencesection.style.display = "block";
+  uploadsection.style.display = "none";
+  batchsection.style.display = "none";
+  
+  loadExistingAudiences();
+  updateButtonStates();
+});
+
+async function loadExistingAudiences() {
+  const audiencesGrid = document.getElementById("audiencesGrid");
+  
+  if (!audiencesGrid) {
+    console.error("Audiences grid not found");
+    return;
+  }
+
+  audiencesGrid.innerHTML = '<div class="loading-message">Loading audiences...</div>';
+
+  try {
+    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/audiences");
+    if (!response.ok) throw new Error("Failed to load audiences");
+
+    const audiences = await response.json();
+
+    if (audiences.length === 0) {
+      audiencesGrid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <p>No saved audiences yet</p>
+          <p class="empty-hint">Create audiences by uploading CSV or using Batch Search</p>
+        </div>
+      `;
+      return;
+    }
+
+    audiencesGrid.innerHTML = "";
+
+    audiences.forEach((audience) => {
+      // audience_list comes as array from API (already parsed by backend)
+      const audienceList = Array.isArray(audience.audience_list) 
+        ? audience.audience_list 
+        : JSON.parse(audience.audience_list);
+      
+      const recipientCount = audienceList.length;
+      const createdDate = new Date(audience.created_at).toLocaleDateString();
+
+      const audienceCard = document.createElement("div");
+      audienceCard.className = "audience-card";
+      audienceCard.dataset.audienceId = audience.id;
+
+      audienceCard.innerHTML = `
+        <div class="audience-card-header">
+          <h3 class="audience-name">${audience.audience_name}</h3>
+        </div>
+        <div class="audience-info">
+          <span class="info-item">${recipientCount} recipients</span>
+          <span class="info-item">${createdDate}</span>
+        </div>
+        <div class="audience-actions">
+          <button class="select-audience-btn">Select</button>
+          <button class="view-details-btn">View Details</button>
+        </div>
+      `;
+
+      audienceCard
+        .querySelector(".select-audience-btn")
+        .addEventListener("click", () => selectAudience(audience.id));
+
+      audienceCard
+        .querySelector(".view-details-btn")
+        .addEventListener("click", () => {
+          const list = Array.isArray(audience.audience_list) 
+            ? audience.audience_list 
+            : JSON.parse(audience.audience_list);
+          viewAudienceDetails(list, audience.audience_name);
+        });
+
+      audiencesGrid.appendChild(audienceCard);
+    });
+
+  } catch (error) {
+    console.error("Error loading audiences:", error);
+    audiencesGrid.innerHTML = `
+      <div class="error-state">
+        <div class="error-icon">⚠️</div>
+        <p>Failed to load audiences</p>
+        <button onclick="loadExistingAudiences()" class="retry-btn">Retry</button>
+      </div>
+    `;
+  }
+}
+
+function viewAudienceDetails(audienceList, audienceName) {
+  const modal = document.createElement("div");
+  modal.className = "audience-modal";
+
+  const detailsHTML = audienceList.map((item, idx) => `
+    <tr>
+      <td>${idx + 1}</td>
+      <td>${item.firstName} ${item.lastName}</td>
+      <td>${item.address}</td>
+      <td>${item.city}</td>
+      <td>${item.state}</td>
+      <td>${item.zipcode}</td>
+    </tr>
+  `).join("");
+
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h2>${audienceName} — ${audienceList.length} recipients</h2>
+      <table class="audience-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Address</th>
+            <th>City</th>
+            <th>State</th>
+            <th>Zip</th>
+          </tr>
+        </thead>
+        <tbody>${detailsHTML}</tbody>
+      </table>
+      <button class="close-modal-btn" onclick="this.closest('.audience-modal').remove()">✖ Close</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+}
+
+async function selectAudience(audienceId) {
+  try {
+    const response = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/audiences/${audienceId}`);
+    
+    if (!response.ok) {
+      throw new Error("Failed to load audience details");
+    }
+
+    const audience = await response.json();
+    
+    selectedAudienceId = audienceId;
+    currentAudienceData = audience;
+
+    // Parse audience_list - it comes as array from API
+    const audienceList = Array.isArray(audience.audience_list) 
+      ? audience.audience_list 
+      : JSON.parse(audience.audience_list);
+    
+    recipientsList = audienceList;
+
+    document.querySelectorAll(".audience-card").forEach(card => {
+      card.classList.remove("selected-audience");
+    });
+    
+    const selectedCard = document.querySelector(`[data-audience-id="${audienceId}"]`);
+    if (selectedCard) {
+      selectedCard.classList.add("selected-audience");
+    }
+
+    showAlert(`✅ Audience "${audience.audience_name}" selected with ${recipientsList.length} recipients`);
+    
+    saveState();
+    updateButtonStates();
+
+  } catch (error) {
+    console.error("Error selecting audience:", error);
+    showAlert("Error loading audience: " + error.message);
+  }
+}
+
+async function deleteAudience(audienceId, event) {
+  event.stopPropagation();
+  
+  const confirmDelete = confirm("Are you sure you want to delete this audience? This action cannot be undone.");
+  
+  if (!confirmDelete) return;
+
+  try {
+    const response = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/audiences/${audienceId}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to delete audience");
+    }
+
+    showAlert("✅ Audience deleted successfully");
+    
+    if (selectedAudienceId === audienceId) {
+      selectedAudienceId = null;
+      currentAudienceData = null;
+      recipientsList = [];
+      updateButtonStates();
+    }
+    
+    loadExistingAudiences();
+
+  } catch (error) {
+    console.error("Error deleting audience:", error);
+    showAlert("Error deleting audience: " + error.message);
+  }
+}
+
+// ============================================
+// AUDIENCE NAME MODAL FUNCTIONS
+// ============================================
+
+function showAudienceNameModal() {
+  const modal = document.getElementById("audienceNameModal");
+  const input = document.getElementById("audienceNameInput");
+  
+  if (modal && input) {
+    input.value = "";
+    modal.style.display = "flex";
+    input.focus();
+  }
+}
+
+function closeAudienceNameModal() {
+  const modal = document.getElementById("audienceNameModal");
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+
+async function confirmSaveAudience() {
+  const audienceName = document.getElementById("audienceNameInput").value.trim();
+  
+  if (!audienceName) {
+    showAlert("Please enter an audience name");
+    return;
+  }
+
+  if (recipientsList.length === 0) {
+    showAlert("No recipients to save");
+    closeAudienceNameModal();
+    return;
+  }
+  console.log(recipientsList)
+  try {
+    // Backend expects audience_list as array of Address objects
+    const payload = {
+      audience_name: audienceName,
+      audience_list: recipientsList // Send as array - backend will serialize to JSON
+    };
+
+    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/audiences", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to save audience");
+    }
+
+    const savedAudience = await response.json();
+    
+    selectedAudienceId = savedAudience.id;
+    currentAudienceData = savedAudience;
+
+    showAlert(`✅ Audience "${audienceName}" saved successfully with ${recipientsList.length} recipients`);
+    
+    closeAudienceNameModal();
+    saveState();
+
+  } catch (error) {
+    console.error("Error saving audience:", error);
+    showAlert("Error saving audience: " + error.message);
+  }
 }
 
 // ============================================
@@ -90,101 +378,6 @@ function closePreview() {
 // ============================================
 // PDF UPLOAD MANAGEMENT
 // ============================================
-
-function createPdfUploadSection() {
-  const pdfUploadHtml = `
-  <div class="pdf-upload-section" style="margin: 3rem 0; text-align: center;">
-    <h3 style="
-      margin-bottom: 2rem;
-      font-size: 1.5rem;
-      color: var(--text-primary, #333);
-      font-weight: 700;
-    ">
-      Or Upload Your Own PDF Letter
-    </h3>
-
-    <div class="upload-box" id="pdfUploadBox" style="
-      background: white;
-      border: 2px dashed var(--border-color, #ccc);
-      border-radius: var(--radius-lg, 12px);
-      padding: 3rem;
-      text-align: center;
-      width: 100%;
-      max-width: 480px;
-      margin: 0 auto;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      position: relative;
-      box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.05));
-    ">
-
-      <div class="upload-icon" style="
-        font-size: 3rem;
-        margin-bottom: 1.25rem;
-        color: var(--primary-color, #667eea);
-      ">📄</div>
-
-      <div class="upload-main-text" style="
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: var(--text-primary, #222);
-        margin-bottom: 0.75rem;
-      ">
-        Drag & drop your PDF file here
-      </div>
-
-      <div class="upload-sub-text" style="
-        font-size: 1rem;
-        color: var(--text-secondary, #666);
-        margin-bottom: 1.75rem;
-      ">
-        or click to browse your files
-      </div>
-
-      <label for="pdfFile" class="choose-file-btn" style="
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.875rem 1.75rem;
-        background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
-        color: white;
-        font-weight: 600;
-        border: none;
-        border-radius: var(--radius-md, 8px);
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: var(--shadow-sm, 0 2px 6px rgba(0, 0, 0, 0.1));
-      "
-      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 10px rgba(0,0,0,0.15)';"
-      onmouseout="this.style.transform=''; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.1)';"
-      >
-        Choose PDF File
-      </label>
-
-      <input
-        type="file"
-        id="pdfFile"
-        accept=".pdf"
-        style="display: none;"
-      />
-
-      <div class="pdf-size-info" style="
-        color: #999;
-        font-size: 0.9rem;
-        margin-top: 1rem;
-      ">
-        Max file size: 10MB
-      </div>
-    </div>
-  </div>
-`;
-
-  const templatesGrid = document.getElementById("templatesGrid");
-  if (templatesGrid && !document.querySelector(".pdf-upload-section")) {
-    templatesGrid.insertAdjacentHTML("afterend", pdfUploadHtml);
-    setupPdfUpload();
-  }
-}
 
 function setupPdfUpload() {
   const pdfUploadBox = document.getElementById("pdfUploadBox");
@@ -419,17 +612,25 @@ mailerCard.addEventListener("click", () => {
 
 uploadcsvCard.addEventListener("click", () => {
   uploadcsvCard.classList.add("selected");
+  existingaudienceCard.classList.remove("selected");
   BatchsearchCard.classList.remove("selected");
+
   uploadsection.style.display = "block";
+  existingaudiencesection.style.display = "none";
   batchsection.style.display = "none";
+
   updateButtonStates();
 });
 
 BatchsearchCard.addEventListener("click", () => {
   BatchsearchCard.classList.add("selected");
   uploadcsvCard.classList.remove("selected");
+  existingaudienceCard.classList.remove("selected");
+
   batchsection.style.display = "flex";
   uploadsection.style.display = "none";
+  existingaudiencesection.style.display = "none";
+
   updateButtonStates();
 });
 
@@ -463,11 +664,14 @@ function saveState() {
       ? "csv"
       : BatchsearchCard.classList.contains("selected")
       ? "batch"
+      : existingaudienceCard?.classList.contains("selected")
+      ? "existing"
       : null,
     campaignName: document.getElementById("campaignName")?.value || "",
     mailerName: document.getElementById("mailerName")?.value || "",
     mailerNameonly: document.getElementById("mailerNameOnlyInput")?.value || "",
     recipients: recipientsList,
+    selectedAudienceId: selectedAudienceId,
   };
   sessionStorage.setItem("campaignState", JSON.stringify(state));
 }
@@ -492,13 +696,24 @@ function restoreState() {
   if (state.uploadMode === "csv") {
     uploadcsvCard.classList.add("selected");
     BatchsearchCard.classList.remove("selected");
+    existingaudienceCard?.classList.remove("selected");
     uploadsection.style.display = "block";
     batchsection.style.display = "none";
+    existingaudiencesection.style.display = "none";
   } else if (state.uploadMode === "batch") {
     BatchsearchCard.classList.add("selected");
     uploadcsvCard.classList.remove("selected");
-    batchsection.style.display = "block";
+    existingaudienceCard?.classList.remove("selected");
+    batchsection.style.display = "flex";
     uploadsection.style.display = "none";
+    existingaudiencesection.style.display = "none";
+  } else if (state.uploadMode === "existing") {
+    existingaudienceCard?.classList.add("selected");
+    uploadcsvCard.classList.remove("selected");
+    BatchsearchCard.classList.remove("selected");
+    existingaudiencesection.style.display = "block";
+    uploadsection.style.display = "none";
+    batchsection.style.display = "none";
   }
 
   if (state.campaignName)
@@ -507,15 +722,13 @@ function restoreState() {
     document.getElementById("mailerName").value = state.mailerName;
   if (state.mailerNameonly)
     document.getElementById("mailerNameOnlyInput").value = state.mailerNameonly;
+  
   if (state.recipients && state.recipients.length) {
     recipientsList = state.recipients;
-    document.getElementById("uploadBox").innerHTML = `
-      <div class="upload-icon" style="color: #28a745;">✓</div>
-      <div class="upload-main-text" style="color: #28a745;">File uploaded successfully!</div>
-      <div class="upload-sub-text">${recipientsList.length} recipients restored</div>
-      <button class="choose-file-btn" onclick="resetUpload()" style="background: #6c757d; margin-top: 1rem;">
-        Upload Different File
-      </button>`;
+  }
+  
+  if (state.selectedAudienceId) {
+    selectedAudienceId = state.selectedAudienceId;
   }
 }
 
@@ -714,15 +927,11 @@ function getCachedPage(pageNum) {
   }
 
   const cacheKey = `${currentSearchHash}_page_${pageNum}`;
- // console.log("Looking for cache key:", cacheKey);
-
   const memoryCache = pageCache.get(cacheKey);
   if (memoryCache) {
-   // console.log("Found in memory cache");
     return memoryCache;
   }
 
- // console.log("No cache found for page", pageNum);
   return null;
 }
 
@@ -741,11 +950,9 @@ function setCachedPage(pageNum, records) {
   };
 
   pageCache.set(cacheKey, cacheData);
-  //console.log("Cached in memory. Total cached pages:", pageCache.size);
 }
 
 function clearPageCache() {
-  //console.log("Clearing page cache");
   pageCache.clear();
   allLoadedRecords = [];
 
@@ -758,7 +965,6 @@ function clearPageCache() {
       }
     }
     keysToRemove.forEach((key) => sessionStorage.removeItem(key));
-  //  console.log("Cleared", keysToRemove.length, "items from sessionStorage");
     document.querySelector(".result-counts").innerHTML = `
   <span class="count-item">Total Results Found: <strong>0</strong></span>
   <span class="count-item">Selected: <strong>0</strong></span>
@@ -780,9 +986,7 @@ async function searchProperties(event, pageNum = 1) {
   const street = document.getElementById("streetInput").value.trim();
   const minYearBuilt = document.getElementById("minYearBuilt").value.trim();
   const maxYearBuilt = document.getElementById("maxYearBuilt").value.trim();
-  const neighborhood = document
-    .getElementById("neighborhoodInput")
-    .value.trim();
+
   const minValue = document.getElementById("minValue").value.trim();
   const maxValue = document.getElementById("maxValue").value.trim();
 
@@ -798,16 +1002,16 @@ async function searchProperties(event, pageNum = 1) {
     recordsPerPage = parseInt(pageSizeSelect.value);
   }
 
-  if (!((street && zip) || (street && city && state) || neighborhood)) {
+  if (!((street && zip) || (street && city && state) || zip)) {
     alert(
-      "Please enter either 'Street + Zip Code' or 'Street + City + State' or 'Neighborhood'."
+      "Please enter either 'Street + Zip Code' or 'Street + City + State' or 'zip code'."
     );
     return;
   }
 
   let queryValue = "";
-  if (neighborhood) {
-    queryValue = `${neighborhood}, ${state}`;
+  if (zip) {
+    queryValue = `${zip}`;
   }
 
   const skip = (pageNum - 1) * recordsPerPage;
@@ -890,8 +1094,6 @@ async function searchProperties(event, pageNum = 1) {
   const cachedData = getCachedPage(pageNum);
 
   if (cachedData && cachedData.records) {
-  //  console.log(`Using cached data for page ${pageNum}`);
-
     let records = cachedData.records;
 
     if (zip && records.length > 0) {
@@ -934,7 +1136,6 @@ async function searchProperties(event, pageNum = 1) {
     );
 
     const responseData = await response.json();
-   // console.log("Full Response:", responseData);
 
     const data = Array.isArray(responseData) ? responseData[0] : responseData;
 
@@ -946,16 +1147,12 @@ async function searchProperties(event, pageNum = 1) {
     ) {
       totalResultsFound = data.results.meta.results.resultsFound || 0;
       totalPages = Math.ceil(totalResultsFound / recordsPerPage);
-      // console.log("Total Results Found:", totalResultsFound);
-      // console.log("Total Pages:", totalPages);
     }
 
     let records = [];
     if (data && data.results && Array.isArray(data.results.properties)) {
       records = data.results.properties;
     }
-
-    // console.log("Records:", records);
 
     setCachedPage(pageNum, records);
 
@@ -1360,6 +1557,8 @@ function saveAudience() {
     return;
   }
 
+  recipientsList = [];
+
   allLoadedRecords.forEach((record) => {
     const recordId =
       record._id || `${record.address?.street}_${record.address?.zip}`;
@@ -1393,16 +1592,13 @@ function saveAudience() {
         address: record.address?.street || record.address?.streetAddress || "",
         city: record.address?.city || "",
         state: record.address?.state || "",
-        zipcode: record.address?.zip || record.address?.zipCode || "",
+        zipCode: record.address?.zip || record.address?.zipCode || "",
       };
       recipientsList.push(recipient);
     }
   });
 
-  // console.log("Recipients List:", recipientsList);
-  alert(
-    `Audience saved successfully! Total selected: ${recipientsList.length}`
-  );
+  showAudienceNameModal();
 }
 
 // ============================================
@@ -1424,24 +1620,26 @@ async function parseCSV(file) {
           address: row.address || "",
           city: row.city || "",
           state: row.state || "",
-          zipcode: row.zipcode || "",
+          zipCode: row.zipcode || "",
         };
       });
 
-      recipientsList = [...recipientsList, ...recipients];
-      saveState();
-      sessionStorage.setItem("recipients", JSON.stringify(recipientsList));
-
+      recipientsList = recipients;
+      
       const uploadBox = document.getElementById("uploadBox");
       uploadBox.innerHTML = `
-  <div class="upload-icon" style="color: #28a745;">✓</div>
-  <div class="upload-main-text" style="color: #28a745;">File uploaded successfully!</div>
-  <div class="upload-sub-text">${recipients.length} recipients loaded from ${file.name}</div>
-  <button class="choose-file-btn" onclick="resetUpload()" style="background: #6c757d; margin-top: 1rem;">
-    Upload Different File
-  </button>
-`;
-      updateButtonStates();
+        <div class="upload-icon" style="color: #28a745;">✓</div>
+        <div class="upload-main-text" style="color: #28a745;">File uploaded successfully!</div>
+        <div class="upload-sub-text">${recipients.length} recipients loaded from ${file.name}</div>
+        <div class="upload-sub-text" style="color: #ff6b6b; font-weight: 600; margin-top: 1rem;">Saving Audience...</div>
+      `;
+      
+      saveState();
+      
+      // Automatically call save audience modal with a slight delay
+      setTimeout(() => {
+        showAudienceNameModal();
+      }, 500);
     },
     error: (error) => {
       console.error("CSV parsing error:", error);
@@ -1646,7 +1844,6 @@ function initAutocomplete() {
     document.getElementById("cityInput").value = place.formatted_address;
 
     loadZipCodes(cityName, stateCode);
-    loadNeighborhoods(cityName, stateCode);
   });
 }
 
@@ -1715,69 +1912,6 @@ function populateZipDropdown(zipCodes) {
     option.textContent = zip;
     zipSelect.appendChild(option);
   });
-}
-
-async function loadNeighborhoods(cityName, stateCode) {
-  const neighborhoodSelect = document.getElementById("neighborhoodInput");
-  neighborhoodSelect.innerHTML =
-    '<option value="">Loading neighborhoods...</option>';
-
-  const query = `
-    [out:json][timeout:25];
-    area["name"="${cityName}"]["admin_level"="8"]->.city;
-    (
-      node["place"="neighbourhood"](area.city);
-      way["place"="neighbourhood"](area.city);
-      relation["place"="neighbourhood"](area.city);
-      node["place"="suburb"](area.city);
-      way["place"="suburb"](area.city);
-      relation["place"="suburb"](area.city);
-      node["place"="quarter"](area.city);
-      way["place"="quarter"](area.city);
-      relation["place"="quarter"](area.city);
-    );
-    out tags;
-  `;
-
-  try {
-    const response = await fetch("https://overpass-api.de/api/interpreter", {
-      method: "POST",
-      body: query,
-    });
-    const data = await response.json();
-
-    const neighborhoods = [
-      ...new Set(
-        data.elements
-          .map((el) => el.tags && el.tags.name)
-          .filter((name) => !!name)
-      ),
-    ];
-    // console.log(neighborhoods);
-
-    neighborhoodSelect.innerHTML =
-      '<option value="">-- Select Neighborhood --</option>';
-
-    const cityOption = document.createElement("option");
-    cityOption.value = cityName;
-    cityOption.textContent = cityName;
-    neighborhoodSelect.appendChild(cityOption);
-
-    neighborhoods.forEach((nb) => {
-      const option = document.createElement("option");
-      option.value = nb;
-      option.textContent = nb;
-      neighborhoodSelect.appendChild(option);
-    });
-  } catch (error) {
-    console.error("Error fetching neighborhoods:", error);
-    neighborhoodSelect.innerHTML =
-      '<option value="">-- Select Neighborhood --</option>';
-    const option = document.createElement("option");
-    option.value = cityName;
-    option.textContent = cityName;
-    neighborhoodSelect.appendChild(option);
-  }
 }
 
 // ============================================
@@ -1927,7 +2061,6 @@ async function orderDesign(templateId, button) {
 
   try {
     const mode = getCurrentMode();
-    // console.log("📦 orderDesign - Current mode:", mode);
 
     const confirmSend = confirm(
       `You are about to send the letter in ${mode.toUpperCase()} mode.\n\nDo you want to proceed?`
@@ -1962,6 +2095,21 @@ async function orderDesign(templateId, button) {
       throw new Error("Please select a template or upload a PDF");
     }
 
+    // Use correct recipients list
+    let finalRecipientsList = recipientsList;
+    
+    // If using existing audience, ensure we have the data
+    if (selectedAudienceId && currentAudienceData) {
+      const audienceList = Array.isArray(currentAudienceData.audience_list)
+        ? currentAudienceData.audience_list
+        : JSON.parse(currentAudienceData.audience_list);
+      finalRecipientsList = audienceList;
+    }
+
+    if (finalRecipientsList.length === 0) {
+      throw new Error("No recipients available");
+    }
+    console.log(finalRecipientsList)
     const token = await getToken(mode);
 
     const payload = {
@@ -1977,8 +2125,16 @@ async function orderDesign(templateId, button) {
         type: "fullWindow",
         fontColor: "Black",
       },
-      recipients: recipientsList,
+      recipients: finalRecipientsList,
       letter: finalHtml,
+      returnAddress: {
+        firstName: "Mark",
+        lastName: "Fazzini",
+        address: "4175 Woodlands Pkwy",
+        city: "Palm Harbor",
+        state: "FL",
+        zipCode: "34685",
+      },
     };
 
     const res = await fetch("https://v3.pcmintegrations.com/order/letter", {
@@ -2009,7 +2165,7 @@ async function orderDesign(templateId, button) {
 }
 
 // ============================================
-// CREATE & SEND FUNCTIONS
+// UPDATED CREATE AND SEND FUNCTIONS
 // ============================================
 
 async function createAndSendLetter() {
@@ -2073,11 +2229,10 @@ async function createAndSendLetter() {
         campaign_id: campaign.id,
         mailer_name: mailerName,
         template_id: uploadedPdfUrl ? null : window.currentEditingTemplateId,
-        address_list: JSON.stringify(recipientsList),
+        audience_id: selectedAudienceId,
         schedule_time: null,
         send_date: new Date().toISOString(),
         status: "sent",
-        pdf_url: uploadedPdfUrl || null,
         env_mode: mode,
       };
 
@@ -2127,16 +2282,16 @@ async function createAndSendLetter() {
         return;
       }
 
-      const mailerPayload = {
-        mailer_name: mailerName,
-        template_id: uploadedPdfUrl ? null : window.currentEditingTemplateId,
-        address_list: JSON.stringify(recipientsList),
-        schedule_time: null,
-        send_date: new Date().toISOString(),
-        status: "sent",
-        pdf_url: uploadedPdfUrl || null,
-        env_mode: mode,
-      };
+    const mailerPayload = {
+      mailer_name: mailerName,
+      template_id: uploadedPdfUrl ? null : window.currentEditingTemplateId,
+      audience_id: selectedAudienceId,  
+      schedule_time: null,
+      send_date: new Date().toISOString(),
+      status: "sent",
+      env_mode: mode,
+      canva_link: null
+    };
 
       const mailerResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
         method: "POST",
@@ -2161,12 +2316,10 @@ async function createAndSendLetter() {
 }
 
 async function createAndSave() {
-  const btn = document.querySelector("button[onclick='createAndSendLetter()']");
   const isCampaign = campaignCard.classList.contains("selected");
   const isMailer = mailerCard.classList.contains("selected");
 
   const mode = getCurrentMode();
-
 
   if (!isCampaign && !isMailer) {
     showAlert("Please select either 'New Campaign' or 'New Mailer' option.");
@@ -2208,7 +2361,7 @@ async function createAndSave() {
         campaign_id: campaign.id,
         mailer_name: mailerName,
         template_id: null,
-        address_list: JSON.stringify(recipientsList),
+        audience_id: selectedAudienceId || null,
         schedule_time: null,
         send_date: null,
         status: "pending",
@@ -2250,7 +2403,7 @@ async function createAndSave() {
       const mailerPayload = {
         mailer_name: mailerName,
         template_id: null,
-        address_list: JSON.stringify(recipientsList),
+        audience_id: selectedAudienceId || null,
         schedule_time: null,
         send_date: null,
         status: "pending",
@@ -2277,6 +2430,103 @@ async function createAndSave() {
     console.error("Error:", error);
     showAlert(error.message || "Something went wrong.");
   }
+}
+
+function downloadSampleCSV() {
+  const csvContent = `FirstName,LastName,Address,City,State,Zipcode
+John,Doe,123 Main St,New York,NY,10001
+Jane,Smith,456 Oak Ave,Los Angeles,CA,90001
+Mike,Johnson,789 Pine Rd,Chicago,IL,60601`;
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+
+  link.setAttribute("href", url);
+  link.setAttribute("download", "sample_recipients.csv");
+  link.style.visibility = "hidden";
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// ============================================
+// CANVA CONTEXT MANAGEMENT
+// ============================================
+
+function handleCanvaNavigation() {
+  const isCampaign = campaignCard?.classList.contains("selected");
+  const isMailer = mailerCard?.classList.contains("selected");
+
+  if (!isCampaign && !isMailer) {
+    showAlert("⚠️ Please select either 'New Campaign' or 'New Mailer' first.");
+    return;
+  }
+
+  let campaignName = "";
+  let mailerName = "";
+
+  if (isCampaign) {
+    campaignName = document.getElementById("campaignNameInput")?.value?.trim() || "";
+    mailerName = document.getElementById("mailerNameInput")?.value?.trim() || "";
+  } else {
+    mailerName = document.getElementById("mailerNameOnlyInput")?.value?.trim() || "";
+  }
+
+  if (isCampaign && !campaignName) {
+    showAlert("⚠️ Please enter Campaign Name before proceeding.");
+    return;
+  }
+
+  if (!mailerName) {
+    showAlert("⚠️ Please enter Mailer Name before proceeding.");
+    return;
+  }
+
+  if (!recipientsList || recipientsList.length === 0) {
+    showAlert("⚠️ Please add recipients before browsing Canva templates.\n\nYou can:\n• Search for properties\n• Upload a CSV file\n• Select an existing audience");
+    return;
+  }
+
+  console.log("✅ All validations passed!");
+  saveCampaignContextForCanva();
+
+  console.log("🔗 Navigating to Canva templates...");
+  window.location.href = "templateGallery.html?view=canva";
+}
+
+function saveCampaignContextForCanva() {
+  const isCampaignSelected = campaignCard?.classList.contains("selected");
+  const isMailerSelected = mailerCard?.classList.contains("selected");
+
+  let mode = null;
+  let campaignName = "";
+  let mailerName = "";
+
+  if (isCampaignSelected) {
+    mode = "campaign";
+    campaignName = document.getElementById("campaignNameInput")?.value?.trim() || "";
+    mailerName = document.getElementById("mailerNameInput")?.value?.trim() || "";
+  } else if (isMailerSelected) {
+    mode = "mailer";
+    mailerName = document.getElementById("mailerNameOnlyInput")?.value?.trim() || "";
+  }
+
+  const context = {
+    mode: mode,
+    campaignName: campaignName,
+    mailerName: mailerName,
+    recipients: recipientsList,
+    selectedAudienceId: selectedAudienceId,
+    envMode: getCurrentMode(),
+    timestamp: Date.now(),
+  };
+
+  const key = mode === "mailer" ? "mailerContext" : "campaignContext";
+  sessionStorage.setItem(key, JSON.stringify(context));
+
+  console.log(`📦 Saved ${mode} context to sessionStorage → ${key}`, context);
 }
 
 // ============================================
@@ -2312,7 +2562,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const productionBtn = document.getElementById("productionModeBtn");
 
   let currentMode = getCurrentMode();
-  // console.log("🔍 Initial mode on page load:", currentMode);
 
   if (currentMode === "production") {
     testingBtn.classList.remove("active");

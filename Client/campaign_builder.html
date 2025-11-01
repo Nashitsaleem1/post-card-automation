@@ -91,6 +91,7 @@
       <div class="selection-cards" id="addressselection">
         <div class="card" id="uploadcsv">Upload CSV</div>
         <div class="card" id="batchsearch">Batch Search</div>
+        <div class="card" id="existingaudience">Existing Audience</div>
       </div>
       <div class="upload-section" id="uploadsection" style="display: none">
         <!-- Two-column layout -->
@@ -168,21 +169,96 @@
           </div>
         </div>
       </div>
+      <!-- NEW: Existing Audience Section -->
+      <div
+        class="existing-audience-section"
+        id="existingaudiencesection"
+        style="display: none"
+      >
+        <div class="audience-list-container">
+          <div class="audience-header">
+            <h2>Select an Existing Audience</h2>
+            <button class="refresh-btn" onclick="loadExistingAudiences()">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+              Refresh
+            </button>
+          </div>
 
+          <div class="audiences-grid" id="audiencesGrid">
+            <div class="loading-message">Loading audiences...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audience Name Modal -->
+      <div id="audienceNameModal" class="custom-modal" style="display: none">
+        <div class="custom-modal-content">
+          <h3 style="margin-bottom: 1.5rem; color: #333">Save Audience</h3>
+          <div class="form-group" style="margin-bottom: 1.5rem">
+            <label
+              for="audienceNameInput"
+              style="display: block; margin-bottom: 0.5rem; font-weight: 600"
+            >
+              Audience Name:
+            </label>
+            <input
+              type="text"
+              id="audienceNameInput"
+              class="form-input"
+              placeholder="Enter audience name (e.g., 'Florida Homeowners Q1 2025')"
+              maxlength="100"
+              style="
+                width: 100%;
+                padding: 0.75rem;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+              "
+            />
+          </div>
+          <div style="display: flex; gap: 1rem; justify-content: flex-end">
+            <button
+              onclick="closeAudienceNameModal()"
+              class="custom-modal-ok-btn"
+              style="background-color: #6c757d"
+            >
+              Cancel
+            </button>
+            <button
+              onclick="confirmSaveAudience()"
+              class="custom-modal-ok-btn"
+              style="background-color: #28a745"
+            >
+              Save Audience
+            </button>
+          </div>
+        </div>
+      </div>
       <div class="main-container" id="batchdatasearch" style="display: none">
         <div class="search-note">
           <span style="font-size: 16px">💡</span>
           <strong>Tip:</strong> Start by typing the
-          <strong>city name</strong> first. Once the city is selected, the
-          <strong>neighborhood</strong> and <strong>zip code</strong> fields
-          will automatically update with valid options. <br /><br />
-          ▪ If only a <strong>neighborhood</strong> is selected, the search will
-          include <em>all zip codes</em> in that area. If a
-          <strong>zip code</strong> is selected, the results will be
-          <em>filtered</em> specifically for that zip code. <br />
-          ▪ The default pagination value is 20. You can change it to your
-          preferred number, and all subsequent API calls will use that value
-          automatically.
+          <strong>city name</strong> first. Once you select a city, the
+          <strong>ZIP code</strong> field will automatically update with valid
+          options.
+          <br />
+          ▪ Selecting a ZIP code will display properties within that area. For a
+          more precise search, you can also enter a
+          <strong>street name</strong>—just make sure the ZIP code is selected
+          as well.
+          <br />
+          ▪ The default pagination limit is <strong>20</strong>. You can change
+          this to your preferred number, and all subsequent API calls will
+          automatically use that value.
         </div>
 
         <div class="content-sections">
@@ -216,13 +292,6 @@
                   <label for="zipInput">Zip Code:</label>
                   <select id="zipInput" class="form-input">
                     <option value="">-- Select Zip --</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="neighborhoodInput">Neighborhood:</label>
-                  <select id="neighborhoodInput" class="form-input">
-                    <option value="">-- Select Neighborhood --</option>
                   </select>
                 </div>
 
@@ -488,7 +557,7 @@
       </h1>
       <div class="templates-grid" id="templatesGrid"></div>
       <!-- PDF Upload Section (NEW) -->
-      <div class="pdf-upload-wrapper" style="margin: 3rem 0">
+      <!-- <div class="pdf-upload-wrapper" style="margin: 3rem 0">
         <h1 class="heading3">
           <i> Or Upload Your Own PDF Letter </i>
         </h1>
@@ -583,7 +652,7 @@
           of the template selection above. The PDF should be properly formatted
           for mailing.
         </div>
-      </div>
+      </div> -->
       <div id="previewOverlay" class="preview-overlay">
         <div class="preview-content">
           <button class="close-btn" onclick="closePreview()">✖</button>
@@ -596,11 +665,13 @@
           Use an Existing Template
         </a>
         <a
-          href="templateGallery.html"
+          href="javascript:void(0)"
+          onclick="handleCanvaNavigation()"
           class="template-link"
-          title="After editing a template, return here and select it from the list above."
+          title="Select recipients first, then browse Canva templates"
+          style="cursor: pointer"
         >
-          Edit an Existing Template
+          Use Canva Templates
         </a>
       </div>
 
@@ -744,15 +815,15 @@
               designing a mailer.
             </li>
             <li>
-              <strong>Select Your Audience:</strong> Once your campaign and
+              <strong>Select & Save Your Audience:</strong> Once your campaign and
               mailer are ready, choose your recipients using either
               <em>"Upload CSV"</em> or <em>"Batch Search"</em> to select your
-              audience.
+              audience. Then save your audience to move forward.
             </li>
             <li>
               <strong>Choose or Edit a Template:</strong> You can select an
               existing template or edit it according to your needs. Any template
-              you edit will automatically be available for your campaign.
+              you edit will automatically be available for your campaign. You can edit canva templates and send them.
             </li>
             <li>
               <strong>Create or Send Your Letter:</strong> You have two options:

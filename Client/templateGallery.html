@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PCM</title>
+    <title>PCM - Template Gallery</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link
       class="taskbar-icon"
@@ -12,8 +12,10 @@
       href="./assets/images/p_icon_with_gradient-removebg-preview.png"
     />
     <link rel="stylesheet" href="./assets/css/index.css" />
+    <link rel="stylesheet" href="./assets/css/template-gallery.css" />
   </head>
   <body>
+    <!-- Existing Navbar -->
     <nav class="navbar">
       <div class="logo">
         <a
@@ -44,12 +46,95 @@
       <div class="hamburger" id="hamburger">☰</div>
     </nav>
 
-    <div class="container">
-      <!-- <h2>Choose and Customize Your Template</h2> -->
-      <div class="templates-grid" id="templatesGrid"></div>
-    </div>
+    <!-- Main Container with Sidebar -->
+    <div class="tg-main-container">
+      <!-- Professional Sidebar -->
+      <aside class="tg-sidebar">
+        <div class="tg-sidebar-header">
+          <h2>Template Gallery</h2>
+        </div>
+        <nav class="tg-sidebar-nav">
+          <div class="tg-nav-item active" data-view="canva">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
+              />
+            </svg>
+            <span>Canva Templates</span>
+          </div>
+          <div class="tg-nav-item" data-view="letter">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <span>Letter Templates</span>
+          </div>
+        </nav>
+      </aside>
 
-    <!-- All your modals here -->
+      <!-- Content Area -->
+      <main class="tg-content-area">
+        <!-- Canva Templates View -->
+        <div id="canvaView" class="tg-view-content">
+          <div class="tg-content-header">
+            <h1>Canva Templates</h1>
+            <p>Explore professional, ready-made designs you can easily customize in Canva.</br> Once you’re done editing, return here to send them instantly.</p>
+          </div>
+          <div class="tg-canva-grid" id="canvaGrid">
+            <!-- Canva templates will be loaded here -->
+          </div>
+        </div>
+        <!-- Letter Templates View -->
+        <div id="letterView" class="tg-view-content hidden">
+          <div class="tg-content-header">
+            <h1>Letter Templates</h1>
+            <p>Choose a template to customize for your campaign</p>
+          </div>
+          <div class="tg-templates-grid" id="templatesGrid">
+            <!-- Templates will be loaded dynamically here -->
+          </div>
+        </div>
+      </main>
+    </div>
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteConfirmModal" class="custom-modal" style="display: none">
+      <div class="custom-modal-content">
+        <div class="custom-modal-header">
+          <h3 style="margin: 0; color: #1e293b">Delete Template</h3>
+        </div>
+        <div
+          id="deleteConfirmMessage"
+          class="custom-modal-text"
+          style="margin: 1rem 0"
+        >
+          <!-- Message will be inserted here -->
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem">
+          <button
+            id="deleteCancelBtn"
+            class="custom-modal-ok-btn"
+            style="background-color: #6c757d; flex: 1"
+          >
+            Cancel
+          </button>
+          <button
+            id="deleteConfirmBtn"
+            class="custom-modal-ok-btn"
+            style="background-color: #ef4444; flex: 1"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Edit Modal -->
     <div id="editModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -78,7 +163,7 @@
       </div>
     </div>
 
-    <!-- Other modals... -->
+    <!-- Save as New Modal -->
     <div id="saveAsNewModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -111,6 +196,7 @@
       </div>
     </div>
 
+    <!-- Success Modal -->
     <div id="successModal" class="modal-overlay">
       <div class="modal-box">
         <h2>🎉 Success!</h2>
@@ -121,6 +207,7 @@
       </div>
     </div>
 
+    <!-- Template Created Modal -->
     <div id="templateCreatedModal" class="modal-overlay">
       <div class="modal-box">
         <h2>✅ Template Created!</h2>
@@ -135,12 +222,14 @@
       </div>
     </div>
 
+    <!-- Alert Modal -->
     <div id="alertModal" class="custom-modal" style="display: none">
       <div class="custom-modal-content">
         <div id="alertMessage" class="custom-modal-text"></div>
         <button id="alertOkBtn" class="custom-modal-ok-btn">OK</button>
       </div>
     </div>
+
     <!-- Confirm Modal -->
     <div id="confirmModal" class="custom-modal" style="display: none">
       <div class="custom-modal-content">
@@ -163,6 +252,8 @@
         </div>
       </div>
     </div>
+
+    <!-- User Guide Icon -->
     <div id="userGuideIcon">
       <img
         src="./assets/images/question_mark_user_guide_icon.jpg"
@@ -170,6 +261,7 @@
       />
     </div>
 
+    <!-- User Guide Overlay -->
     <div id="userGuideOverlay">
       <div id="userGuideContent">
         <span id="closeGuide">&times;</span>
@@ -187,15 +279,15 @@
               designing a mailer.
             </li>
             <li>
-              <strong>Select Your Audience:</strong> Once your campaign and
+              <strong>Select & Save Your Audience:</strong> Once your campaign and
               mailer are ready, choose your recipients using either
               <em>"Upload CSV"</em> or <em>"Batch Search"</em> to select your
-              audience.
+              audience. Then save your audience to move forward.
             </li>
             <li>
               <strong>Choose or Edit a Template:</strong> You can select an
               existing template or edit it according to your needs. Any template
-              you edit will automatically be available for your campaign.
+              you edit will automatically be available for your campaign. You can edit canva templates and send them.
             </li>
             <li>
               <strong>Create or Send Your Letter:</strong> You have two options:
@@ -216,74 +308,100 @@
         </div>
       </div>
     </div>
-
-    <!-- Regular JavaScript -->
+    <!-- Brochure Preview Modal -->
+    <div id="brochurePreviewModal" class="modal" style="display: none">
+      <div
+        class="modal-content"
+        style="
+          max-width: 90vw;
+          max-height: 90vh;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        "
+      >
+        <div
+          class="modal-header"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+          "
+        >
+          <h3 style="margin: 0">Preview Brochure</h3>
+          <div style="display: flex; gap: 10px; align-items: center">
+            <button
+              class="close"
+              onclick="closeBrochurePreviewModal()"
+              style="
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-size: 28px;
+                padding: 0;
+                color: #666;
+              "
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+        <div
+          class="modal-body"
+          style="
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f5f5f5;
+            padding: 0;
+          "
+        >
+          <div
+            id="brochurePreviewContent"
+            style="
+              width: 100%;
+              height: 100%;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+            "
+          >
+            <!-- Preview will be loaded here -->
+          </div>
+        </div>
+        <div
+          class="modal-footer"
+          style="
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            background: white;
+          "
+        >
+          <button
+            class="btn btn-secondary"
+            id="cancelSendBrochureBtn"
+            onclick="closeBrochurePreviewModal()"
+            style="flex: 1"
+          >
+            Cancel
+          </button>
+          <button
+            class="btn btn-primary"
+            id="confirmSendBrochureBtn"
+            style="flex: 1"
+          >
+            ✅ Confirm & Send Brochure
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Scripts -->
     <script src="./assets/js/script.js"></script>
   </body>
-  <script>
-    const hamburger = document.getElementById("hamburger");
-    const navLinks = document.querySelector(".nav-links");
-
-    // Toggle menu when hamburger clicked
-    hamburger.addEventListener("click", (e) => {
-      e.stopPropagation(); // prevent triggering document click
-      navLinks.classList.toggle("nav-active");
-    });
-
-    // Close menu if clicking outside
-    document.addEventListener("click", (e) => {
-      if (
-        navLinks.classList.contains("nav-active") &&
-        !navLinks.contains(e.target) &&
-        e.target !== hamburger
-      ) {
-        navLinks.classList.remove("nav-active");
-      }
-    });
-  </script>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const guideIcon = document.getElementById("userGuideIcon");
-      const guideOverlay = document.getElementById("userGuideOverlay");
-      const closeGuide = document.getElementById("closeGuide");
-      const getStartedBtn = document.getElementById("getStartedBtn");
-
-      // Function to close the guide
-      function closeUserGuide() {
-        if (guideOverlay) guideOverlay.classList.remove("show");
-      }
-
-      // Open overlay when clicking icon
-      if (guideIcon && guideOverlay) {
-        guideIcon.addEventListener("click", () => {
-          guideOverlay.classList.add("show");
-        });
-      }
-
-      // Close overlay buttons
-      if (closeGuide) {
-        closeGuide.addEventListener("click", closeUserGuide);
-      }
-
-      if (getStartedBtn) {
-        getStartedBtn.addEventListener("click", closeUserGuide);
-      }
-
-      // Click outside content to close
-      if (guideOverlay) {
-        guideOverlay.addEventListener("click", (e) => {
-          if (e.target === guideOverlay) {
-            closeUserGuide();
-          }
-        });
-      }
-
-      // ESC key to close
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && guideOverlay?.classList.contains("show")) {
-          closeUserGuide();
-        }
-      });
-    });
-  </script>
 </html>

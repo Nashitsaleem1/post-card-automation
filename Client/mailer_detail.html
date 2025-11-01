@@ -569,7 +569,7 @@
 
         <div class="recipients-card">
           <div class="section-title">Recipients</div>
-          <div class="filter-bar" id="filterBar" style="display: none;">
+          <div class="filter-bar" id="filterBar" style="display: none">
             <input type="checkbox" id="filterScanned" />
             <label for="filterScanned">Show only scanned letters</label>
           </div>
@@ -604,418 +604,481 @@
       </div>
     </div>
 
-<script>
-let recipients = [];
-let currentMailer = null;
-let currentSchedulingTemplate = null;
-window.currentEditingTemplateId = null;
+    <script>
+      let recipients = [];
+      let currentMailer = null;
+      let currentSchedulingTemplate = null;
+      window.currentEditingTemplateId = null;
 
-// Get mode from session storage
-let currentMode = sessionStorage.getItem('apiMode') || 'testing';
-console.log('Current API Mode:', currentMode);
+      let currentMode = sessionStorage.getItem("apiMode") || "testing";
+      console.log("Current API Mode:", currentMode);
 
-// Function to get current mode
-function getCurrentMode() {
-  return sessionStorage.getItem('apiMode') || 'testing';
-}
-
-function getQueryParam(key) {
-  const params = new URLSearchParams(window.location.search);
-  return params.get(key);
-}
-
-function openScheduleModal(templateId) {
-  window.currentEditingTemplateId = templateId;
-  currentSchedulingTemplate = templateId;
-  document.getElementById("scheduleDate").value = "";
-  document.getElementById("scheduleTime").value = "";
-  document.getElementById("scheduleModal").style.display = "flex";
-}
-
-function closeScheduleModal() {
-  document.getElementById("scheduleModal").style.display = "none";
-  currentSchedulingTemplate = null;
-}
-
-async function confirmSchedule() {
-  if (!window.currentEditingTemplateId) {
-    alert("Please select a template first.");
-    return;
-  }
-
-  const date = document.getElementById("scheduleDate").value;
-  const time = document.getElementById("scheduleTime").value;
-  if (!date || !time) return alert("Please select both date and time.");
-
-  const scheduleDateTime = `${date}T${time}:00`;
-  const mailerId = getQueryParam("id");
-
-  try {
-    const payload = {
-      template_id: window.currentEditingTemplateId,
-      schedule_time: scheduleDateTime,
-      status: "scheduled",
-    };
-
-    const res = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${mailerId}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      function getCurrentMode() {
+        return sessionStorage.getItem("apiMode") || "testing";
       }
-    );
 
-    if (!res.ok) throw new Error("Failed to schedule mailer");
+      function getQueryParam(key) {
+        const params = new URLSearchParams(window.location.search);
+        return params.get(key);
+      }
 
-    await res.json();
+      function openScheduleModal(templateId) {
+        window.currentEditingTemplateId = templateId;
+        currentSchedulingTemplate = templateId;
+        document.getElementById("scheduleDate").value = "";
+        document.getElementById("scheduleTime").value = "";
+        document.getElementById("scheduleModal").style.display = "flex";
+      }
 
-    const mode = getCurrentMode();
-    alert(`Mailer scheduled successfully in ${mode.toUpperCase()} mode!`);
-    closeScheduleModal();
-    location.reload();
-  } catch (err) {
-    console.error(err);
-    alert("Error scheduling mailer: " + err.message);
-  }
-}
+      function closeScheduleModal() {
+        document.getElementById("scheduleModal").style.display = "none";
+        currentSchedulingTemplate = null;
+      }
 
-async function openTemplatePreview(templateId) {
-  try {
-    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`);
-    if (!res.ok) {
-      throw new Error("Failed to fetch template");
-    }
-    const template = await res.json();
+      async function confirmSchedule() {
+        if (!window.currentEditingTemplateId) {
+          alert("Please select a template first.");
+          return;
+        }
 
-    const todayObj = new Date();
-    const formattedDate = todayObj.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-    const finalHtml = (template.html_content || "<p>No content available</p>").replace(/DATE/g, formattedDate);
+        const date = document.getElementById("scheduleDate").value;
+        const time = document.getElementById("scheduleTime").value;
+        if (!date || !time) return alert("Please select both date and time.");
 
-    const previewModal = document.createElement("div");
-    previewModal.className = "template-preview-modal";
-    previewModal.innerHTML = `
+        const scheduleDateTime = `${date}T${time}:00`;
+        const mailerId = getQueryParam("id");
+
+        try {
+          const payload = {
+            template_id: window.currentEditingTemplateId,
+            schedule_time: scheduleDateTime,
+            status: "scheduled",
+          };
+
+          const res = await fetch(
+            `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${mailerId}`,
+            {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            }
+          );
+
+          if (!res.ok) throw new Error("Failed to schedule mailer");
+
+          await res.json();
+
+          const mode = getCurrentMode();
+          alert(`Mailer scheduled successfully in ${mode.toUpperCase()} mode!`);
+          closeScheduleModal();
+          location.reload();
+        } catch (err) {
+          console.error(err);
+          alert("Error scheduling mailer: " + err.message);
+        }
+      }
+
+      async function viewSelectedContent() {
+        if (!currentMailer) {
+          alert("No mailer data available");
+          return;
+        }
+
+        console.log("📌 Viewing selected content for mailer:", currentMailer);
+
+        if (currentMailer.canva_link) {
+          console.log("✅ Canva link found:", currentMailer.canva_link);
+          showCanvaPreview(currentMailer.canva_link);
+          return;
+        }
+
+        if (currentMailer.template_id) {
+          console.log("✅ Template ID found:", currentMailer.template_id);
+          await openTemplatePreview(currentMailer.template_id);
+          return;
+        }
+
+        alert("⚠️ No template or Canva link available for this mailer");
+      }
+
+      function showCanvaPreview(canvaLink) {
+        console.log("🎨 Opening Canva PDF preview:", canvaLink);
+
+        const previewModal = document.createElement("div");
+        previewModal.className = "template-preview-modal";
+        previewModal.style.zIndex = "9999";
+        previewModal.innerHTML = `
+    <div class="template-preview-overlay" onclick="this.parentElement.remove()"></div>
+    <div class="template-preview-content">
+      <div class="template-preview-header">
+        <h3>📄 Canva PDF Preview</h3>
+        <button class="btn btn-outline" onclick="this.closest('.template-preview-modal').remove()">Close</button>
+      </div>
+      <iframe 
+        src="${canvaLink}#toolbar=0&navpanes=0&scrollbar=0&zoom=100"
+        style="width:100%;height:80vh;border:none;margin-top:1rem;border-radius:6px;">
+      </iframe>
+    </div>
+  `;
+        document.body.appendChild(previewModal);
+      }
+
+      async function openTemplatePreview(templateId) {
+        try {
+          const res = await fetch(
+            `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
+          );
+          if (!res.ok) {
+            throw new Error("Failed to fetch template");
+          }
+          const template = await res.json();
+
+          const todayObj = new Date();
+          const formattedDate = todayObj.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+          const finalHtml = (
+            template.html_content || "<p>No content available</p>"
+          ).replace(/DATE/g, formattedDate);
+
+          const previewModal = document.createElement("div");
+          previewModal.className = "template-preview-modal";
+          previewModal.innerHTML = `
       <div class="template-preview-overlay" onclick="this.parentElement.remove()"></div>
       <div class="template-preview-content">
         <div class="template-preview-header">
           <h3>Template Preview</h3>
-          <button class="btn btn-outline" onclick="this.closest('.template-preview-modal').remove()">Close</button>
+          <button class="btn btn-outline" onclick="this.parentElement.parentElement.remove()">Close</button>
         </div>
-        <iframe srcdoc="${finalHtml.replace(/"/g, '&quot;')}"
+        <iframe srcdoc="${finalHtml.replace(/"/g, "&quot;")}"
                 style="width:100%;height:80vh;border:none;margin-top:1rem;"></iframe>
       </div>
     `;
-    document.body.appendChild(previewModal);
-  } catch (err) {
-    console.error("openTemplatePreview error:", err);
-    alert("Could not load template preview. Please try again.");
-  }
-}
-
-async function getToken(env = null) {
-  // Use provided env or fall back to current mode from session
-  const selectedEnv = env || getCurrentMode();
-  
-  // Define credentials for both environments
-  const credentials = {
-    testing: {
-      apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
-      apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
-      childRefNbr: "myAccountReference",
-      url: "https://v3.pcmintegrations.com/auth/login"
-    },
-    production: {
-      apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
-      apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
-      childRefNbr: "myAccountReference",
-      url: "https://v3.pcmintegrations.com/auth/login"
-    }
-  };
-
-  const creds = credentials[selectedEnv];
-  const payload = {
-    apiKey: creds.apiKey,
-    apiSecret: creds.apiSecret,
-    childRefNbr: creds.childRefNbr
-  };
-
-  const res = await fetch(creds.url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) throw new Error(`Auth failed for ${selectedEnv.toUpperCase()} environment`);
-  const data = await res.json();
-  return data.token;
-}
-
-
-async function orderDesign(templateId, button) {
-  const originalText = button.textContent;
-  button.textContent = "Processing...";
-  button.disabled = true;
-
-  try {
-    const mailerId = getQueryParam("id");
-    if (!mailerId) throw new Error("Mailer ID not found");
-
-    // Use the selected mode from session storage
-    const mode = getCurrentMode();
-    
-    // Confirm with user about the current mode
-    const confirmSend = confirm(
-      `You are about to send the letter in ${mode.toUpperCase()} mode.\n\nDo you want to proceed?`
-    );
-    
-    if (!confirmSend) {
-      button.textContent = originalText;
-      button.disabled = false;
-      return false;
-    }
-
-    const todayObj = new Date();
-    const todayISO = todayObj.toISOString().split("T")[0];
-    const formattedDate = todayObj.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-
-    // --- Step 1: Load template content ---
-    const tplRes = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`);
-    if (!tplRes.ok) throw new Error("Failed to load template content");
-    const tpl = await tplRes.json();
-    const finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
-
-    // --- Step 2: Get PCM token using selected mode ---
-    const token = await getToken(mode);
-
-    // --- Step 3: Send letter via PCM ---
-    const pcmPayload = {
-      extRefNbr: "12345",
-      designID: 0,
-      mailClass: "FirstClass",
-      mailDate: todayISO,
-      color: true,
-      printOnBothSides: true,
-      insertAddressingPage: true,
-      envelope: {
-        font: "Bradley Hand",
-        type: "fullWindow",
-        fontColor: "Black",
-      },
-      recipients: recipients,
-      letter: finalHtml,
-    };
-
-    const res = await fetch("https://v3.pcmintegrations.com/order/letter", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(pcmPayload),
-    });
-
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || "PCM API request failed");
-
-    alert(` Letter sent successfully in ${mode.toUpperCase()} mode!`);
-
-    // --- Step 4: Update backend only after PCM succeeds ---
-    const updatePayload = {
-      status: "sent",
-      send_date: new Date().toISOString(),
-      template_id: templateId,
-    };
-
-    const updateRes = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${mailerId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatePayload),
-    });
-
-    if (!updateRes.ok) {
-      const errData = await updateRes.json().catch(() => ({}));
-      throw new Error(errData.detail || "Failed to update mailer table");
-    }
-
-    const updatedMailer = await updateRes.json();
-
-    // --- Step 5: Update frontend ---
-    currentMailer = { ...updatedMailer };
-    renderMailerInfo(currentMailer);
-
-    return true;
-
-  } catch (err) {
-    console.error("Order Design Error:", err);
-    alert("Error sending letter: " + err.message);
-    return false;
-  } finally {
-    button.textContent = originalText;
-    button.disabled = false;
-  }
-}
-
-async function deleteMailer(mailerId) {
-  if (!currentMailer) {
-    alert("No mailer loaded");
-    return;
-  }
-
-  const mailerEnvMode = currentMailer.env_mode || "testing";
-  const mailerStatus = currentMailer.status || "pending";
-  const isTestingMode = mailerEnvMode === "testing";
-
-  // Check if deletion is allowed based on env_mode
-  if (mailerEnvMode === "production" && mailerStatus === "sent") {
-    alert(
-      `Cannot delete sent mailers created in PRODUCTION mode.\n\nMailer was created in: ${mailerEnvMode.toUpperCase()} mode\nCurrent status: ${mailerStatus}\n\nOnly 'pending' or 'scheduled' mailers can be deleted in production.`
-    );
-    return;
-  }
-
-  let confirmMessage = `Are you sure you want to delete this mailer?\n\nMailer Status: ${mailerStatus}\nCreated in: ${mailerEnvMode.toUpperCase()} mode\n\nThis action cannot be undone.`;
-
-  if (!confirm(confirmMessage)) {
-    return;
-  }
-
-  try {
-    const res = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${mailerId}`,
-      {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+          document.body.appendChild(previewModal);
+        } catch (err) {
+          console.error("openTemplatePreview error:", err);
+          alert("Could not load template preview. Please try again.");
+        }
       }
-    );
 
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.detail || "Failed to delete mailer");
-    }
+      async function getToken(env = null) {
+        const selectedEnv = env || getCurrentMode();
 
-    const result = await res.json();
-    alert(
-      `✅ Mailer deleted successfully!\n\nCreated in: ${result.env_mode.toUpperCase()} mode\nStatus was: ${result.status}`
-    );
-    window.location.href = "dashboard.html";
-  } catch (err) {
-    console.error("Delete mailer error:", err);
-    alert("Error deleting mailer: " + err.message);
-  }
-}
+        const credentials = {
+          testing: {
+            apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
+            apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
+            childRefNbr: "myAccountReference",
+            url: "https://v3.pcmintegrations.com/auth/login",
+          },
+          production: {
+            apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
+            apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
+            childRefNbr: "myAccountReference",
+            url: "https://v3.pcmintegrations.com/auth/login",
+          },
+        };
 
-function attachMailerActions(mailer) {
-  const actions = document.getElementById("actionButtons");
-  actions.innerHTML = "";
+        const creds = credentials[selectedEnv];
+        const payload = {
+          apiKey: creds.apiKey,
+          apiSecret: creds.apiSecret,
+          childRefNbr: creds.childRefNbr,
+        };
 
-  const schedBtn = document.createElement("button");
-  schedBtn.className = "btn btn-secondary";
-  schedBtn.innerHTML = "Schedule";
-  schedBtn.onclick = () => {
-    if (!window.currentEditingTemplateId) {
-      alert("Please select a template before scheduling.");
-      return;
-    }
-    openScheduleModal(window.currentEditingTemplateId);
-  };
-  actions.appendChild(schedBtn);
+        const res = await fetch(creds.url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
 
-  const sendBtn = document.createElement("button");
-  sendBtn.className = "btn btn-primary";
-  sendBtn.innerHTML = "✉️ Send Letter";
-  sendBtn.onclick = (e) => {
-    if (!window.currentEditingTemplateId) {
-      alert("Please select a template before sending.");
-      return;
-    }
-    orderDesign(window.currentEditingTemplateId, sendBtn);
-  };
-  actions.appendChild(sendBtn);
+        if (!res.ok)
+          throw new Error(
+            `Auth failed for ${selectedEnv.toUpperCase()} environment`
+          );
+        const data = await res.json();
+        return data.token;
+      }
 
-  const deleteBtn = document.createElement("button");
-  deleteBtn.className = "btn btn-outline";
-  deleteBtn.innerHTML = "🗑️ Delete";
-  deleteBtn.style.color = "#ef4444";
-  deleteBtn.style.borderColor = "#ef4444";
-  deleteBtn.onclick = () => deleteMailer(mailer.id);
-  actions.appendChild(deleteBtn);
-}
+      async function orderDesign(templateId, button) {
+        const originalText = button.textContent;
+        button.textContent = "Processing...";
+        button.disabled = true;
 
-function formatSchedule(dateString) {
-  if (!dateString) return "No schedule set";
-  const d = new Date(dateString);
-  if (isNaN(d)) return "No schedule set";
-  return (
-    d.toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }) +
-    " at " +
-    d.toLocaleTimeString("en-GB", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    })
-  );
-}
+        try {
+          const mailerId = getQueryParam("id");
+          if (!mailerId) throw new Error("Mailer ID not found");
 
-function renderMailerInfo(mailer) {
-  currentMailer = mailer;
+          const mode = getCurrentMode();
 
-  document.getElementById("mailerName").textContent = mailer.mailer_name;
-  document.getElementById("mailerNameCard").textContent = mailer.mailer_name;
+          const confirmSend = confirm(
+            `You are about to send the letter in ${mode.toUpperCase()} mode.\n\nDo you want to proceed?`
+          );
 
-  const statusEl = document.getElementById("mailerStatus");
+          if (!confirmSend) {
+            button.textContent = originalText;
+            button.disabled = false;
+            return false;
+          }
 
-  if (mailer.status === "sent") {
-    statusEl.textContent = "Sent";
-    statusEl.className = "status-badge status-sent";
-    handleSentMailer(mailer);
-    return;
-  }
+          const todayObj = new Date();
+          const todayISO = todayObj.toISOString().split("T")[0];
+          const formattedDate = todayObj.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
 
-  if (mailer.status === "scheduled") {
-    statusEl.textContent = "Scheduled";
-    statusEl.className = "status-badge status-scheduled";
-    handleScheduledMailer(mailer);
-    return;
-  }
+          const tplRes = await fetch(
+            `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
+          );
+          if (!tplRes.ok) throw new Error("Failed to load template content");
+          const tpl = await tplRes.json();
+          const finalHtml = (tpl.html_content || "").replace(
+            /DATE/g,
+            formattedDate
+          );
 
-  statusEl.textContent = "Pending";
-  statusEl.className = "status-badge status-pending";
-  handlePendingMailer(mailer);
-}
+          const token = await getToken(mode);
 
-function handleScheduledMailer(mailer) {
-  const infoContent = document.getElementById("mailerInfoContent");
-  if (!infoContent) return;
+          const pcmPayload = {
+            extRefNbr: "12345",
+            designID: 0,
+            mailClass: "FirstClass",
+            mailDate: todayISO,
+            color: true,
+            printOnBothSides: true,
+            insertAddressingPage: true,
+            envelope: {
+              font: "Bradley Hand",
+              type: "fullWindow",
+              fontColor: "Black",
+            },
+            recipients: recipients,
+            letter: finalHtml,
+            returnAddress: {
+              firstName: "Mark",
+              lastName: "Fazzini",
+              address: "4175 Woodlands Pkwy",
+              city: "Palm Harbor",
+              state: "FL",
+              zipCode: "34685",
+            },
+          };
 
-  infoContent.innerHTML = "";
+          const res = await fetch(
+            "https://v3.pcmintegrations.com/order/letter",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(pcmPayload),
+            }
+          );
 
-  const sendDateItem = document.createElement("div");
-  sendDateItem.className = "info-item";
-  sendDateItem.innerHTML = `
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok)
+            throw new Error(data.message || "PCM API request failed");
+
+          alert(` Letter sent successfully in ${mode.toUpperCase()} mode!`);
+
+          const updatePayload = {
+            status: "sent",
+            send_date: new Date().toISOString(),
+            template_id: templateId,
+          };
+
+          const updateRes = await fetch(
+            `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${mailerId}`,
+            {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(updatePayload),
+            }
+          );
+
+          if (!updateRes.ok) {
+            const errData = await updateRes.json().catch(() => ({}));
+            throw new Error(errData.detail || "Failed to update mailer table");
+          }
+
+          const updatedMailer = await updateRes.json();
+
+          currentMailer = { ...updatedMailer };
+          renderMailerInfo(currentMailer);
+
+          return true;
+        } catch (err) {
+          console.error("Order Design Error:", err);
+          alert("Error sending letter: " + err.message);
+          return false;
+        } finally {
+          button.textContent = originalText;
+          button.disabled = false;
+        }
+      }
+
+      async function deleteMailer(mailerId) {
+        if (!currentMailer) {
+          alert("No mailer loaded");
+          return;
+        }
+
+        const mailerEnvMode = currentMailer.env_mode || "testing";
+        const mailerStatus = currentMailer.status || "pending";
+
+        if (mailerEnvMode === "production" && mailerStatus === "sent") {
+          alert(
+            `Cannot delete sent mailers created in PRODUCTION mode.\n\nMailer was created in: ${mailerEnvMode.toUpperCase()} mode\nCurrent status: ${mailerStatus}\n\nOnly 'pending' or 'scheduled' mailers can be deleted in production.`
+          );
+          return;
+        }
+
+        let confirmMessage = `Are you sure you want to delete this mailer?\n\nMailer Status: ${mailerStatus}\nCreated in: ${mailerEnvMode.toUpperCase()} mode\n\nThis action cannot be undone.`;
+
+        if (!confirm(confirmMessage)) {
+          return;
+        }
+
+        try {
+          const res = await fetch(
+            `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${mailerId}`,
+            {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            throw new Error(errorData.detail || "Failed to delete mailer");
+          }
+
+          const result = await res.json();
+          alert(
+            `✅ Mailer deleted successfully!\n\nCreated in: ${result.env_mode.toUpperCase()} mode\nStatus was: ${
+              result.status
+            }`
+          );
+          window.location.href = "dashboard.html";
+        } catch (err) {
+          console.error("Delete mailer error:", err);
+          alert("Error deleting mailer: " + err.message);
+        }
+      }
+
+      function attachMailerActions(mailer) {
+        const actions = document.getElementById("actionButtons");
+        actions.innerHTML = "";
+
+        const schedBtn = document.createElement("button");
+        schedBtn.className = "btn btn-secondary";
+        schedBtn.innerHTML = "Schedule";
+        schedBtn.onclick = () => {
+          if (!window.currentEditingTemplateId) {
+            alert("Please select a template before scheduling.");
+            return;
+          }
+          openScheduleModal(window.currentEditingTemplateId);
+        };
+        actions.appendChild(schedBtn);
+
+        const sendBtn = document.createElement("button");
+        sendBtn.className = "btn btn-primary";
+        sendBtn.innerHTML = "✉️ Send Letter";
+        sendBtn.onclick = (e) => {
+          if (!window.currentEditingTemplateId) {
+            alert("Please select a template before sending.");
+            return;
+          }
+          orderDesign(window.currentEditingTemplateId, sendBtn);
+        };
+        actions.appendChild(sendBtn);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "btn btn-outline";
+        deleteBtn.innerHTML = "🗑️ Delete";
+        deleteBtn.style.color = "#ef4444";
+        deleteBtn.style.borderColor = "#ef4444";
+        deleteBtn.onclick = () => deleteMailer(mailer.id);
+        actions.appendChild(deleteBtn);
+      }
+
+      function formatSchedule(dateString) {
+        if (!dateString) return "No schedule set";
+        const d = new Date(dateString);
+        if (isNaN(d)) return "No schedule set";
+        return (
+          d.toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }) +
+          " at " +
+          d.toLocaleTimeString("en-GB", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          })
+        );
+      }
+
+      function renderMailerInfo(mailer) {
+        currentMailer = mailer;
+
+        document.getElementById("mailerName").textContent = mailer.mailer_name;
+        document.getElementById("mailerNameCard").textContent =
+          mailer.mailer_name;
+
+        const statusEl = document.getElementById("mailerStatus");
+
+        if (mailer.status === "sent") {
+          statusEl.textContent = "Sent";
+          statusEl.className = "status-badge status-sent";
+          handleSentMailer(mailer);
+          return;
+        }
+
+        if (mailer.status === "scheduled") {
+          statusEl.textContent = "Scheduled";
+          statusEl.className = "status-badge status-scheduled";
+          handleScheduledMailer(mailer);
+          return;
+        }
+
+        statusEl.textContent = "Pending";
+        statusEl.className = "status-badge status-pending";
+        handlePendingMailer(mailer);
+      }
+
+      function handleScheduledMailer(mailer) {
+        const infoContent = document.getElementById("mailerInfoContent");
+        if (!infoContent) return;
+
+        infoContent.innerHTML = "";
+
+        const sendDateItem = document.createElement("div");
+        sendDateItem.className = "info-item";
+        sendDateItem.innerHTML = `
     <strong>Send Date & Time</strong>
     <span>${formatSchedule(mailer.schedule_time)}</span>
   `;
-  infoContent.appendChild(sendDateItem);
+        infoContent.appendChild(sendDateItem);
 
-  const expectedDelivery = new Date(mailer.schedule_time);
-  expectedDelivery.setDate(expectedDelivery.getDate() + 7);
+        const expectedDelivery = new Date(mailer.schedule_time);
+        expectedDelivery.setDate(expectedDelivery.getDate() + 7);
 
-  const deliveryItem = document.createElement("div");
-  deliveryItem.className = "info-item";
-  deliveryItem.innerHTML = `
+        const deliveryItem = document.createElement("div");
+        deliveryItem.className = "info-item";
+        deliveryItem.innerHTML = `
     <strong>Expected Delivery</strong>
     <span>${expectedDelivery.toLocaleDateString("en-GB", {
       day: "numeric",
@@ -1023,134 +1086,234 @@ function handleScheduledMailer(mailer) {
       year: "numeric",
     })}</span>
   `;
-  infoContent.appendChild(deliveryItem);
+        infoContent.appendChild(deliveryItem);
 
-  const recipientCount = JSON.parse(mailer.address_list || "[]").length;
-  const totalCost = (recipientCount * 1.31).toFixed(2);
+        const recipientCount = mailer.audience_list ? mailer.audience_list.length : 0;
+        const totalCost = (recipientCount * 1.31).toFixed(2);
 
-  const costItem = document.createElement("div");
-  costItem.className = "info-item";
-  costItem.innerHTML = `
+        const costItem = document.createElement("div");
+        costItem.className = "info-item";
+        costItem.innerHTML = `
     <strong>Expected Cost</strong>
     <span>$${totalCost}</span>
   `;
-  infoContent.appendChild(costItem);
+        infoContent.appendChild(costItem);
 
-  // Display env_mode info
-  const envModeItem = document.createElement("div");
-  envModeItem.className = "info-item";
-  envModeItem.innerHTML = `
+        const envModeItem = document.createElement("div");
+        envModeItem.className = "info-item";
+        envModeItem.innerHTML = `
     <strong>Created in Mode</strong>
     <span style="text-transform: uppercase; font-weight: 600; color: ${
       mailer.env_mode === "production" ? "#ef4444" : "#22c55e"
     }">${mailer.env_mode || "testing"}</span>
   `;
-  infoContent.appendChild(envModeItem);
+        infoContent.appendChild(envModeItem);
 
-  const actions = document.getElementById("actionButtons");
-  actions.innerHTML = "";
+        const actions = document.getElementById("actionButtons");
+        actions.innerHTML = "";
 
-  if (mailer.template_id) {
-    const viewTemplateBtn = document.createElement("button");
-    viewTemplateBtn.className = "btn btn-outline";
-    viewTemplateBtn.innerHTML = "View Selected Template";
-    viewTemplateBtn.onclick = () => openTemplatePreview(mailer.template_id);
-    actions.appendChild(viewTemplateBtn);
-  }
+        if (mailer.template_id || mailer.canva_link) {
+          const viewBtn = document.createElement("button");
+          viewBtn.className = "btn btn-outline";
+          viewBtn.innerHTML = mailer.canva_link
+            ? "🎨 View Canva Template"
+            : "📄 View Selected Template";
+          viewBtn.onclick = () => viewSelectedContent();
+          actions.appendChild(viewBtn);
+        }
 
-  const deleteBtn = document.createElement("button");
-  deleteBtn.className = "btn btn-outline";
-  deleteBtn.innerHTML = "🗑️ Delete";
-  deleteBtn.style.color = "#ef4444";
-  deleteBtn.style.borderColor = "#ef4444";
-  deleteBtn.onclick = () => deleteMailer(mailer.id);
-  actions.appendChild(deleteBtn);
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "btn btn-outline";
+        deleteBtn.innerHTML = "🗑️ Delete";
+        deleteBtn.style.color = "#ef4444";
+        deleteBtn.style.borderColor = "#ef4444";
+        deleteBtn.onclick = () => deleteMailer(mailer.id);
+        actions.appendChild(deleteBtn);
 
-  document.getElementById("templateSection").classList.remove("visible");
-  document.getElementById("filterBar").style.display = "none";
-}
+        document.getElementById("templateSection").classList.remove("visible");
+        document.getElementById("filterBar").style.display = "none";
+      }
 
-function handlePendingMailer(mailer) {
-  document.getElementById("templateSection").classList.add("visible");
-  loadTemplates();
+      function navigateToCanvaWithMailerContext() {
+        if (!currentMailer) {
+          alert("No mailer data available");
+          return;
+        }
 
-  const infoContent = document.getElementById("mailerInfoContent");
-  if (!infoContent) return;
+        console.log(
+          "📌 Preparing to navigate to Canva with mailer context:",
+          currentMailer
+        );
 
-  infoContent.innerHTML = "";
+        if (currentMailer.status !== "pending") {
+          alert("⚠️ Only pending mailers can select Canva templates");
+          return;
+        }
 
-  const recipientCount = JSON.parse(mailer.address_list || "[]").length;
-  const totalCost = (recipientCount * 1.31).toFixed(2);
+        let recipients = [];
+        let selectedAudienceId = currentMailer.audience_id || null;
 
-  const costItem = document.createElement("div");
-  costItem.className = "info-item";
-  costItem.innerHTML = `
+        if (currentMailer.audience_list && Array.isArray(currentMailer.audience_list)) {
+          recipients = currentMailer.audience_list;
+          console.log("✅ Recipients from audience_list:", recipients.length);
+        }
+
+        if (recipients.length === 0) {
+          alert("⚠️ No recipients in this mailer");
+          return;
+        }
+
+        const mailerContext = {
+          mode: "mailer",
+          mailerId: currentMailer.id,
+          mailerName: currentMailer.mailer_name,
+          recipients: recipients,
+          selectedAudienceId: selectedAudienceId,
+          envMode: currentMailer.env_mode || getCurrentMode(),
+          timestamp: Date.now(),
+        };
+
+        console.log("✅ Mailer context ready:", mailerContext);
+        console.log("📊 Audience ID:", selectedAudienceId);
+        console.log("📊 Recipients count:", recipients.length);
+
+        sessionStorage.setItem("mailerContext", JSON.stringify(mailerContext));
+        console.log("💾 Mailer context saved to sessionStorage");
+
+        console.log("🔗 Navigating to Canva templates page...");
+        window.location.href = "templateGallery.html?view=canva&source=mailer";
+      }
+
+      function handlePendingMailer(mailer) {
+        document.getElementById("templateSection").classList.add("visible");
+        loadTemplates();
+
+        const infoContent = document.getElementById("mailerInfoContent");
+        if (!infoContent) return;
+
+        infoContent.innerHTML = "";
+
+        const recipientCount = mailer.audience_list ? mailer.audience_list.length : 0;
+        const totalCost = (recipientCount * 1.31).toFixed(2);
+
+        const costItem = document.createElement("div");
+        costItem.className = "info-item";
+        costItem.innerHTML = `
     <strong>Estimated Cost</strong>
     <span>$${totalCost}</span>
   `;
-  infoContent.appendChild(costItem);
+        infoContent.appendChild(costItem);
 
-  attachMailerActions(mailer);
-  
-  document.getElementById("filterBar").style.display = "none";
-}
+        attachMailerActionsWithCanva(mailer);
 
-async function fetchScannedRecipients(qrCodeId) {
-  if (!qrCodeId) return [];
-  
-  // Always use current mode for fetching scanned recipients
-  const mode = getCurrentMode();
-  const token = await getToken(mode);
-  if (!token) return [];
+        document.getElementById("filterBar").style.display = "none";
+      }
 
-  try {
-    const res = await fetch(`https://v3.pcmintegrations.com/qr-code/${qrCodeId}/tracking`, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
+      function attachMailerActionsWithCanva(mailer) {
+        const actions = document.getElementById("actionButtons");
+        actions.innerHTML = "";
 
-    if (!res.ok) return [];
+        const schedBtn = document.createElement("button");
+        schedBtn.className = "btn btn-secondary";
+        schedBtn.innerHTML = "📅 Schedule";
+        schedBtn.onclick = () => {
+          if (!window.currentEditingTemplateId) {
+            alert("Please select a template before scheduling.");
+            return;
+          }
+          openScheduleModal(window.currentEditingTemplateId);
+        };
+        actions.appendChild(schedBtn);
 
-    const data = await res.json();
-    if (!data.results || !Array.isArray(data.results)) return [];
+        const sendBtn = document.createElement("button");
+        sendBtn.className = "btn btn-primary";
+        sendBtn.innerHTML = "✉️ Send Letter";
+        sendBtn.onclick = (e) => {
+          if (!window.currentEditingTemplateId) {
+            alert("Please select a template before sending.");
+            return;
+          }
+          orderDesign(window.currentEditingTemplateId, sendBtn);
+        };
+        actions.appendChild(sendBtn);
 
-    return data.results.map(item => ({
-      firstName: item.recipient.firstName,
-      lastName: item.recipient.lastName,
-      address: item.recipient.address,
-      city: item.recipient.city,
-      state: item.recipient.state,
-      zipcode: item.recipient.zipCode,
-    }));
-  } catch (err) {
-    console.error("Error fetching scanned recipients:", err);
-    return [];
-  }
-}
+        const canvaBtn = document.createElement("button");
+        canvaBtn.className = "btn btn-primary";
+        canvaBtn.style.background =
+          "linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)";
+        canvaBtn.innerHTML = "🎨 Select & Send Canva Template";
+        canvaBtn.onclick = () => {
+          navigateToCanvaWithMailerContext();
+        };
+        actions.appendChild(canvaBtn);
 
-function handleSentMailer(mailer) {
-  const infoContent = document.getElementById("mailerInfoContent");
-  if (!infoContent) return;
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "btn btn-outline";
+        deleteBtn.innerHTML = "🗑️ Delete";
+        deleteBtn.style.color = "#ef4444";
+        deleteBtn.style.borderColor = "#ef4444";
+        deleteBtn.onclick = () => deleteMailer(mailer.id);
+        actions.appendChild(deleteBtn);
+      }
 
-  infoContent.innerHTML = "";
+      async function fetchScannedRecipients(qrCodeId) {
+        if (!qrCodeId) return [];
 
-  const sendDateItem = document.createElement("div");
-  sendDateItem.className = "info-item";
-  sendDateItem.innerHTML = `
+        const mode = getCurrentMode();
+        const token = await getToken(mode);
+        if (!token) return [];
+
+        try {
+          const res = await fetch(
+            `https://v3.pcmintegrations.com/qr-code/${qrCodeId}/tracking`,
+            {
+              method: "GET",
+              headers: {
+                Accept: "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (!res.ok) return [];
+
+          const data = await res.json();
+          if (!data.results || !Array.isArray(data.results)) return [];
+
+          return data.results.map((item) => ({
+            firstName: item.recipient.firstName,
+            lastName: item.recipient.lastName,
+            address: item.recipient.address,
+            city: item.recipient.city,
+            state: item.recipient.state,
+            zipcode: item.recipient.zipCode,
+          }));
+        } catch (err) {
+          console.error("Error fetching scanned recipients:", err);
+          return [];
+        }
+      }
+
+      function handleSentMailer(mailer) {
+        const infoContent = document.getElementById("mailerInfoContent");
+        if (!infoContent) return;
+
+        infoContent.innerHTML = "";
+
+        const sendDateItem = document.createElement("div");
+        sendDateItem.className = "info-item";
+        sendDateItem.innerHTML = `
     <strong>Sent Date & Time</strong>
     <span>${formatSchedule(mailer.send_date)}</span>
   `;
-  infoContent.appendChild(sendDateItem);
+        infoContent.appendChild(sendDateItem);
 
-  const expectedDelivery = new Date(mailer.send_date);
-  expectedDelivery.setDate(expectedDelivery.getDate() + 7);
+        const expectedDelivery = new Date(mailer.send_date);
+        expectedDelivery.setDate(expectedDelivery.getDate() + 7);
 
-  const deliveryItem = document.createElement("div");
-  deliveryItem.className = "info-item";
-  deliveryItem.innerHTML = `
+        const deliveryItem = document.createElement("div");
+        deliveryItem.className = "info-item";
+        deliveryItem.innerHTML = `
     <strong>Expected Delivery</strong>
     <span>${expectedDelivery.toLocaleDateString("en-GB", {
       day: "numeric",
@@ -1158,222 +1321,223 @@ function handleSentMailer(mailer) {
       year: "numeric",
     })}</span>
   `;
-  infoContent.appendChild(deliveryItem);
+        infoContent.appendChild(deliveryItem);
 
-  const recipientCount = JSON.parse(mailer.address_list || "[]").length;
-  const totalCost = (recipientCount * 1.31).toFixed(2);
+        const recipientCount = mailer.audience_list ? mailer.audience_list.length : 0;
+        const totalCost = (recipientCount * 1.31).toFixed(2);
 
-  const costItem = document.createElement("div");
-  costItem.className = "info-item";
-  costItem.innerHTML = `
+        const costItem = document.createElement("div");
+        costItem.className = "info-item";
+        costItem.innerHTML = `
     <strong>Expected Cost</strong>
     <span>$${totalCost}</span>
   `;
-  infoContent.appendChild(costItem);
+        infoContent.appendChild(costItem);
 
-  // Display env_mode info
-  const envModeItem = document.createElement("div");
-  envModeItem.className = "info-item";
-  envModeItem.innerHTML = `
+        const envModeItem = document.createElement("div");
+        envModeItem.className = "info-item";
+        envModeItem.innerHTML = `
     <strong>Created in Mode</strong>
     <span style="text-transform: uppercase; font-weight: 600; color: ${
       mailer.env_mode === "production" ? "#ef4444" : "#22c55e"
     }">${mailer.env_mode || "testing"}</span>
   `;
-  infoContent.appendChild(envModeItem);
+        infoContent.appendChild(envModeItem);
 
-  const actions = document.getElementById("actionButtons");
-  actions.innerHTML = "";
+        const actions = document.getElementById("actionButtons");
+        actions.innerHTML = "";
 
-  if (mailer.template_id) {
-    const viewTemplateBtn = document.createElement("button");
-    viewTemplateBtn.className = "btn btn-outline";
-    viewTemplateBtn.innerHTML = "View Selected Template";
-    viewTemplateBtn.onclick = () => openTemplatePreview(mailer.template_id);
-    actions.appendChild(viewTemplateBtn);
-  }
+        if (mailer.template_id || mailer.canva_link) {
+          const viewBtn = document.createElement("button");
+          viewBtn.className = "btn btn-outline";
+          viewBtn.innerHTML = mailer.canva_link
+            ? "🎨 View Canva Template"
+            : "📄 View Selected Template";
+          viewBtn.onclick = () => viewSelectedContent();
+          actions.appendChild(viewBtn);
+        }
 
-  // Show delete button only if mailer was created in testing mode
-  const mailerEnvMode = mailer.env_mode || "testing";
-  if (mailerEnvMode === "testing") {
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "btn btn-outline";
-    deleteBtn.innerHTML = "🗑️ Delete (Testing Mode)";
-    deleteBtn.style.color = "#ef4444";
-    deleteBtn.style.borderColor = "#ef4444";
-    deleteBtn.onclick = () => deleteMailer(mailer.id);
-    actions.appendChild(deleteBtn);
-  } else {
-    // Show disabled delete button for production mode
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "btn btn-outline";
-    deleteBtn.innerHTML = "🗑️ Delete (Production - Disabled)";
-    deleteBtn.style.color = "#9ca3af";
-    deleteBtn.style.borderColor = "#9ca3af";
-    deleteBtn.disabled = true;
-    deleteBtn.title =
-      "Cannot delete sent mailers created in production mode";
-    actions.appendChild(deleteBtn);
-  }
+        const mailerEnvMode = mailer.env_mode || "testing";
+        if (mailerEnvMode === "testing") {
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "btn btn-outline";
+          deleteBtn.innerHTML = "🗑️ Delete (Testing Mode)";
+          deleteBtn.style.color = "#ef4444";
+          deleteBtn.style.borderColor = "#ef4444";
+          deleteBtn.onclick = () => deleteMailer(mailer.id);
+          actions.appendChild(deleteBtn);
+        } else {
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "btn btn-outline";
+          deleteBtn.innerHTML = "🗑️ Delete (Production - Disabled)";
+          deleteBtn.style.color = "#9ca3af";
+          deleteBtn.style.borderColor = "#9ca3af";
+          deleteBtn.disabled = true;
+          deleteBtn.title =
+            "Cannot delete sent mailers created in production mode";
+          actions.appendChild(deleteBtn);
+        }
 
-  document.getElementById("templateSection").classList.remove("visible");
-  document.getElementById("filterBar").style.display = "flex";
-}
-
-
-async function loadTemplates(selectedTemplateId = null) {
-  const templatesGrid = document.getElementById("templatesGrid");
-
-  try {
-    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates");
-    const templates = await response.json();
-
-    templatesGrid.innerHTML = "";
-
-    // Function to render each template card safely
-    function renderTemplateCard(tpl) {
-      const div = document.createElement("div");
-      div.classList.add("template-card");
-      div.dataset.templateId = tpl.id;
-
-      if (selectedTemplateId && tpl.id === selectedTemplateId) {
-        div.classList.add("selected");
-        window.currentEditingTemplateId = tpl.id;
+        document.getElementById("templateSection").classList.remove("visible");
+        document.getElementById("filterBar").style.display = "flex";
       }
 
-      const encodedHtml = encodeURIComponent(tpl.html_content || "");
+      async function loadTemplates(selectedTemplateId = null) {
+        const templatesGrid = document.getElementById("templatesGrid");
 
-      div.innerHTML = `
+        try {
+          const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates");
+          const templates = await response.json();
+
+          templatesGrid.innerHTML = "";
+
+          function renderTemplateCard(tpl) {
+            const div = document.createElement("div");
+            div.classList.add("template-card");
+            div.dataset.templateId = tpl.id;
+
+            if (selectedTemplateId && tpl.id === selectedTemplateId) {
+              div.classList.add("selected");
+              window.currentEditingTemplateId = tpl.id;
+            }
+
+            const encodedHtml = encodeURIComponent(tpl.html_content || "");
+
+            div.innerHTML = `
         <div class="template-preview">${tpl.html_content}</div>
         <button class="full-preview-btn" data-html="${encodedHtml}">
           Full Preview
         </button>
       `;
 
-      // Handle full preview safely (no inline JS)
-      const previewBtn = div.querySelector(".full-preview-btn");
-      previewBtn.addEventListener("click", (event) => {
-        const encoded = event.currentTarget.dataset.html;
-        openFullPreview(event, encoded);
-      });
+            const previewBtn = div.querySelector(".full-preview-btn");
+            previewBtn.addEventListener("click", (event) => {
+              const encoded = event.currentTarget.dataset.html;
+              openFullPreview(event, encoded);
+            });
 
-      // Handle template selection
-      div.addEventListener("click", (e) => {
-        if (e.target.closest("button")) return;
+            div.addEventListener("click", (e) => {
+              if (e.target.closest("button")) return;
 
-        document
-          .querySelectorAll(".template-card")
-          .forEach((el) => el.classList.remove("selected"));
-        div.classList.add("selected");
-        window.currentEditingTemplateId = tpl.id;
-      });
+              document
+                .querySelectorAll(".template-card")
+                .forEach((el) => el.classList.remove("selected"));
+              div.classList.add("selected");
+              window.currentEditingTemplateId = tpl.id;
+            });
 
-      return div;
-    }
+            return div;
+          }
 
-    // Render first 6 templates
-    templates.slice(0, 6).forEach((tpl) => {
-      templatesGrid.appendChild(renderTemplateCard(tpl));
-    });
+          templates.slice(0, 6).forEach((tpl) => {
+            templatesGrid.appendChild(renderTemplateCard(tpl));
+          });
 
-    // Add "Show All Templates" button if needed
-    if (templates.length > 6) {
-      const showAllBtn = document.createElement("button");
-      showAllBtn.textContent = "Show All Templates";
-      showAllBtn.classList.add("show-all-btn");
+          if (templates.length > 6) {
+            const showAllBtn = document.createElement("button");
+            showAllBtn.textContent = "Show All Templates";
+            showAllBtn.classList.add("show-all-btn");
 
-      showAllBtn.addEventListener("click", () => {
-        showAllBtn.remove();
-        templates.slice(6).forEach((tpl) => {
-          templatesGrid.appendChild(renderTemplateCard(tpl));
-        });
-      });
+            showAllBtn.addEventListener("click", () => {
+              showAllBtn.remove();
+              templates.slice(6).forEach((tpl) => {
+                templatesGrid.appendChild(renderTemplateCard(tpl));
+              });
+            });
 
-      templatesGrid.appendChild(showAllBtn);
-    }
-  } catch (err) {
-    console.error("Error loading templates:", err);
-    templatesGrid.innerHTML = "<p>Failed to load templates.</p>";
-  }
-}
-
-// Updated openFullPreview - prevent event propagation
-function openFullPreview(event, encodedHtml) {
-  event.preventDefault();
-  event.stopPropagation();
-
-  const html = decodeURIComponent(encodedHtml);
-  const overlay = document.getElementById("previewOverlay");
-  const body = document.getElementById("previewBody");
-
-  if (!overlay || !body) {
-    console.error("Preview elements not found in DOM");
-    return;
-  }
-
-  body.innerHTML = html;
-  overlay.style.display = "flex";
-}
-
-function closePreview() {
-  document.getElementById("previewOverlay").style.display = "none";
-  document.getElementById("previewBody").innerHTML = "";
-}
-
-async function getQrCodeIdFromTemplate(templateId) {
-  if (!templateId) return null;
-  try {
-    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`);
-    if (!res.ok) throw new Error("Failed to fetch template for QR code");
-    const template = await res.json();
-    return template.qr_code_id || null;
-  } catch (err) {
-    console.error("Error fetching QR code ID:", err);
-    return null;
-  }
-}
-
-async function renderRecipients(list, templateId = null, mailerStatus = "pending") {
-  let qrCodeId = null;
-  
-  if (mailerStatus === "sent" && templateId) {
-    qrCodeId = await getQrCodeIdFromTemplate(templateId);
-
-    if (qrCodeId) {
-      try {
-        const scannedRecipients = await fetchScannedRecipients(qrCodeId);
-
-        list = list.map((r) => {
-          const matched = scannedRecipients.find(
-            (s) =>
-              s.firstName === r.firstName &&
-              s.lastName === r.lastName &&
-              s.address === r.address
-          );
-          return { ...r, scanned: !!matched };
-        });
-
-        recipients = list;
-      } catch (err) {
-        console.error("Error updating scanned status:", err);
+            templatesGrid.appendChild(showAllBtn);
+          }
+        } catch (err) {
+          console.error("Error loading templates:", err);
+          templatesGrid.innerHTML = "<p>Failed to load templates.</p>";
+        }
       }
-    }
-  }
 
-  const tableDiv = document.getElementById("recipientsTable");
-  if (!list.length) {
-    tableDiv.innerHTML = "<p style='text-align:center;color:#64748b;padding:1rem;'>No recipients available.</p>";
-    return;
-  }
+      function openFullPreview(event, encodedHtml) {
+        event.preventDefault();
+        event.stopPropagation();
 
-  const showScannedStatus = mailerStatus === "sent";
+        const html = decodeURIComponent(encodedHtml);
+        const overlay = document.getElementById("previewOverlay");
+        const body = document.getElementById("previewBody");
 
-  tableDiv.innerHTML = list
-    .map(
-      (r) => `
+        if (!overlay || !body) {
+          console.error("Preview elements not found in DOM");
+          return;
+        }
+
+        body.innerHTML = html;
+        overlay.style.display = "flex";
+      }
+
+      function closePreview() {
+        document.getElementById("previewOverlay").style.display = "none";
+        document.getElementById("previewBody").innerHTML = "";
+      }
+
+      async function getQrCodeIdFromTemplate(templateId) {
+        if (!templateId) return null;
+        try {
+          const res = await fetch(
+            `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
+          );
+          if (!res.ok) throw new Error("Failed to fetch template for QR code");
+          const template = await res.json();
+          return template.qr_code_id || null;
+        } catch (err) {
+          console.error("Error fetching QR code ID:", err);
+          return null;
+        }
+      }
+
+      async function renderRecipients(
+        list,
+        templateId = null,
+        mailerStatus = "pending"
+      ) {
+        let qrCodeId = null;
+
+        if (mailerStatus === "sent" && templateId) {
+          qrCodeId = await getQrCodeIdFromTemplate(templateId);
+
+          if (qrCodeId) {
+            try {
+              const scannedRecipients = await fetchScannedRecipients(qrCodeId);
+
+              list = list.map((r) => {
+                const matched = scannedRecipients.find(
+                  (s) =>
+                    s.firstName === r.firstName &&
+                    s.lastName === r.lastName &&
+                    s.address === r.address
+                );
+                return { ...r, scanned: !!matched };
+              });
+
+              recipients = list;
+            } catch (err) {
+              console.error("Error updating scanned status:", err);
+            }
+          }
+        }
+
+        const tableDiv = document.getElementById("recipientsTable");
+        if (!list.length) {
+          tableDiv.innerHTML =
+            "<p style='text-align:center;color:#64748b;padding:1rem;'>No recipients available.</p>";
+          return;
+        }
+
+        const showScannedStatus = mailerStatus === "sent";
+
+        tableDiv.innerHTML = list
+          .map(
+            (r) => `
     <div class="recipient-item">
       <div class="recipient-name">${r.firstName || ""} ${r.lastName || ""}</div>
-      <div class="recipient-address">${r.address || ""}, ${r.city || ""} ${r.state || ""} ${r.zipcode || ""}</div>
+      <div class="recipient-address">${r.address || ""}, ${r.city || ""} ${
+              r.state || ""
+            } ${r.zipcode || ""}</div>
       ${
         showScannedStatus && r.scanned !== undefined
           ? `<span class="recipient-status ${
@@ -1383,94 +1547,101 @@ async function renderRecipients(list, templateId = null, mailerStatus = "pending
       }
     </div>
   `
-    )
-    .join("");
-}
+          )
+          .join("");
+      }
 
-async function updateRecipients() {
-  if (!currentMailer) return;
+      async function updateRecipients() {
+        if (!currentMailer) return;
 
-  const filter = document.getElementById("filterScanned").checked;
-  const originalList = JSON.parse(currentMailer.address_list || "[]");
+        const filter = document.getElementById("filterScanned").checked;
+        
+        const originalList = currentMailer.audience_list || [];
 
-  await renderRecipients(
-    filter 
-      ? originalList.filter((r) => r.scanned) 
-      : originalList, 
-    currentMailer.template_id,
-    currentMailer.status || "pending"
-  );
-}
+        await renderRecipients(
+          filter ? originalList.filter((r) => r.scanned) : originalList,
+          currentMailer.template_id,
+          currentMailer.status || "pending"
+        );
+      }
 
-async function loadMailerDetail() {
-  const mailerId = getQueryParam("id");
-  if (!mailerId) {
-    alert("No mailer ID provided");
-    return;
-  }
+      async function loadMailerDetail() {
+        const mailerId = getQueryParam("id");
+        if (!mailerId) {
+          alert("No mailer ID provided");
+          return;
+        }
 
-  try {
-    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${mailerId}`);
-    if (!res.ok) throw new Error("Failed to fetch mailer details");
+        try {
+          const res = await fetch(
+            `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${mailerId}`
+          );
+          if (!res.ok) throw new Error("Failed to fetch mailer details");
 
-    const mailer = await res.json();
-    currentMailer = mailer;
-    renderMailerInfo(mailer);
+          const mailer = await res.json();
+          console.log("📦 Mailer data received:", mailer);
 
-    recipients = JSON.parse(mailer.address_list || "[]");
-    await updateRecipients();
-  } catch (err) {
-    console.error(err);
-    alert("Could not load mailer details");
-  }
-}
+          currentMailer = mailer;
 
-// Initialize mode selector on page load
-function initializeModeSelector() {
-  const testingBtn = document.getElementById('testingModeBtn');
-  const productionBtn = document.getElementById('productionModeBtn');
-  
-  if (!testingBtn || !productionBtn) return;
-  
-  // Update current mode from session
-  currentMode = getCurrentMode();
-  
-  // Set initial active state
-  if (currentMode === 'production') {
-    testingBtn.classList.remove('active');
-    productionBtn.classList.add('active');
-  } else {
-    testingBtn.classList.add('active');
-    productionBtn.classList.remove('active');
-  }
-  
-  // Testing mode button click
-  testingBtn.addEventListener('click', () => {
-    currentMode = 'testing';
-    sessionStorage.setItem('apiMode', 'testing');
-    testingBtn.classList.add('active');
-    productionBtn.classList.remove('active');
-    alert('Switched to TESTING mode');
-  });
-  
-  // Production mode button click
-  productionBtn.addEventListener('click', () => {
-    currentMode = 'production';
-    sessionStorage.setItem('apiMode', 'production');
-    productionBtn.classList.add('active');
-    testingBtn.classList.remove('active');
-    alert('Switched to PRODUCTION mode');
-  });
-}
+          if (mailer.audience_list && Array.isArray(mailer.audience_list)) {
+            recipients = mailer.audience_list;
+            console.log("✅ Recipients from audience_list:", recipients.length);
+          } else {
+            recipients = [];
+            console.warn("⚠️ No recipients found in mailer data");
+          }
 
-document
-  .getElementById("filterScanned")
-  .addEventListener("change", updateRecipients);
+          console.log("📊 Total recipients loaded:", recipients.length);
+          
+          renderMailerInfo(mailer);
+          await updateRecipients();
+        } catch (err) {
+          console.error(err);
+          alert("Could not load mailer details");
+        }
+      }
 
-window.onload = () => {
-  initializeModeSelector();
-  loadMailerDetail();
-};
-</script>
+      function initializeModeSelector() {
+        const testingBtn = document.getElementById("testingModeBtn");
+        const productionBtn = document.getElementById("productionModeBtn");
+
+        if (!testingBtn || !productionBtn) return;
+
+        currentMode = getCurrentMode();
+
+        if (currentMode === "production") {
+          testingBtn.classList.remove("active");
+          productionBtn.classList.add("active");
+        } else {
+          testingBtn.classList.add("active");
+          productionBtn.classList.remove("active");
+        }
+
+        testingBtn.addEventListener("click", () => {
+          currentMode = "testing";
+          sessionStorage.setItem("apiMode", "testing");
+          testingBtn.classList.add("active");
+          productionBtn.classList.remove("active");
+          alert("Switched to TESTING mode");
+        });
+
+        productionBtn.addEventListener("click", () => {
+          currentMode = "production";
+          sessionStorage.setItem("apiMode", "production");
+          productionBtn.classList.add("active");
+          testingBtn.classList.remove("active");
+          alert("Switched to PRODUCTION mode");
+        });
+      }
+
+      document
+        .getElementById("filterScanned")
+        .addEventListener("change", updateRecipients);
+
+      window.onload = () => {
+        initializeModeSelector();
+        loadMailerDetail();
+      };
+    </script>
   </body>
 </html>

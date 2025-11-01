@@ -1,54 +1,58 @@
-// campaign-detail.js
-// Updated: Template selection via side panel button
+// ============================================
+// GLOBAL STATE
+// ============================================
 
-// Global State
 let recipients = [];
 let currentCampaign = null;
 let allMailers = [];
+let currentAudienceId = null; // ✅ NEW: Track audience ID
 window.currentEditingTemplateId = null;
 window.currentEditingMailerId = null;
 window.currentSideMailerId = null;
 let templatesCache = [];
 
-// Get mode from session storage
-let currentMode = sessionStorage.getItem('apiMode') || 'testing';
-console.log('Current API Mode:', currentMode);
+// ============================================
+// MODE MANAGEMENT
+// ============================================
 
-// Function to get current mode
+let currentMode = sessionStorage.getItem("apiMode") || "testing";
+console.log("Current API Mode:", currentMode);
+
 function getCurrentMode() {
-  return sessionStorage.getItem('apiMode') || 'testing';
+  return sessionStorage.getItem("apiMode") || "testing";
 }
 
-// Helper to get query param
 function getQueryParam(key) {
   return new URLSearchParams(window.location.search).get(key);
 }
 
+// ============================================
+// AUTHENTICATION
+// ============================================
+
 async function getToken(env = null) {
-  // Use provided env or fall back to current mode from session
   const selectedEnv = env || getCurrentMode();
-  
-  // Define credentials for both environments
+
   const credentials = {
     testing: {
       apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
       apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
       childRefNbr: "myAccountReference",
-      url: "https://v3.pcmintegrations.com/auth/login"
+      url: "https://v3.pcmintegrations.com/auth/login",
     },
     production: {
       apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
       apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
       childRefNbr: "myAccountReference",
-      url: "https://v3.pcmintegrations.com/auth/login"
-    }
+      url: "https://v3.pcmintegrations.com/auth/login",
+    },
   };
 
   const creds = credentials[selectedEnv];
   const payload = {
     apiKey: creds.apiKey,
     apiSecret: creds.apiSecret,
-    childRefNbr: creds.childRefNbr
+    childRefNbr: creds.childRefNbr,
   };
 
   const res = await fetch(creds.url, {
@@ -57,16 +61,45 @@ async function getToken(env = null) {
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) throw new Error(`Auth failed for ${selectedEnv.toUpperCase()} environment`);
+  if (!res.ok)
+    throw new Error(`Auth failed for ${selectedEnv.toUpperCase()} environment`);
   const data = await res.json();
   return data.token;
 }
 
+// ============================================
+// ✅ NEW: FETCH RECIPIENTS FROM AUDIENCE
+// ============================================
+
+async function getRecipientsFromAudience(audienceId) {
+  if (!audienceId) return [];
+
+  try {
+    console.log("📥 Fetching recipients from audience ID:", audienceId);
+    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/audiences/${audienceId}`);
+
+    if (!res.ok) throw new Error("Failed to fetch audience");
+
+    const audience = await res.json();
+    const audienceList = Array.isArray(audience.audience_list)
+      ? audience.audience_list
+      : JSON.parse(audience.audience_list);
+
+    console.log("✅ Recipients fetched from audience:", audienceList.length);
+    return audienceList;
+  } catch (err) {
+    console.error("Error fetching audience recipients:", err);
+    return [];
+  }
+}
+
+// ============================================
+// QR CODE & SCANNING
+// ============================================
 
 async function fetchScannedRecipients(qrCodeId) {
   if (!qrCodeId) return [];
   try {
-    // Always fetch a production token
     const mode = getCurrentMode();
     const token = await getToken(mode);
 
@@ -99,7 +132,6 @@ async function fetchScannedRecipients(qrCodeId) {
   }
 }
 
-
 async function getQrCodeIdFromTemplate(templateId) {
   if (!templateId) return null;
   try {
@@ -113,7 +145,10 @@ async function getQrCodeIdFromTemplate(templateId) {
   }
 }
 
-/* ---------- Utility ---------- */
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
 function formatSchedule(dateString) {
   if (!dateString) return "Not Scheduled";
   const d = new Date(dateString);
@@ -138,7 +173,10 @@ function addDaysToDate(dateString, days) {
   }
 }
 
-/* ---------- Templates ---------- */
+// ============================================
+// TEMPLATE MANAGEMENT
+// ============================================
+
 async function loadTemplates() {
   try {
     const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates");
@@ -152,7 +190,6 @@ async function loadTemplates() {
   }
 }
 
-/* ---------- Render templates in grid with preview ---------- */
 async function renderTemplateGrid(templates, containerId, selectable = true) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -225,7 +262,6 @@ async function renderTemplateGrid(templates, containerId, selectable = true) {
   });
 }
 
-/* ---------- Preview template ---------- */
 async function previewTemplate(templateId, event) {
   if (event) event.stopPropagation();
 
@@ -254,7 +290,10 @@ function closeFullPreview() {
   document.getElementById("fullPreviewModal").style.display = "none";
 }
 
-/* ---------- Render recipients ---------- */
+// ============================================
+// ✅ UPDATED: RENDER RECIPIENTS
+// ============================================
+
 async function renderRecipientsForContainer(
   list,
   containerId,
@@ -266,12 +305,24 @@ async function renderRecipientsForContainer(
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  // Only fetch scanned recipients if status is "sent"
+  console.log("📥 renderRecipientsForContainer called with:", {
+    recipientCount: list.length,
+    mailerStatus,
+    templateId,
+    filterScanned,
+  });
+
+  // ✅ FIXED: Only fetch scanned recipients if status is "sent" AND we have a templateId
   if (templateId && mailerStatus === "sent") {
     try {
       const qrCodeId = await getQrCodeIdFromTemplate(templateId);
+      console.log("🔍 QR Code ID retrieved:", qrCodeId);
+
       if (qrCodeId) {
         const scanned = await fetchScannedRecipients(qrCodeId);
+        console.log("✅ Scanned recipients fetched:", scanned.length);
+
+        // Map scanned status to original recipients
         list = list.map((r) => {
           const matched = scanned.find(
             (s) =>
@@ -282,18 +333,26 @@ async function renderRecipientsForContainer(
           return { ...r, scanned: !!matched };
         });
       } else {
-        list = list.map((r) => ({ ...r, scanned: !!r.scanned }));
+        console.warn("⚠️ No QR Code ID found for template");
+        list = list.map((r) => ({ ...r, scanned: false }));
       }
     } catch (err) {
-      console.error("renderRecipientsForContainer:", err);
+      console.error("❌ Error fetching scanned recipients:", err);
+      // Keep recipients visible even if scan fetch fails
+      list = list.map((r) => ({ ...r, scanned: false }));
     }
   } else {
-    // For pending or scheduled, don't mark as scanned
+    // For pending/scheduled, mark all as not scanned
     list = list.map((r) => ({ ...r, scanned: false }));
   }
 
+  // ✅ FIXED: Apply filters AFTER adding scanned status
   let filtered = list.slice();
-  if (filterScanned) filtered = filtered.filter((r) => r.scanned);
+
+  if (filterScanned) {
+    filtered = filtered.filter((r) => r.scanned);
+  }
+
   if (searchTerm) {
     const st = searchTerm.toLowerCase();
     filtered = filtered.filter((r) =>
@@ -303,13 +362,20 @@ async function renderRecipientsForContainer(
     );
   }
 
-  if (!filtered.length) {
-    container.innerHTML =
-      "<p style='text-align:center;color:#64748b;padding:1rem;'>No recipients available</p>";
+  console.log("📊 Filtered recipients:", filtered.length);
+
+  // ✅ FIXED: Show message only if TRULY no recipients
+  if (!filtered || filtered.length === 0) {
+    if (!list || list.length === 0) {
+      container.innerHTML =
+        "<p style='text-align:center;color:#64748b;padding:1rem;'>No recipients available</p>";
+    } else {
+      container.innerHTML =
+        "<p style='text-align:center;color:#64748b;padding:1rem;'>No recipients match your filters</p>";
+    }
     return;
   }
 
-  // Only show scanned status badge if mailer status is "sent"
   const showScannedStatus = mailerStatus === "sent";
 
   container.innerHTML = filtered
@@ -333,14 +399,16 @@ async function renderRecipientsForContainer(
     .join("");
 }
 
-/* ---------- Compute expected delivery ---------- */
 function computeExpectedDeliveryForMailer(mailer) {
   if (mailer.send_date) return addDaysToDate(mailer.send_date, 9);
   if (mailer.schedule_time) return addDaysToDate(mailer.schedule_time, 9);
   return null;
 }
 
-/* ---------- Render mailers ---------- */
+// ============================================
+// ✅ UPDATED: RENDER MAILERS
+// ============================================
+
 function renderMailers(mailers) {
   const mailersSection = document.getElementById("mailersSection");
   mailersSection.innerHTML = "";
@@ -355,7 +423,39 @@ function renderMailers(mailers) {
     mailers.length === 1 && mailers[0].status === "pending";
 
   mailers.forEach((mailer) => {
-    const recipientCount = JSON.parse(mailer.address_list || "[]").length;
+    console.log("🔍 Mailer data:", mailer); // ✅ DEBUG LOG
+
+    // ✅ UPDATED: Better recipient parsing
+    let recipientCount = 0;
+
+    if (mailer.audience_id && mailer.audience_list) {
+      try {
+        const audienceList =
+          typeof mailer.audience_list === "string"
+            ? JSON.parse(mailer.audience_list)
+            : mailer.audience_list;
+        recipientCount = Array.isArray(audienceList) ? audienceList.length : 0;
+        console.log("📊 Recipients from audience:", recipientCount); // ✅ DEBUG LOG
+      } catch (err) {
+        console.error("Error parsing audience_list:", err);
+        recipientCount = 0;
+      }
+    } else if (mailer.address_list) {
+      try {
+        const addressList =
+          typeof mailer.address_list === "string"
+            ? JSON.parse(mailer.address_list)
+            : mailer.address_list;
+        recipientCount = Array.isArray(addressList) ? addressList.length : 0;
+        console.log("📊 Recipients from address_list:", recipientCount); // ✅ DEBUG LOG
+      } catch (err) {
+        console.error("Error parsing address_list:", err);
+        recipientCount = 0;
+      }
+    }
+
+    console.log("✅ Final recipient count:", recipientCount); // ✅ DEBUG LOG
+
     const totalCost = (recipientCount * 1.31).toFixed(2);
     const expectedIso = computeExpectedDeliveryForMailer(mailer);
     const expectedText = expectedIso
@@ -375,19 +475,41 @@ function renderMailers(mailers) {
     const card = document.createElement("div");
     card.className = "mailer-card";
 
-    const canDelete = mailer.status === "pending" || mailer.status === "scheduled";
-    
+    const canDelete =
+      mailer.status === "pending" || mailer.status === "scheduled";
+
     const actionButtons = hasSinglePending
       ? `
-      <button class="btn btn-outline" onclick="openSidePanel(${mailer.id})">View Detail</button>
-      <button class="btn btn-secondary" onclick="openTemplateSelector(${mailer.id}, event)">Select Template</button>
-      <button class="btn btn-secondary" onclick="openScheduleModal(${mailer.id})">Schedule</button>
-      <button class="btn btn-primary" onclick="sendMailer(${mailer.id}, this)">Send Letter</button>
-      ${canDelete ? `<button class="btn btn-danger" onclick="deleteMailer(${mailer.id})">Delete</button>` : ""}
+      <button class="btn btn-outline" onclick="openSidePanel(${
+        mailer.id
+      })">View Detail</button>
+      <button class="btn btn-secondary" onclick="openTemplateSelector(${
+        mailer.id
+      }, event)">Select Template</button>
+      <button class="btn btn-secondary" onclick="navigateToCanvaTemplates(${
+        mailer.id
+      })">Select Canva Template</button>
+      <button class="btn btn-secondary" onclick="openScheduleModal(${
+        mailer.id
+      })">Schedule</button>
+      <button class="btn btn-primary" onclick="sendMailer(${
+        mailer.id
+      }, this)">Send Letter</button>
+      ${
+        canDelete
+          ? `<button class="btn btn-danger" onclick="deleteMailer(${mailer.id})">Delete</button>`
+          : ""
+      }
     `
       : `
-      <button class="btn btn-outline" onclick="openSidePanel(${mailer.id}, event)">View Detail</button>
-      ${canDelete ? `<button class="btn btn-danger" onclick="deleteMailer(${mailer.id})">Delete</button>` : ""}
+      <button class="btn btn-outline" onclick="openSidePanel(${
+        mailer.id
+      }, event)">View Detail</button>
+      ${
+        canDelete
+          ? `<button class="btn btn-danger" onclick="deleteMailer(${mailer.id})">Delete</button>`
+          : ""
+      }
     `;
 
     card.innerHTML = `
@@ -415,8 +537,10 @@ function renderMailers(mailers) {
   });
 }
 
+// ============================================
+// DELETE FUNCTIONS
+// ============================================
 
-/* ---------- Delete Mailer ---------- */
 async function deleteMailer(mailerId) {
   const mailer = allMailers.find((m) => m.id === mailerId);
   if (!mailer) {
@@ -426,17 +550,15 @@ async function deleteMailer(mailerId) {
 
   const mailerEnvMode = mailer.env_mode || "testing";
 
-  // ❌ Prevent deletion if sent in production
   if (mailer.status === "sent" && mailerEnvMode === "production") {
     alert(`❌ Cannot delete sent mailers in PRODUCTION mode.`);
     return;
   }
 
-  // If only one mailer and deletable, confirm full campaign deletion
   const canDeleteSent = mailerEnvMode === "testing" && mailer.status === "sent";
   if (
-    allMailers.length === 1 &&
-    ["pending", "scheduled"].includes(mailer.status) ||
+    (allMailers.length === 1 &&
+      ["pending", "scheduled"].includes(mailer.status)) ||
     canDeleteSent
   ) {
     const confirmDelete = confirm(
@@ -447,7 +569,6 @@ async function deleteMailer(mailerId) {
     return;
   }
 
-  // Confirm deletion of individual mailer
   const confirmDelete = confirm(
     `Are you sure you want to delete "${mailer.mailer_name}"?\nThis action cannot be undone.`
   );
@@ -473,7 +594,6 @@ async function deleteMailer(mailerId) {
   }
 }
 
-/* ---------- Delete Campaign ---------- */
 async function deleteCampaign() {
   const campaignId = getQueryParam("id");
   if (!campaignId) {
@@ -481,14 +601,15 @@ async function deleteCampaign() {
     return;
   }
 
-  // Get env_mode from the first mailer
-  const firstMailerEnvMode = allMailers.length > 0 ? (allMailers[0].env_mode || "testing") : "testing";
+  const firstMailerEnvMode =
+    allMailers.length > 0 ? allMailers[0].env_mode || "testing" : "testing";
 
-  // Check if first mailer is sent and env_mode is production
   if (allMailers.length > 0) {
     const firstMailerStatus = allMailers[0].status || "pending";
     if (firstMailerStatus === "sent" && firstMailerEnvMode === "production") {
-      alert(`Cannot delete campaigns with sent mailers in PRODUCTION mode.\n\nFirst mailer environment: ${firstMailerEnvMode.toUpperCase()}`);
+      alert(
+        `Cannot delete campaigns with sent mailers in PRODUCTION mode.\n\nFirst mailer environment: ${firstMailerEnvMode.toUpperCase()}`
+      );
       return;
     }
   }
@@ -499,13 +620,10 @@ async function deleteCampaign() {
   if (!confirmDelete) return;
 
   try {
-    const res = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/campaigns/${campaignId}`,
-      {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/campaigns/${campaignId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
 
     if (!res.ok) {
       const txt = await res.text();
@@ -513,7 +631,6 @@ async function deleteCampaign() {
     }
 
     alert(`Campaign deleted successfully!`);
-    // Redirect to campaigns list or home page
     window.location.href = "dashboard.html";
   } catch (err) {
     console.error("deleteCampaign error:", err);
@@ -521,7 +638,6 @@ async function deleteCampaign() {
   }
 }
 
-/* ---------- Update visibility of delete campaign button ---------- */
 function updateDeleteCampaignButtonVisibility() {
   const deleteBtn = document.getElementById("deleteCampaignBtn");
   if (!deleteBtn) return;
@@ -531,13 +647,11 @@ function updateDeleteCampaignButtonVisibility() {
     const firstMailerStatus = firstMailer.status || "pending";
     const firstMailerEnvMode = firstMailer.env_mode || "testing";
 
-    // ✅ TESTING mode → always show delete button
     if (firstMailerEnvMode === "testing") {
       deleteBtn.style.display = "block";
       return;
     }
 
-    // ✅ PRODUCTION mode → only show if status = pending or scheduled
     if (firstMailerEnvMode === "production") {
       const canDelete = ["pending", "scheduled"].includes(firstMailerStatus);
       deleteBtn.style.display = canDelete ? "block" : "none";
@@ -545,27 +659,61 @@ function updateDeleteCampaignButtonVisibility() {
     }
   }
 
-  // ✅ If no mailers found, allow campaign deletion
   deleteBtn.style.display = "block";
 }
 
-/* ---------- Update delete mailer button visibility in side panel ---------- */
 function updateDeleteMailerButtonVisibility(mailer) {
   if (!mailer) return false;
   const mailerEnvMode = mailer.env_mode || "testing";
 
-  // ✅ Always allow delete for pending/scheduled
   if (["pending", "scheduled"].includes(mailer.status)) return true;
-
-  // ✅ Allow delete for sent only in TESTING mode
   if (mailer.status === "sent" && mailerEnvMode === "testing") return true;
 
-  // ❌ Block delete for sent mailers in PRODUCTION
   return false;
 }
 
+// ============================================
+// ✅ UPDATED: NAVIGATE TO CANVA TEMPLATES
+// ============================================
 
-/* ---------- Open Template Selector in Side Panel ---------- */
+function navigateToCanvaTemplates(mailerId) {
+  const mailer = allMailers.find((m) => m.id === mailerId);
+  if (!mailer) {
+    alert("Mailer not found");
+    return;
+  }
+
+  // ✅ NEW: Get recipients from audience or address_list
+  let recipients = [];
+  if (mailer.audience_id && mailer.audience_list) {
+    recipients = Array.isArray(mailer.audience_list)
+      ? mailer.audience_list
+      : JSON.parse(mailer.audience_list || "[]");
+  } else if (mailer.address_list) {
+    recipients = JSON.parse(mailer.address_list || "[]");
+  }
+
+  // Create mailer context for sessionStorage
+  const CampaignContext = {
+    mode: "campaign",
+    sourceType: "mailer",
+    mailerId: mailer.id,
+    mailerName: mailer.mailer_name || "Unnamed Mailer",
+    campaigndataId: mailer.id,
+    campaignName: mailer.campaign_name || currentCampaign.campaign_name,
+    recipients: recipients,
+    selectedAudienceId: mailer.audience_id || null, // ✅ NEW: Store audience ID
+    envMode: mailer.env_mode || "testing",
+    timestamp: new Date().toISOString(),
+  };
+
+  console.log("📌 Storing mailer context:", CampaignContext);
+  sessionStorage.setItem("mailerContext", JSON.stringify(CampaignContext));
+
+  // Navigate to template gallery with canva view
+  window.location.href = "templateGallery.html?view=canva";
+}
+
 async function openTemplateSelector(mailerId, event) {
   event?.stopPropagation?.();
   const side = document.getElementById("sidePanel");
@@ -574,7 +722,6 @@ async function openTemplateSelector(mailerId, event) {
   const mailer = allMailers.find((m) => m.id === mailerId);
   if (!mailer) return alert("Mailer not found");
 
-  // Hide any open side panel
   side.classList.remove("visible");
   side.setAttribute("aria-hidden", "true");
 
@@ -596,16 +743,24 @@ async function openTemplateSelector(mailerId, event) {
   await renderTemplateGrid(templates, "templateGrid", true);
 }
 
-/* ---------- Side panel ---------- */
+// ============================================
+// SIDE PANEL
+// ============================================
+
 async function openSidePanel(mailerId, event) {
   event?.stopPropagation?.();
   const side = document.getElementById("sidePanel");
   const layout = document.getElementById("layoutContainer");
   const templateSection = document.getElementById("templateGridSection");
   const mailer = allMailers.find((m) => m.id === mailerId);
-  if (!mailer) return alert("Mailer not found");
 
-  // Check if this is the same mailer already open - if so, skip loading
+  if (!mailer) {
+    alert("Mailer not found");
+    return;
+  }
+
+  console.log("👁️ Opening side panel for mailer:", mailer);
+
   if (
     window.currentSideMailerId === mailerId &&
     side.classList.contains("visible")
@@ -615,7 +770,6 @@ async function openSidePanel(mailerId, event) {
 
   window.currentSideMailerId = mailerId;
 
-  // Hide template section and show only side panel
   templateSection.classList.remove("visible");
   layout.classList.remove("has-side-with-templates");
   layout.classList.add("has-side");
@@ -623,15 +777,15 @@ async function openSidePanel(mailerId, event) {
   side.classList.add("visible");
   side.setAttribute("aria-hidden", "false");
 
-  // Show loading state
   document.getElementById("detailMailerName").textContent =
     mailer.mailer_name || "Unnamed Mailer";
   document.getElementById("detailMailerSub").textContent =
     mailer.campaign_name || "";
+
+  // ✅ FIXED: Show loading state
   document.getElementById("detailRecipients").innerHTML =
     '<div style="text-align:center;padding:2rem;color:#64748b;">Loading recipients...</div>';
 
-  // Show recipient details section
   document.getElementById(
     "detailStatus"
   ).parentElement.parentElement.style.display = "block";
@@ -642,8 +796,58 @@ async function openSidePanel(mailerId, event) {
   document.getElementById("detailStatus").textContent = (
     mailer.status || "pending"
   ).toUpperCase();
+
+  // ✅ CRITICAL FIX: Parse recipients correctly from mailer
+  let recipientsList = [];
+
+  console.log("📦 Mailer data:", {
+    has_audience_id: !!mailer.audience_id,
+    has_audience_list: !!mailer.audience_list,
+    has_address_list: !!mailer.address_list,
+  });
+
+  // Try audience_list first
+  if (mailer.audience_list) {
+    try {
+      recipientsList =
+        typeof mailer.audience_list === "string"
+          ? JSON.parse(mailer.audience_list)
+          : mailer.audience_list;
+      recipientsList = Array.isArray(recipientsList) ? recipientsList : [];
+      console.log(
+        "✅ Recipients loaded from audience_list:",
+        recipientsList.length
+      );
+    } catch (err) {
+      console.error("❌ Error parsing audience_list:", err);
+      recipientsList = [];
+    }
+  }
+
+  // Fallback to address_list
+  if (recipientsList.length === 0 && mailer.address_list) {
+    try {
+      recipientsList =
+        typeof mailer.address_list === "string"
+          ? JSON.parse(mailer.address_list)
+          : mailer.address_list;
+      recipientsList = Array.isArray(recipientsList) ? recipientsList : [];
+      console.log(
+        "✅ Recipients loaded from address_list:",
+        recipientsList.length
+      );
+    } catch (err) {
+      console.error("❌ Error parsing address_list:", err);
+      recipientsList = [];
+    }
+  }
+
+  console.log("📊 Final recipients to display:", recipientsList.length);
+
+  // ✅ FIXED: Update cost based on actual recipients
   document.getElementById("detailCost").textContent =
-    "$" + (JSON.parse(mailer.address_list || "[]").length * 1.31).toFixed(2);
+    "$" + (recipientsList.length * 1.31).toFixed(2);
+
   const expectedIso = computeExpectedDeliveryForMailer(mailer);
   document.getElementById("detailExpected").textContent = expectedIso
     ? new Date(expectedIso).toLocaleDateString("en-US", {
@@ -653,7 +857,7 @@ async function openSidePanel(mailerId, event) {
       })
     : "TBD";
 
-  const recipientsList = JSON.parse(mailer.address_list || "[]");
+  // ✅ FIXED: Render recipients with proper status
   await renderRecipientsForContainer(
     recipientsList,
     "detailRecipients",
@@ -662,32 +866,46 @@ async function openSidePanel(mailerId, event) {
     false,
     ""
   );
-  // --- View Template button logic ---
-  // Inside openSidePanel()
+
+  // View template/canva button logic
   const viewTemplateBtn = document.getElementById("viewTemplateBtn");
 
   if (viewTemplateBtn) {
-    // Enable or disable based on whether a template is assigned
-    const hasTemplate = !!(
-      mailer.template_id || window.currentEditingTemplateId
-    );
-    viewTemplateBtn.disabled = !hasTemplate;
-    viewTemplateBtn.style.opacity = hasTemplate ? 1 : 0.6;
+    const templateId = mailer.template_id || window.currentEditingTemplateId;
+    const hasTemplate = !!templateId;
+    const hasCanvaLink = !!mailer.canva_link;
 
-    // Remove old event listener to avoid duplicate handlers
+    viewTemplateBtn.style.display =
+      hasTemplate || hasCanvaLink ? "inline-block" : "none";
+    viewTemplateBtn.disabled = false;
+    viewTemplateBtn.style.opacity = 1;
+
     const newBtn = viewTemplateBtn.cloneNode(true);
     viewTemplateBtn.parentNode.replaceChild(newBtn, viewTemplateBtn);
 
-    newBtn.addEventListener("click", async () => {
-      const templateId = mailer.template_id || window.currentEditingTemplateId;
-      if (!templateId) {
-        alert("No template selected for this mailer.");
-        return;
-      }
-      await openTemplatePreview(templateId);
-    });
+    if (hasCanvaLink && !hasTemplate) {
+      newBtn.textContent = "🎨 View Canva Design";
+      newBtn.addEventListener("click", async () => {
+        openCanvaLinkInput(mailer.id, mailer.canva_link);
+      });
+    } else if (hasTemplate && !hasCanvaLink) {
+      newBtn.textContent = "📄 View Template";
+      newBtn.addEventListener("click", async () => {
+        await openTemplatePreview(templateId);
+      });
+    } else if (hasTemplate && hasCanvaLink) {
+      newBtn.textContent = "👁️ View Design";
+      newBtn.addEventListener("click", async () => {
+        if (mailer.status === "sent") {
+          openViewSentMailerModal(templateId, mailer);
+        } else {
+          await openTemplatePreview(templateId);
+        }
+      });
+    }
   }
 
+  // Search and filter setup
   const search = document.getElementById("detailSearch");
   const only = document.getElementById("detailOnlyScanned");
 
@@ -696,7 +914,6 @@ async function openSidePanel(mailerId, event) {
   const onlyClone = only.cloneNode(true);
   only.parentNode.replaceChild(onlyClone, only);
 
-  // Only show the "Only Scanned" filter for sent status
   const showScannedFilter = (mailer.status || "pending") === "sent";
   onlyClone.parentElement.style.display = showScannedFilter ? "block" : "none";
 
@@ -723,23 +940,121 @@ async function openSidePanel(mailerId, event) {
   });
 }
 
+function openViewSentMailerModal(templateId, mailer) {
+  const modal = document.createElement("div");
+  modal.className = "view-sent-mailer-modal";
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="this.parentElement.remove()" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: -1;"></div>
+    <div class="modal-content" style="position: relative; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); max-width: 400px; width: 90%;z-index: 10001;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h3 style="margin: 0;">View Sent Mailer</h3>
+        <button class="btn btn-outline" onclick="this.closest('[style*=&quot;z-index: 10000&quot;]').remove()" style="padding: 0.5rem 1rem;">Close</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:#64748b;margin-bottom:1.5rem;">What would you like to view?</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          ${
+            templateId
+              ? `<button class="btn btn-secondary" onclick="viewTemplateVersion(${templateId}); this.closest('[style*=&quot;z-index: 10000&quot;]').remove()" style="padding: 0.75rem;">
+            📄 View Template
+          </button>`
+              : ""
+          }
+          ${
+            mailer.canva_link
+              ? `<button class="btn btn-secondary" onclick="openCanvaLinkInput('${mailer.id}', '${mailer.canva_link}'); this.closest('[style*=&quot;z-index: 10000&quot;]').remove()" style="padding: 0.75rem;">
+            🎨 View Canva Link
+          </button>`
+              : ""
+          }
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function viewTemplateVersion(templateId) {
+  await openTemplatePreview(templateId);
+}
+
+function openCanvaLinkInput(mailerId, canvaLink) {
+  console.log("🎨 Opening Canva PDF preview:", canvaLink);
+
+  const previewModal = document.createElement("div");
+  previewModal.className = "template-preview-modal";
+  previewModal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+  previewModal.innerHTML = `
+    <div class="template-preview-overlay" onclick="this.parentElement.remove()" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: -1;"></div>
+    <div class="template-preview-content" style="position: relative; background: white; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 95%; height: 95vh; display: flex; flex-direction: column; z-index: 10001;">
+      <div class="template-preview-header" style="padding: 1rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0;">📄 Canva PDF Preview</h3>
+        <button class="btn btn-outline" onclick="this.closest('.template-preview-modal').remove()" style="padding: 0.5rem 1rem;">Close</button>
+      </div>
+      <iframe 
+        src="${canvaLink}#toolbar=0&navpanes=0&scrollbar=0&zoom=100"
+        style="flex: 1; border: none; margin: 0; border-radius: 0 0 8px 8px;">
+      </iframe>
+    </div>
+  `;
+  document.body.appendChild(previewModal);
+}
+
+function openCanvaLink() {
+  const linkInput = document.getElementById("canvaLinkInput");
+  const link = linkInput?.value.trim();
+
+  if (!link) {
+    alert("Please enter a valid Canva link");
+    return;
+  }
+
+  if (!link.startsWith("http://") && !link.startsWith("https://")) {
+    alert("Please enter a valid URL starting with http:// or https://");
+    return;
+  }
+
+  window.open(link, "_blank");
+}
+
 async function openTemplatePreview(templateId) {
   try {
-    // Fetch template directly from API to ensure we have latest data
     const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`);
     if (!res.ok) {
       throw new Error("Failed to fetch template");
     }
     const template = await res.json();
 
-    // Replace DATE placeholder with formatted date
     const todayObj = new Date();
     const formattedDate = todayObj.toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
     });
-    const finalHtml = (template.html_content || "<p>No content available</p>").replace(/DATE/g, formattedDate);
+    const finalHtml = (
+      template.html_content || "<p>No content available</p>"
+    ).replace(/DATE/g, formattedDate);
 
     const previewModal = document.createElement("div");
     previewModal.className = "template-preview-modal";
@@ -750,7 +1065,7 @@ async function openTemplatePreview(templateId) {
           <h3>Template Preview</h3>
           <button class="btn btn-outline" onclick="this.closest('.template-preview-modal').remove()">Close</button>
         </div>
-        <iframe srcdoc="${finalHtml.replace(/"/g, '&quot;')}"
+        <iframe srcdoc="${finalHtml.replace(/"/g, "&quot;")}"
                 style="width:100%;height:80vh;border:none;margin-top:1rem;"></iframe>
       </div>
     `;
@@ -771,7 +1086,6 @@ function closeSidePanel() {
   layout.classList.remove("has-side");
   layout.classList.remove("has-side-with-templates");
 
-  // Always hide template section when closing side panel
   templateSection.classList.remove("visible");
 
   window.currentSideMailerId = null;
@@ -832,7 +1146,9 @@ async function confirmSchedule() {
       const txt = await res.text();
       throw new Error(txt || "Failed to schedule");
     }
-    alert("Mailer scheduled successfully! (Currently in TESTING phase scheduling)");
+    alert(
+      "Mailer scheduled successfully! (Currently in TESTING phase scheduling)"
+    );
     closeScheduleModal();
     await loadCampaignDetail();
   } catch (err) {
@@ -844,7 +1160,9 @@ async function confirmSchedule() {
 /* ---------- Send mailer ---------- */
 async function sendMailer(mailerId, button) {
   if (!window.currentEditingTemplateId) {
-    alert("Please select a template first by clicking 'Select Template' button.");
+    alert(
+      "Please select a template first by clicking 'Select Template' button."
+    );
     return;
   }
 
@@ -853,10 +1171,8 @@ async function sendMailer(mailerId, button) {
   button.disabled = true;
 
   try {
-    // --- Use the selected mode from session storage ---
     const mode = getCurrentMode();
 
-    // --- Confirm with user about the current mode ---
     const confirmSend = confirm(
       `You are about to send the letter in ${mode.toUpperCase()} mode.\n\nDo you want to proceed?`
     );
@@ -869,16 +1185,15 @@ async function sendMailer(mailerId, button) {
 
     console.log(`📦 Sending mailer using ${mode.toUpperCase()} environment...`);
 
-    // --- Find mailer info ---
     const mailer = allMailers.find((m) => m.id === mailerId);
     if (!mailer) throw new Error("Mailer not found");
 
-    // --- Fetch template HTML ---
-    const tplRes = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${window.currentEditingTemplateId}`);
+    const tplRes = await fetch(
+      `https://pcm-app-h8mn8.ondigitalocean.app/templates/${window.currentEditingTemplateId}`
+    );
     if (!tplRes.ok) throw new Error("Failed to load template content");
     const tpl = await tplRes.json();
 
-    // --- Prepare HTML content with date ---
     const todayObj = new Date();
     const todayISO = todayObj.toISOString().split("T")[0];
     const formattedDate = todayObj.toLocaleDateString("en-US", {
@@ -888,13 +1203,18 @@ async function sendMailer(mailerId, button) {
     });
     const finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
 
-    // --- Get PCM Token ---
     const token = await getToken(mode);
 
-    // --- Parse recipients ---
-    const mailerRecipients = JSON.parse(mailer.address_list || "[]");
+    // ✅ NEW: Get recipients from audience or address_list
+    let mailerRecipients = [];
+    if (mailer.audience_id && mailer.audience_list) {
+      mailerRecipients = Array.isArray(mailer.audience_list)
+        ? mailer.audience_list
+        : JSON.parse(mailer.audience_list || "[]");
+    } else if (mailer.address_list) {
+      mailerRecipients = JSON.parse(mailer.address_list || "[]");
+    }
 
-    // --- Build PCM payload ---
     const pcmPayload = {
       extRefNbr: "12345",
       designID: 0,
@@ -910,12 +1230,18 @@ async function sendMailer(mailerId, button) {
       },
       recipients: mailerRecipients,
       letter: finalHtml,
+      returnAddress: {
+        firstName: "Mark",
+        lastName: "Fazzini",
+        address: "4175 Woodlands Pkwy",
+        city: "Palm Harbor",
+        state: "FL",
+        zipCode: "34685",
+      },
     };
 
-    // --- Use correct API base URL ---
     const baseUrl = "https://v3.pcmintegrations.com";
 
-    // --- Send to PCM API ---
     const res = await fetch(`${baseUrl}/order/letter`, {
       method: "POST",
       headers: {
@@ -931,18 +1257,20 @@ async function sendMailer(mailerId, button) {
 
     alert(`Mailer sent successfully using ${mode.toUpperCase()} environment!`);
 
-    // --- Update backend (only after success) ---
     const updatePayload = {
       status: "sent",
       send_date: new Date().toISOString(),
       template_id: window.currentEditingTemplateId,
     };
 
-    const updateRes = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${mailerId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatePayload),
-    });
+    const updateRes = await fetch(
+      `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${mailerId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatePayload),
+      }
+    );
 
     if (!updateRes.ok) {
       const errData = await updateRes.json().catch(() => ({}));
@@ -958,7 +1286,6 @@ async function sendMailer(mailerId, button) {
     button.disabled = false;
   }
 }
-
 
 /* ---------- Create mailer modal ---------- */
 async function openCreateMailerModal() {
@@ -1020,19 +1347,31 @@ async function createMailer() {
   }
 
   const campaignId = getQueryParam("id");
-  const baseRecipients = JSON.parse(currentCampaign.address_list || "[]");
+
+  // ✅ NEW: Get recipients from audience or address_list
+  let baseRecipients = [];
+  if (currentCampaign.audience_id && currentCampaign.audience_list) {
+    baseRecipients = Array.isArray(currentCampaign.audience_list)
+      ? currentCampaign.audience_list
+      : JSON.parse(currentCampaign.audience_list || "[]");
+  } else if (currentCampaign.address_list) {
+    baseRecipients = JSON.parse(currentCampaign.address_list || "[]");
+  }
 
   const requestData = {
     campaign_id: campaignId,
     mailer_name: mailerName,
-    address_list: JSON.stringify(baseRecipients),
+    address_list: currentCampaign.audience_id
+      ? null
+      : JSON.stringify(baseRecipients),
+    audience_id: currentCampaign.audience_id || null, // ✅ NEW: Store audience_id
     schedule_time: null,
     send_date: null,
     status: "pending",
     template_id: window.currentEditingTemplateId,
     expected_send_date: expectedSendDateIso,
     expected_delivery: expectedDeliveryIso,
-    mode:mode
+    env_mode: mode,
   };
 
   try {
@@ -1054,7 +1393,10 @@ async function createMailer() {
   }
 }
 
-/* ---------- Load campaign detail ---------- */
+// ============================================
+// ✅ UPDATED: LOAD CAMPAIGN DETAIL
+// ============================================
+
 async function loadCampaignDetail() {
   const campaignId = getQueryParam("id");
   if (!campaignId) {
@@ -1077,13 +1419,15 @@ async function loadCampaignDetail() {
     allMailers = campaignData;
     currentCampaign = campaignData[0];
 
+    // ✅ NEW: Store audience_id for later use
+    currentAudienceId = currentCampaign.audience_id || null;
+
     document.getElementById("campaignName").textContent =
       currentCampaign.campaign_name || "Unnamed Campaign";
 
     renderMailers(campaignData);
-    updateDeleteCampaignButtonVisibility(); // Add this line
+    updateDeleteCampaignButtonVisibility();
 
-    // Always hide template section on initial load
     const templateSection = document.getElementById("templateGridSection");
     templateSection.classList.remove("visible");
 
@@ -1094,7 +1438,10 @@ async function loadCampaignDetail() {
   }
 }
 
-/* ---------- Event wiring ---------- */
+// ============================================
+// EVENT LISTENERS
+// ============================================
+
 document
   .getElementById("openAddMailerBtn")
   .addEventListener("click", openCreateMailerModal);
