@@ -23,8 +23,8 @@ const API_KEYS = {
     apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
   },
   production: {
-    apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
-    apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
+    apiKey: "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy",
+    apiSecret: "ZDFjNmUwM2MtOTcwNi00MjBiLWE4NDItM2Y5MjAzMDJiMTVh",
   },
 };
 
