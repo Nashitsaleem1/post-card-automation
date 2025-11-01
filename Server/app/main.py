@@ -1,3 +1,4 @@
+import base64
 import os
 import json
 from typing import List
@@ -13,11 +14,12 @@ from sqlalchemy import desc
 from .database import Base, engine, get_db
 from . import schemas
 from pytz import timezone, utc
-from .models import Template, Campaign, CampaignData, MailerOneOff, QRCodeInfo
+from .models import Template, Campaign, CampaignData, MailerOneOff, QRCodeInfo, Audience
 from sqlalchemy.orm import Session, joinedload
 from .database import SessionLocal
 from fastapi.staticfiles import StaticFiles
 import uuid
+import time
 from pathlib import Path
 import pytz
 from fastapi import FastAPI, UploadFile, File, HTTPException
@@ -27,9 +29,14 @@ API_KEY = "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0"
 API_SECRET = "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl"
 CHILD_REF_NBR = "myAccountReference"
 
-STATIC_DIR = Path("uploads/pdfs")  # New directory not in 'static'
+STATIC_DIR = Path("uploads/pdfs")  
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
+CLIENT_ID = "OC-AZn4e_GgzZAp"
+CLIENT_SECRET = "cnvcaQ5z-PNqcsxXWKVvJ1G_ocl159sYRDGvunfWsY2xcrIk80f1e095"
+TOKEN_URL = "https://api.canva.com/rest/v1/oauth/token"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TOKENS_FILE = os.path.join(BASE_DIR, "canva_tokens.json")
 
 # ---------- Scheduler ----------
 scheduler = BackgroundScheduler()
@@ -42,10 +49,6 @@ app = FastAPI(title="PCM Automation", version="1.0.0")
 # ---------- CORS ----------
 origins_env = os.getenv("CORS_ORIGINS", "")
 origins = [o.strip() for o in origins_env.split(",") if o.strip()]
-
-
-# # Keep the static mount as is:
-# app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Add new mount for uploads:
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
@@ -73,6 +76,57 @@ app.add_middleware(
 )
 
 
+def load_tokens():
+    if os.path.exists(TOKENS_FILE):
+        with open(TOKENS_FILE) as f:
+            return json.load(f)
+    return None
+
+
+def save_tokens(token_data):
+    # Save with an expiry timestamp
+    token_data["expires_at"] = int(time.time()) + token_data.get("expires_in", 3600)
+    print(token_data["expires_at"])
+    with open(TOKENS_FILE, "w") as f:
+        json.dump(token_data, f, indent=2)
+
+
+def is_token_expired(token_data):
+    return time.time() >= token_data.get("expires_at", 0)
+
+
+def refresh_access_token(refresh_token):
+    auth_str = f"{CLIENT_ID}:{CLIENT_SECRET}"
+    b64_auth = base64.b64encode(auth_str.encode()).decode()
+
+    headers = {
+        "Authorization": f"Basic {b64_auth}",
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+
+    data = {"grant_type": "refresh_token", "refresh_token": refresh_token}
+
+    response = requests.post(TOKEN_URL, headers=headers, data=data)
+    response.raise_for_status()
+    token_data = response.json()
+    save_tokens(token_data)
+    return token_data
+
+
+@app.get("/get_canva_token")
+def get_canva_token():
+    token_data = load_tokens()
+    if not token_data:
+        return {"error": "No token found. Run initial OAuth first."}
+
+    if is_token_expired(token_data):
+        print("🔁 Access token expired — refreshing...")
+        token_data = refresh_access_token(token_data["refresh_token"])
+        return {"access_token": token_data["access_token"], "status": "refreshed"}
+
+    return {"access_token": token_data["access_token"], "status": "valid"}
+
+
 # ---------- Utility: Token Fetch ----------
 def get_pcm_token():
     payload = {
@@ -91,6 +145,66 @@ def get_pcm_token():
     resp.raise_for_status()
     data = resp.json()
     return data.get("token")
+
+
+def get_campaign_data_recipients(campaign_data):
+    """
+    Fetch recipients from either audience_id or address_list
+    Priority: audience_id > address_list
+    """
+    recipients = []
+
+    # Try fetching from Audience table first
+    if campaign_data.audience_id:
+        from .models import Audience  # Import here to avoid circular imports
+
+        audience = Audience.query.filter(
+            Audience.id == campaign_data.audience_id
+        ).first()
+        if audience:
+            recipients = json.loads(audience.audience_list)
+            print(
+                f"✅ Recipients fetched from Audience ID {campaign_data.audience_id}: {len(recipients)} recipients"
+            )
+            return recipients
+
+    # Fallback to address_list if it exists
+    if hasattr(campaign_data, "address_list") and campaign_data.address_list:
+        recipients = json.loads(campaign_data.address_list)
+        print(f"✅ Recipients fetched from address_list: {len(recipients)} recipients")
+        return recipients
+
+    print(f"⚠️ No recipients found for CampaignData {campaign_data.id}")
+    return []
+
+
+def get_mailer_recipients(mailer):
+    """
+    Fetch recipients from either audience_id or address_list
+    Priority: audience_id > address_list
+    """
+    recipients = []
+
+    # Try fetching from Audience table first
+    if mailer.audience_id:
+        from .models import Audience  # Import here to avoid circular imports
+
+        audience = Audience.query.filter(Audience.id == mailer.audience_id).first()
+        if audience:
+            recipients = json.loads(audience.audience_list)
+            print(
+                f"✅ Recipients fetched from Audience ID {mailer.audience_id}: {len(recipients)} recipients"
+            )
+            return recipients
+
+    # Fallback to address_list if it exists
+    if hasattr(mailer, "address_list") and mailer.address_list:
+        recipients = json.loads(mailer.address_list)
+        print(f"✅ Recipients fetched from address_list: {len(recipients)} recipients")
+        return recipients
+
+    print(f"⚠️ No recipients found for Mailer {mailer.id}")
+    return []
 
 
 # ---------- Scheduler Job for Campaign ----------
@@ -125,10 +239,16 @@ def send_letter_job(campaign_data_id: int):
         formatted_date = today_obj.strftime("%B %d, %Y")
 
         final_html = template.template.replace("DATE", formatted_date)
-        recipients = json.loads(campaign_data.address_list)
+
+        recipients = get_campaign_data_recipients(campaign_data)
+        if not recipients:
+            print(f"❌ No recipients found for CampaignData {campaign_data_id}")
+            campaign_data.status = "failed"
+            db.commit()
+            return
 
         payload = {
-            "extRefNbr": "prod_12345",
+            "extRefNbr": "12345",
             "designID": 0,
             "mailClass": "FirstClass",
             "mailDate": today_iso,
@@ -166,7 +286,7 @@ def send_letter_job(campaign_data_id: int):
             db.commit()
             print(f"✅ CampaignData {campaign_data_id} marked as SENT")
 
-            # ✅ Schedule QR tracking after 24 hours
+            # Schedule QR tracking after 24 hours
             track_time = datetime.utcnow() + timedelta(hours=24)
             scheduler.add_job(
                 qr_tracking_job,
@@ -202,10 +322,6 @@ def send_letter_job(campaign_data_id: int):
 
 # ---------- QR Tracking Job ----------
 def qr_tracking_job(campaign_data_id: int):
-    from .database import SessionLocal
-    from apscheduler.triggers.date import DateTrigger
-    from datetime import datetime, timedelta
-    import json, requests, os
 
     db = SessionLocal()
     try:
@@ -250,8 +366,14 @@ def qr_tracking_job(campaign_data_id: int):
             )
             return
 
+        recipients = get_campaign_data_recipients(campaign_data)
+        if not recipients:
+            print(
+                f"❌ No recipients found for QR tracking of CampaignData {campaign_data_id}"
+            )
+            return
+
         # --- Compare recipients ---
-        recipients = json.loads(campaign_data.address_list)
         matched_recipients = []
         for rec in recipients:
             for scan in results:
@@ -289,7 +411,6 @@ def qr_tracking_job(campaign_data_id: int):
                 log_file.write(log_entry)
             print(f"📝 Log written to {log_path}")
 
-            # --- NEW: Send notification ---
             send_scan_complete_notification(
                 campaign_data_id,
                 campaign_data.mailer_name or f"Mailer-{campaign_data_id}",
@@ -396,10 +517,15 @@ def send_oneoff_job(mailer_id: int):
 
         final_html = template.template.replace("DATE", formatted_date)
 
-        recipients = json.loads(mailer.address_list)
+        recipients = get_mailer_recipients(mailer)
+        if not recipients:
+            print(f"❌ No recipients found for MailerOneOff {mailer_id}")
+            mailer.status = "failed"
+            db.commit()
+            return
 
         payload = {
-            "extRefNbr": f"oneoff_{mailer.id}",
+            "extRefNbr": "12345",
             "designID": 0,
             "mailClass": "FirstClass",
             "mailDate": today_iso,
@@ -496,7 +622,7 @@ async def upload_pdf(file: UploadFile = File(...)):
         with open(file_path, "wb") as f:
             f.write(content)
 
-        # ✅ Change the URL to use /uploads instead of /static
+        # change the URL to use /uploads instead of /static
         file_url = f"https://pcm-app-h8mn8.ondigitalocean.app/uploads/pdfs/{unique_filename}"
 
         return {
@@ -644,11 +770,12 @@ def create_campaign_data(
         campaign_id=data.campaign_id,
         mailer_name=data.mailer_name,
         template_id=data.template_id,
-        address_list=data.address_list,
+        audience_id=data.audience_id,
         schedule_time=data.schedule_time,
         send_date=data.send_date,
         status=data.status or "pending",
         env_mode=data.env_mode,
+        canva_link=data.canva_link,
     )
 
     db.add(new_data)
@@ -693,14 +820,19 @@ def get_campaign_data_by_campaign(campaign_id: int, db: Session = Depends(get_db
     response_model=List[schemas.CampaignDataWithCampaignName],
 )
 def get_campaign_data_with_name(campaign_id: int, db: Session = Depends(get_db)):
-    # Query CampaignData joined with Campaign to get campaign_name and env_mode
+    # Query CampaignData joined with Campaign AND Audience to get all necessary data
     data = (
         db.query(
             CampaignData,
             Campaign.campaign_name.label("campaign_name"),
             CampaignData.env_mode.label("env_mode"),
+            CampaignData.canva_link.label("canva_link"),
+            Audience.audience_list.label("audience_list"),  # ✅ Get audience_list
         )
         .join(Campaign, Campaign.id == CampaignData.campaign_id)
+        .outerjoin(
+            Audience, Audience.id == CampaignData.audience_id
+        )  # ✅ Left join Audience
         .filter(CampaignData.campaign_id == campaign_id)
         .all()
     )
@@ -710,25 +842,23 @@ def get_campaign_data_with_name(campaign_id: int, db: Session = Depends(get_db))
 
     # Convert to list of dicts for response
     result = []
-    for cd, cname, env_mode in data:
+    for cd, cname, env_mode, canva_link, audience_list in data:
         row = cd.__dict__.copy()
         row.pop("_sa_instance_state", None)
         row["campaign_name"] = cname
-        row["env_mode"] = env_mode  # ✅ include env_mode
+        row["env_mode"] = env_mode
+        row["canva_link"] = canva_link
+        row["audience_list"] = audience_list  # ✅ Add audience_list to response
         result.append(row)
+
     return result
 
 
 @app.get("/dashboard/all")
 def get_dashboard_all(mode: str, db: Session = Depends(get_db)):
-    """
-    mode: 'testing' or 'production'
-    Example: /dashboard/all?mode=testing
-    """
     if mode not in ["testing", "production"]:
         raise HTTPException(status_code=400, detail="Invalid mode value")
 
-    # Get all campaigns that have CampaignData entries in this mode
     campaign_ids = (
         db.query(CampaignData.campaign_id)
         .filter(CampaignData.env_mode == mode)
@@ -744,64 +874,55 @@ def get_dashboard_all(mode: str, db: Session = Depends(get_db)):
         .all()
     )
 
-    if not campaigns:
-        return {
-            "total_campaigns": 0,
-            "latest_campaign": None,
-            "total_recipients": 0,
-            "data": [],
-            "all_campaigns": [],
-        }
-
-    latest_campaign = campaigns[0]
-
     all_campaign_data = (
         db.query(CampaignData)
-        .options(joinedload(CampaignData.template), joinedload(CampaignData.campaign))
+        .options(
+            joinedload(CampaignData.template),
+            joinedload(CampaignData.campaign),
+            joinedload(CampaignData.audience),  # ✅ Include audience
+        )
         .filter(CampaignData.env_mode == mode)
         .order_by(desc(CampaignData.id))
         .all()
     )
 
     total_recipients = 0
+
     for data_record in all_campaign_data:
-        address_list = data_record.address_list
-        if not address_list:
-            continue
-        try:
-            recipients = (
-                json.loads(address_list)
-                if isinstance(address_list, str)
-                else address_list
-            )
-            if isinstance(recipients, list):
-                total_recipients += len(recipients)
-        except (json.JSONDecodeError, TypeError):
-            continue
+        if data_record.audience and data_record.audience.audience_list:
+            try:
+                recipients = json.loads(data_record.audience.audience_list)
+                if isinstance(recipients, list):
+                    total_recipients += len(recipients)
+            except Exception:
+                pass
 
     return {
         "total_campaigns": len(campaigns),
         "latest_campaign": {
-            "id": latest_campaign.id,
-            "campaign_name": latest_campaign.campaign_name,
+            "id": campaigns[0].id if campaigns else None,
+            "campaign_name": campaigns[0].campaign_name if campaigns else None,
         },
         "total_recipients": total_recipients,
-        "all_campaigns": [
-            {"id": c.id, "campaign_name": c.campaign_name} for c in campaigns
-        ],
         "data": [
             {
                 "id": d.id,
                 "campaign_id": d.campaign_id,
                 "campaign_name": d.campaign.campaign_name if d.campaign else None,
                 "mailer_name": d.mailer_name,
-                "address_list": d.address_list,
                 "schedule_time": d.schedule_time,
                 "status": d.status,
                 "template_id": d.template_id,
                 "template_preview": d.template.template if d.template else None,
                 "qr_code_id": d.template.qr_code_id if d.template else None,
                 "env_mode": d.env_mode,
+                "audience_id": d.audience.id if d.audience else None,
+                "audience_name": d.audience.audience_name if d.audience else None,
+                "audience_list": (
+                    json.loads(d.audience.audience_list)
+                    if d.audience and d.audience.audience_list
+                    else []
+                ),
             }
             for d in all_campaign_data
         ],
@@ -829,6 +950,8 @@ def update_campaign_data(
         campaign_data.schedule_time = payload.schedule_time
     if payload.send_date is not None:
         campaign_data.send_date = payload.send_date
+    if payload.canva_link is not None:
+        campaign_data.canva_link = payload.canva_link
 
     db.commit()
     db.refresh(campaign_data)
@@ -875,11 +998,12 @@ def create_mailer_one_off(
         mailer = MailerOneOff(
             mailer_name=payload.mailer_name,
             template_id=payload.template_id,
-            address_list=payload.address_list,
+            audience_id=payload.audience_id,
             schedule_time=payload.schedule_time,
             send_date=payload.send_date,
             status=payload.status or "pending",
             env_mode=payload.env_mode or "testing",
+            canva_link=payload.canva_link,
         )
 
         db.add(mailer)
@@ -920,11 +1044,38 @@ def get_all_one_off_mailers(mode: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid mode value")
 
     try:
-        mailers = db.query(MailerOneOff).filter(MailerOneOff.env_mode == mode).all()
+        mailers = (
+            db.query(MailerOneOff)
+            .options(joinedload(MailerOneOff.audience))  # eager-load audience
+            .filter(MailerOneOff.env_mode == mode)
+            .all()
+        )
+
+        # Build structured response with audience info
+        response_data = []
+        for mailer in mailers:
+            response_data.append(
+                {
+                    "id": mailer.id,
+                    "mailer_name": mailer.mailer_name,
+                    "env_mode": mailer.env_mode,
+                    "audience_id": mailer.audience_id,
+                    "audience_name": (
+                        mailer.audience.audience_name if mailer.audience else None
+                    ),
+                    "audience_list": (
+                        json.loads(mailer.audience.audience_list)
+                        if mailer.audience and mailer.audience.audience_list
+                        else []
+                    ),
+                }
+            )
+
         return {
-            "total_one_off_mailers": len(mailers),
-            "data": mailers,
+            "total_one_off_mailers": len(response_data),
+            "data": response_data,
         }
+
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch one-off mailers: {str(e)}"
@@ -937,7 +1088,29 @@ def get_mailer_one_off(mailer_id: int, db: Session = Depends(get_db)):
         mailer = db.query(MailerOneOff).filter(MailerOneOff.id == mailer_id).first()
         if not mailer:
             raise HTTPException(status_code=404, detail="Mailer not found")
-        return mailer
+
+        #  Include related audience info if available
+        audience_name = mailer.audience.audience_name if mailer.audience else None
+        audience_list = (
+            json.loads(mailer.audience.audience_list)
+            if mailer.audience and mailer.audience.audience_list
+            else []
+        )
+
+        return {
+            "id": mailer.id,
+            "mailer_name": mailer.mailer_name,
+            "audience_id": mailer.audience_id,
+            "audience_name": audience_name,
+            "audience_list": audience_list,
+            "template_id": mailer.template_id,
+            "schedule_time": mailer.schedule_time,
+            "send_date": mailer.send_date,
+            "status": mailer.status,
+            "env_mode": mailer.env_mode,
+            "canva_link": mailer.canva_link,
+        }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch mailer: {str(e)}")
 
@@ -960,6 +1133,8 @@ def update_mailer_one_off(
             mailer.status = payload.status
         if payload.send_date is not None:
             mailer.send_date = payload.send_date
+        if payload.canva_link is not None:
+            mailer.canva_link = payload.canva_link
 
         db.commit()
         db.refresh(mailer)
@@ -1201,3 +1376,57 @@ def delete_campaign(campaign_id: int, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=500, detail=f"Failed to delete campaign: {str(e)}"
         )
+
+
+@app.post("/audiences", response_model=schemas.AudienceRead)
+def create_audience(audience: schemas.AudienceCreate, db: Session = Depends(get_db)):
+    """Create a new audience"""
+    # Check if audience name already exists
+    existing = (
+        db.query(Audience)
+        .filter(Audience.audience_name == audience.audience_name)
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Audience name already exists")
+
+    # Convert list of address objects to JSON string for DB storage
+    db_audience = Audience(
+        audience_name=audience.audience_name,
+        audience_list=json.dumps(
+            [addr.model_dump() for addr in audience.audience_list]
+        ),
+    )
+
+    db.add(db_audience)
+    db.commit()
+    db.refresh(db_audience)
+    return db_audience
+
+
+@app.get("/audiences", response_model=List[schemas.AudienceRead])
+def get_all_audiences(db: Session = Depends(get_db)):
+    """Get all audiences"""
+    audiences = db.query(Audience).order_by(Audience.created_at.desc()).all()
+    return audiences
+
+
+@app.get("/audiences/{audience_id}", response_model=schemas.AudienceRead)
+def get_audience_by_id(audience_id: int, db: Session = Depends(get_db)):
+    """Get a specific audience by ID"""
+    audience = db.query(Audience).filter(Audience.id == audience_id).first()
+    if not audience:
+        raise HTTPException(status_code=404, detail="Audience not found")
+    return audience
+
+
+@app.delete("/audiences/{audience_id}")
+def delete_audience(audience_id: int, db: Session = Depends(get_db)):
+    """Delete an audience"""
+    audience = db.query(Audience).filter(Audience.id == audience_id).first()
+    if not audience:
+        raise HTTPException(status_code=404, detail="Audience not found")
+
+    db.delete(audience)
+    db.commit()
+    return {"message": "Audience deleted successfully"}
