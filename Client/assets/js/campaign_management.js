@@ -310,12 +310,12 @@ async function confirmSaveAudience() {
     closeAudienceNameModal();
     return;
   }
-  console.log(recipientsList)
+
   try {
-    // Backend expects audience_list as array of Address objects
+  
     const payload = {
       audience_name: audienceName,
-      audience_list: recipientsList // Send as array - backend will serialize to JSON
+      audience_list: recipientsList 
     };
 
     const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/audiences", {
@@ -942,7 +942,6 @@ function setCachedPage(pageNum, records) {
   }
 
   const cacheKey = `${currentSearchHash}_page_${pageNum}`;
-  console.log("Caching page", pageNum, "with key:", cacheKey);
 
   const cacheData = {
     records: records,
@@ -2109,7 +2108,6 @@ async function orderDesign(templateId, button) {
     if (finalRecipientsList.length === 0) {
       throw new Error("No recipients available");
     }
-    console.log(finalRecipientsList)
     const token = await getToken(mode);
 
     const payload = {
@@ -2492,7 +2490,6 @@ function handleCanvaNavigation() {
   console.log("✅ All validations passed!");
   saveCampaignContextForCanva();
 
-  console.log("🔗 Navigating to Canva templates...");
   window.location.href = "templateGallery.html?view=canva";
 }
 
@@ -2526,7 +2523,6 @@ function saveCampaignContextForCanva() {
   const key = mode === "mailer" ? "mailerContext" : "campaignContext";
   sessionStorage.setItem(key, JSON.stringify(context));
 
-  console.log(`📦 Saved ${mode} context to sessionStorage → ${key}`, context);
 }
 
 // ============================================

@@ -1140,11 +1140,6 @@
           return;
         }
 
-        console.log(
-          "📌 Preparing to navigate to Canva with mailer context:",
-          currentMailer
-        );
-
         if (currentMailer.status !== "pending") {
           alert("⚠️ Only pending mailers can select Canva templates");
           return;
@@ -1155,7 +1150,7 @@
 
         if (currentMailer.audience_list && Array.isArray(currentMailer.audience_list)) {
           recipients = currentMailer.audience_list;
-          console.log("✅ Recipients from audience_list:", recipients.length);
+        
         }
 
         if (recipients.length === 0) {
@@ -1173,14 +1168,7 @@
           timestamp: Date.now(),
         };
 
-        console.log("✅ Mailer context ready:", mailerContext);
-        console.log("📊 Audience ID:", selectedAudienceId);
-        console.log("📊 Recipients count:", recipients.length);
-
         sessionStorage.setItem("mailerContext", JSON.stringify(mailerContext));
-        console.log("💾 Mailer context saved to sessionStorage");
-
-        console.log("🔗 Navigating to Canva templates page...");
         window.location.href = "templateGallery.html?view=canva&source=mailer";
       }
 
@@ -1579,7 +1567,7 @@
           if (!res.ok) throw new Error("Failed to fetch mailer details");
 
           const mailer = await res.json();
-          console.log("📦 Mailer data received:", mailer);
+  
 
           currentMailer = mailer;
 
@@ -1590,8 +1578,6 @@
             recipients = [];
             console.warn("⚠️ No recipients found in mailer data");
           }
-
-          console.log("📊 Total recipients loaded:", recipients.length);
           
           renderMailerInfo(mailer);
           await updateRecipients();

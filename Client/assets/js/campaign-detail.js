@@ -68,7 +68,7 @@ async function getToken(env = null) {
 }
 
 // ============================================
-// ✅ NEW: FETCH RECIPIENTS FROM AUDIENCE
+// FETCH RECIPIENTS FROM AUDIENCE
 // ============================================
 
 async function getRecipientsFromAudience(audienceId) {
@@ -291,7 +291,7 @@ function closeFullPreview() {
 }
 
 // ============================================
-// ✅ UPDATED: RENDER RECIPIENTS
+// RENDER RECIPIENTS
 // ============================================
 
 async function renderRecipientsForContainer(
@@ -305,14 +305,14 @@ async function renderRecipientsForContainer(
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  console.log("📥 renderRecipientsForContainer called with:", {
-    recipientCount: list.length,
-    mailerStatus,
-    templateId,
-    filterScanned,
-  });
+  // console.log("📥 renderRecipientsForContainer called with:", {
+  //   recipientCount: list.length,
+  //   mailerStatus,
+  //   templateId,
+  //   filterScanned,
+  // });
 
-  // ✅ FIXED: Only fetch scanned recipients if status is "sent" AND we have a templateId
+  // Only fetch scanned recipients if status is "sent" AND we have a templateId
   if (templateId && mailerStatus === "sent") {
     try {
       const qrCodeId = await getQrCodeIdFromTemplate(templateId);
@@ -320,7 +320,6 @@ async function renderRecipientsForContainer(
 
       if (qrCodeId) {
         const scanned = await fetchScannedRecipients(qrCodeId);
-        console.log("✅ Scanned recipients fetched:", scanned.length);
 
         // Map scanned status to original recipients
         list = list.map((r) => {
@@ -346,7 +345,7 @@ async function renderRecipientsForContainer(
     list = list.map((r) => ({ ...r, scanned: false }));
   }
 
-  // ✅ FIXED: Apply filters AFTER adding scanned status
+  // Apply filters AFTER adding scanned status
   let filtered = list.slice();
 
   if (filterScanned) {
@@ -362,9 +361,9 @@ async function renderRecipientsForContainer(
     );
   }
 
-  console.log("📊 Filtered recipients:", filtered.length);
+  // console.log("📊 Filtered recipients:", filtered.length);
 
-  // ✅ FIXED: Show message only if TRULY no recipients
+  //Show message only if TRULY no recipients
   if (!filtered || filtered.length === 0) {
     if (!list || list.length === 0) {
       container.innerHTML =
@@ -406,7 +405,7 @@ function computeExpectedDeliveryForMailer(mailer) {
 }
 
 // ============================================
-// ✅ UPDATED: RENDER MAILERS
+// RENDER MAILERS
 // ============================================
 
 function renderMailers(mailers) {
@@ -423,7 +422,6 @@ function renderMailers(mailers) {
     mailers.length === 1 && mailers[0].status === "pending";
 
   mailers.forEach((mailer) => {
-    console.log("🔍 Mailer data:", mailer); // ✅ DEBUG LOG
 
     // ✅ UPDATED: Better recipient parsing
     let recipientCount = 0;
@@ -435,7 +433,7 @@ function renderMailers(mailers) {
             ? JSON.parse(mailer.audience_list)
             : mailer.audience_list;
         recipientCount = Array.isArray(audienceList) ? audienceList.length : 0;
-        console.log("📊 Recipients from audience:", recipientCount); // ✅ DEBUG LOG
+        console.log("📊 Recipients from audience:", recipientCount);
       } catch (err) {
         console.error("Error parsing audience_list:", err);
         recipientCount = 0;
@@ -447,14 +445,14 @@ function renderMailers(mailers) {
             ? JSON.parse(mailer.address_list)
             : mailer.address_list;
         recipientCount = Array.isArray(addressList) ? addressList.length : 0;
-        console.log("📊 Recipients from address_list:", recipientCount); // ✅ DEBUG LOG
+        console.log("📊 Recipients from address_list:", recipientCount); 
       } catch (err) {
         console.error("Error parsing address_list:", err);
         recipientCount = 0;
       }
     }
 
-    console.log("✅ Final recipient count:", recipientCount); // ✅ DEBUG LOG
+    
 
     const totalCost = (recipientCount * 1.31).toFixed(2);
     const expectedIso = computeExpectedDeliveryForMailer(mailer);
@@ -702,12 +700,11 @@ function navigateToCanvaTemplates(mailerId) {
     campaigndataId: mailer.id,
     campaignName: mailer.campaign_name || currentCampaign.campaign_name,
     recipients: recipients,
-    selectedAudienceId: mailer.audience_id || null, // ✅ NEW: Store audience ID
+    selectedAudienceId: mailer.audience_id || null,
     envMode: mailer.env_mode || "testing",
     timestamp: new Date().toISOString(),
   };
-
-  console.log("📌 Storing mailer context:", CampaignContext);
+;
   sessionStorage.setItem("mailerContext", JSON.stringify(CampaignContext));
 
   // Navigate to template gallery with canva view
@@ -800,11 +797,6 @@ async function openSidePanel(mailerId, event) {
   // ✅ CRITICAL FIX: Parse recipients correctly from mailer
   let recipientsList = [];
 
-  console.log("📦 Mailer data:", {
-    has_audience_id: !!mailer.audience_id,
-    has_audience_list: !!mailer.audience_list,
-    has_address_list: !!mailer.address_list,
-  });
 
   // Try audience_list first
   if (mailer.audience_list) {
@@ -814,10 +806,6 @@ async function openSidePanel(mailerId, event) {
           ? JSON.parse(mailer.audience_list)
           : mailer.audience_list;
       recipientsList = Array.isArray(recipientsList) ? recipientsList : [];
-      console.log(
-        "✅ Recipients loaded from audience_list:",
-        recipientsList.length
-      );
     } catch (err) {
       console.error("❌ Error parsing audience_list:", err);
       recipientsList = [];
@@ -832,17 +820,12 @@ async function openSidePanel(mailerId, event) {
           ? JSON.parse(mailer.address_list)
           : mailer.address_list;
       recipientsList = Array.isArray(recipientsList) ? recipientsList : [];
-      console.log(
-        "✅ Recipients loaded from address_list:",
-        recipientsList.length
-      );
     } catch (err) {
       console.error("❌ Error parsing address_list:", err);
       recipientsList = [];
     }
   }
 
-  console.log("📊 Final recipients to display:", recipientsList.length);
 
   // ✅ FIXED: Update cost based on actual recipients
   document.getElementById("detailCost").textContent =
@@ -990,7 +973,6 @@ async function viewTemplateVersion(templateId) {
 }
 
 function openCanvaLinkInput(mailerId, canvaLink) {
-  console.log("🎨 Opening Canva PDF preview:", canvaLink);
 
   const previewModal = document.createElement("div");
   previewModal.className = "template-preview-modal";
@@ -1183,7 +1165,7 @@ async function sendMailer(mailerId, button) {
       return false;
     }
 
-    console.log(`📦 Sending mailer using ${mode.toUpperCase()} environment...`);
+    // console.log(`📦 Sending mailer using ${mode.toUpperCase()} environment...`);
 
     const mailer = allMailers.find((m) => m.id === mailerId);
     if (!mailer) throw new Error("Mailer not found");
