@@ -96,18 +96,22 @@ def is_token_expired(token_data):
 
 
 def refresh_access_token(refresh_token):
-    auth_str = f"{CLIENT_ID}:{CLIENT_SECRET}"
-    b64_auth = base64.b64encode(auth_str.encode()).decode()
+    url = "https://api.canva.com/rest/v1/oauth/token"
 
-    headers = {
-        "Authorization": f"Basic {b64_auth}",
-        "Content-Type": "application/x-www-form-urlencoded",
+    data = {
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
     }
 
-    data = {"grant_type": "refresh_token", "refresh_token": refresh_token}
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
-    response = requests.post(TOKEN_URL, headers=headers, data=data)
+    response = requests.post(url, headers=headers, data=data)
+
+    print("🔄 Canva response:", response.text)
     response.raise_for_status()
+
     token_data = response.json()
     save_tokens(token_data)
     return token_data
