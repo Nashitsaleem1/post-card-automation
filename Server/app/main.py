@@ -114,7 +114,7 @@ def refresh_access_token(refresh_token):
     response = requests.post(url, headers=headers, data=data)
 
     # Log response for debugging
-    print("🔄 Canva token refresh response:", response.status_code, response.text)
+    print("🔄 Canva token refresh response:", response.status_code)
 
     # Handle invalid/expired tokens gracefully
     if response.status_code != 200:
@@ -166,7 +166,7 @@ def get_campaign_data_recipients(campaign_data):
         if audience:
             recipients = json.loads(audience.audience_list)
             print(
-                f"✅ Recipients fetched from Audience ID {campaign_data.audience_id}: {len(recipients)} recipients"
+                f"✅ Recipients fetched from Audience ID {campaign_data.aud}: {len(recipients)} recipients"
             )
             return recipients
 
