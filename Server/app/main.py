@@ -60,6 +60,7 @@ origins = [
     "http://localhost:5500",
     "http://127.0.0.1:5501",
     "https://physical-mail-automation.netlify.app",
+    "https://physical-mail-automation.netlify.app/",
 ]
 
 
@@ -105,19 +106,29 @@ def refresh_access_token(refresh_token):
         "client_secret": CLIENT_SECRET,
     }
 
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
 
+    # Make the POST request
     response = requests.post(url, headers=headers, data=data)
 
-    print("🔄 Canva response:", response.text)
-    response.raise_for_status()
+    # Log response for debugging
+    print("🔄 Canva token refresh response:", response.status_code, response.text)
 
+    # Handle invalid/expired tokens gracefully
+    if response.status_code != 200:
+        try:
+            error = response.json()
+        except Exception:
+            error = response.text
+        raise Exception(f"Failed to refresh token: {error}")
+
+    # Parse response
     token_data = response.json()
-    save_tokens(token_data)
+    
     return token_data
 
-
-@app.get("/get_canva_token")
 def get_canva_token():
     token_data = load_tokens()
     if not token_data:
