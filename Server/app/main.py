@@ -129,19 +129,6 @@ def refresh_access_token(refresh_token):
     
     return token_data
 
-def get_canva_token():
-    token_data = load_tokens()
-    if not token_data:
-        return {"error": "No token found. Run initial OAuth first."}
-
-    if is_token_expired(token_data):
-        print("🔁 Access token expired — refreshing...")
-        token_data = refresh_access_token(token_data["refresh_token"])
-        return {"access_token": token_data["access_token"], "status": "refreshed"}
-
-    return {"access_token": token_data["access_token"], "status": "valid"}
-
-
 # ---------- Utility: Token Fetch ----------
 def get_pcm_token():
     payload = {
@@ -608,8 +595,22 @@ def healthz():
     return {"status": "ok"}
 
 
-# ---------- PDF Upload ----------
+# ---------- Access Token ----------
+@app.get("/get_canva_token")
+def get_canva_token():
+    token_data = load_tokens()
+    if not token_data:
+        return {"error": "No token found. Run initial OAuth first."}
 
+    if is_token_expired(token_data):
+        print("🔁 Access token expired — refreshing...")
+        token_data = refresh_access_token(token_data["refresh_token"])
+        return {"access_token": token_data["access_token"], "status": "refreshed"}
+
+    return {"access_token": token_data["access_token"], "status": "valid"}
+
+
+# ---------- PDF Upload ----------
 
 @app.post("/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...)):
