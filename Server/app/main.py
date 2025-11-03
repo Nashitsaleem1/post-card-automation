@@ -42,7 +42,6 @@ TOKENS_FILE = os.path.join(BASE_DIR, "canva_tokens.json")
 scheduler = BackgroundScheduler()
 scheduler.start()
 
-
 # ---------- App ----------
 app = FastAPI(title="PCM Automation", version="1.0.0")
 
