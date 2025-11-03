@@ -125,7 +125,10 @@ def refresh_access_token(refresh_token):
 
     # Parse response
     token_data = response.json()
-    
+
+    with open(TOKENS_FILE, "w") as f:
+        json.dump(token_data, f, indent=2)
+        
     return token_data
 
 # ---------- Utility: Token Fetch ----------
