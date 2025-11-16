@@ -1,3 +1,4 @@
+//campaign_management.jss
 // ============================================
 // GLOBAL VARIABLES & CONFIGURATION
 // ============================================
@@ -17,16 +18,1342 @@ let cityAutocomplete;
 let recipientsList = [];
 let uploadedPdfUrl = null;
 
+const selectedCarrierRoutes = new Map();
+const selectedDemographics = new Map();
+
+// Store default letter options
+let letterOptions = {
+  insertAddressingPage: true,
+  envelopeType: "fullWindow",
+};
+
+// Store the template ID and button for later use
+let pendingTemplateId = null;
+let pendingButton = null;
+let demographicsData = [];
+let currentListType = null;
+let eddmSectionVisible = false;
+
 const API_KEYS = {
   testing: {
     apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
     apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
   },
-  production: {
-    apiKey: "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy",
-    apiSecret: "ZDFjNmUwM2MtOTcwNi00MjBiLWE4NDItM2Y5MjAzMDJiMTVh",
-  },
+  production: {
+    apiKey: "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy",
+    apiSecret: "ZDFjNmUwM2MtOTcwNi00MjBiLWE4NDItM2Y5MjAzMDJiMTVh",
+  },
 };
+
+function toggleEDDMSection() {
+  const isCampaign = campaignCard.classList.contains("selected");
+  const isMailer = mailerCard.classList.contains("selected");
+
+  // Check if Campaign or Mailer is selected
+  if (!isCampaign && !isMailer) {
+    showAlert("⚠️ Please select either 'New Campaign' or 'New Mailer' first.");
+    return;
+  }
+
+  // Get campaign/mailer names based on selection
+  let campaignName = "";
+  let mailerName = "";
+
+  if (isCampaign) {
+    campaignName =
+      document.getElementById("campaignNameInput")?.value?.trim() || "";
+    mailerName =
+      document.getElementById("mailerNameInput")?.value?.trim() || "";
+  } else {
+    mailerName =
+      document.getElementById("mailerNameOnlyInput")?.value?.trim() || "";
+  }
+
+  // Validate Campaign Name (if Campaign is selected)
+  if (isCampaign && !campaignName) {
+    showAlert("⚠️ Please enter Campaign Name to use RES OCC service.");
+    return;
+  }
+
+  // Validate Mailer Name
+  if (!mailerName) {
+    showAlert("⚠️ Please enter Mailer Name to use RES OCC service.");
+    return;
+  }
+
+  // Check if template or PDF is selected
+  if (!uploadedPdfUrl && !window.currentEditingTemplateId) {
+    showAlert("⚠️ Please select a template before using RES OCC service.");
+    return;
+  }
+
+  // All validations passed - toggle EDDM section
+  const eddmSection = document.querySelector(".eddm-section");
+  eddmSectionVisible = !eddmSectionVisible;
+
+  if (eddmSectionVisible) {
+    eddmSection.style.display = "block";
+    eddmSection.scrollIntoView({ behavior: "smooth" });
+    // showAlert(
+    //   "✅ EDDM section is now ready. Fill in the details and click 'Get List Count ID & Record Count' to place your order."
+    // );
+  } else {
+    eddmSection.style.display = "none";
+  }
+}
+
+function showLetterOptionsModalAsync(templateId, button) {
+  return new Promise((resolve) => {
+    pendingTemplateId = templateId;
+    pendingButton = button;
+
+    const modal = document.getElementById("letterOptionsModal");
+    if (!modal) {
+      resolve(true); // If modal doesn't exist, proceed anyway
+      return;
+    }
+
+    modal.style.display = "flex";
+
+    // Reset form to defaults
+    document.querySelectorAll(".option-btn").forEach((btn) => {
+      btn.classList.remove("active");
+    });
+    document
+      .querySelector('.option-btn[data-value="yes"]')
+      .classList.add("active");
+
+    const envelopeSelect = document.getElementById("envelopeType");
+    if (envelopeSelect) {
+      envelopeSelect.value = "fullWindow";
+    }
+
+    // Store the resolve function so we can call it later
+    window.modalResolve = resolve;
+  });
+}
+
+// Close letter options modal (cancelled)
+function closeLetterOptionsModal() {
+  const modal = document.getElementById("letterOptionsModal");
+  if (modal) {
+    modal.style.display = "none";
+  }
+
+  // Resolve with false (user cancelled)
+  if (window.modalResolve) {
+    window.modalResolve(false);
+    window.modalResolve = null;
+  }
+
+  pendingTemplateId = null;
+  pendingButton = null;
+}
+
+// Confirm letter options and proceed
+function confirmLetterOptions() {
+  const envelopeType = document.getElementById("envelopeType").value;
+
+  if (!envelopeType) {
+    showAlert("Please select an envelope type");
+    return;
+  }
+
+  letterOptions.envelopeType = envelopeType;
+
+  // Close modal
+  const modal = document.getElementById("letterOptionsModal");
+  if (modal) {
+    modal.style.display = "none";
+  }
+  if (window.modalResolve) {
+    window.modalResolve(true);
+    window.modalResolve = null;
+  }
+
+  pendingTemplateId = null;
+  pendingButton = null;
+}
+
+// Select addressing page option
+function selectAddressingOption(value, buttonElement) {
+  const buttons = buttonElement.parentElement.querySelectorAll(".option-btn");
+  buttons.forEach((btn) => btn.classList.remove("active"));
+  buttonElement.classList.add("active");
+  letterOptions.insertAddressingPage = value === "yes";
+}
+
+// ============================================
+// Fetch Carrier Routes
+// ============================================
+
+async function fetchCarrierRoutes(zipCode, listType) {
+  try {
+    const mode = getCurrentMode();
+    const token = await getToken(mode);
+
+    const payload = {
+      listType: "IRL",
+      breakdownType: "ZipCode",
+      zipCodes: [zipCode],
+      demographics: [
+        {
+          key: "Gender",
+          values: ["M", "F"],
+        },
+      ],
+    };
+
+    const response = await fetch(
+      "https://v3.pcmintegrations.com/list/count/zipcode",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    // console.log(data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching carrier routes:", error);
+    throw error;
+  }
+}
+
+// Toggle carrier routes dropdown
+function toggleDropdown(event) {
+  const dropdown = event.currentTarget.parentElement;
+  const header = dropdown.querySelector(".multiselect-header");
+  const list = dropdown.querySelector(".multiselect-list");
+
+  header.classList.toggle("active");
+  list.classList.toggle("open");
+}
+
+// Close dropdown when clicking outside
+document.addEventListener("click", (e) => {
+  const dropdown = document.getElementById("carrierRoutesDropdown");
+  if (dropdown && !dropdown.contains(e.target)) {
+    dropdown.querySelector(".multiselect-header").classList.remove("active");
+    dropdown.querySelector(".multiselect-list").classList.remove("open");
+  }
+});
+
+function handleCheckboxChange(routeCode, routeLabel, isChecked) {
+  if (isChecked) {
+    selectedCarrierRoutes.set(routeCode, routeLabel);
+  } else {
+    selectedCarrierRoutes.delete(routeCode);
+  }
+
+  //the Select All checkbox state
+  updateSelectAllCheckbox();
+
+  // tags display
+  updateSelectedTags();
+}
+
+// Select All checkbox state based on individual selections
+function updateSelectAllCheckbox() {
+  const selectAllCheckbox = document.getElementById("selectAllRoutes");
+  if (!selectAllCheckbox) return;
+
+  const routeCheckboxes = document.querySelectorAll(".route-checkbox");
+  const totalRoutes = routeCheckboxes.length;
+  const checkedRoutes = Array.from(routeCheckboxes).filter(
+    (cb) => cb.checked
+  ).length;
+
+  if (checkedRoutes === 0) {
+    selectAllCheckbox.checked = false;
+    selectAllCheckbox.indeterminate = false;
+  } else if (checkedRoutes === totalRoutes) {
+    selectAllCheckbox.checked = true;
+    selectAllCheckbox.indeterminate = false;
+  } else {
+    selectAllCheckbox.checked = false;
+    selectAllCheckbox.indeterminate = true;
+  }
+}
+
+function updateSelectedTags() {
+  const tagsContainer = document.getElementById("selectedTags");
+  tagsContainer.innerHTML = "";
+
+  const headerText = document.querySelector(".multiselect-header-text");
+
+  if (selectedCarrierRoutes.size === 0) {
+    headerText.textContent = "-- Click to select carrier routes --";
+    return;
+  }
+
+  headerText.textContent = `${selectedCarrierRoutes.size} route(s) selected`;
+
+  selectedCarrierRoutes.forEach((label, code) => {
+    const tag = document.createElement("div");
+    tag.className = "tag";
+    tag.innerHTML = `
+      ${label}
+      <span class="tag-remove" onclick="removeTag('${code}')">×</span>
+    `;
+    tagsContainer.appendChild(tag);
+  });
+}
+
+// Remove tag
+function removeTag(routeCode) {
+  selectedCarrierRoutes.delete(routeCode);
+  const checkbox = document.querySelector(`input[value="${routeCode}"]`);
+  if (checkbox) {
+    checkbox.checked = false;
+  }
+
+  updateSelectAllCheckbox();
+
+  updateSelectedTags();
+}
+
+// Populate carrier routes in dropdown
+function populateCarrierRoutes(routes) {
+  const list = document.getElementById("carrierRoutesList");
+  list.innerHTML = "";
+
+  if (routes.length === 0) {
+    list.innerHTML = '<div class="empty-state">No carrier routes found</div>';
+    return;
+  }
+
+  // Create Select All option at the top
+  const selectAllOption = document.createElement("div");
+  selectAllOption.className = "multiselect-option select-all-option";
+  selectAllOption.innerHTML = `
+    <input 
+      type="checkbox" 
+      id="selectAllRoutes" 
+      onchange="handleSelectAllRoutes(this)"
+    />
+    <label for="selectAllRoutes" style="font-weight: 600; color: #2b7fff;">
+      ✓ Select All Routes
+    </label>
+  `;
+  list.appendChild(selectAllOption);
+
+  // Add divider
+  const divider = document.createElement("div");
+  divider.style.cssText = "border-top: 1px solid #e0e0e0; margin: 0.5rem 0;";
+  list.appendChild(divider);
+
+  // Add individual routes
+  routes.forEach((route) => {
+    const option = document.createElement("div");
+    option.className = "multiselect-option";
+
+    // Format label as "ROUTE CODE - CITY, STATE (Total: X)"
+    const routeLabel = `${route.code} - ${route.text} (${route.total})`;
+    const sanitizedCode = route.code.replace(/:/g, "_").replace(/\s+/g, "_");
+
+    option.innerHTML = `
+      <input 
+        type="checkbox" 
+        id="route_${sanitizedCode}" 
+        value="${route.code}"
+        class="route-checkbox"
+        onchange="handleCheckboxChange('${route.code}', '${routeLabel.replace(
+      /'/g,
+      "\\'"
+    )}', this.checked)"
+      />
+      <label for="route_${sanitizedCode}">
+        <strong>${route.code}</strong> - ${route.text}
+        <span style="color: #999; font-size: 0.85rem; margin-left: 0.5rem;">(${
+          route.total
+        })</span>
+      </label>
+    `;
+    list.appendChild(option);
+  });
+}
+
+// Handle Select All Routes checkbox
+function handleSelectAllRoutes(checkbox) {
+  const routeCheckboxes = document.querySelectorAll(".route-checkbox");
+  const isChecked = checkbox.checked;
+
+  routeCheckboxes.forEach((cb) => {
+    cb.checked = isChecked;
+
+    // Trigger the change handler for each checkbox
+    const routeCode = cb.value;
+    const label = cb.nextElementSibling.textContent.trim();
+    handleCheckboxChange(routeCode, label, isChecked);
+  });
+}
+
+// ============================================
+// EDDM SEND LETTER FUNCTION
+// ============================================
+async function sendLetterViaEDDM() {
+  const btn = document.querySelector("button[onclick='sendLetterViaEDDM()']");
+  const isCampaign = campaignCard.classList.contains("selected");
+  const isMailer = mailerCard.classList.contains("selected");
+
+  if (!isCampaign && !isMailer) {
+    showAlert("Please select either 'New Campaign' or 'New Mailer' option.");
+    return;
+  }
+
+  // Check if user has selected carrier routes
+  if (selectedCarrierRoutes.size === 0) {
+    showAlert(
+      "Please select at least one carrier route and get the list count."
+    );
+    return;
+  }
+
+  // Check if list count has been retrieved
+  if (!window.currentListCountID || !window.currentRecordCount) {
+    showAlert("Please click 'Get List Count ID & Record Count' button first.");
+    return;
+  }
+
+  const mode = getCurrentMode();
+
+  try {
+    if (isCampaign) {
+      const campaignName = document
+        .getElementById("campaignNameInput")
+        .value.trim();
+      const mailerName = document
+        .getElementById("mailerNameInput")
+        .value.trim();
+
+      if (!campaignName || !mailerName) {
+        showAlert("Campaign name and Mailer name are required.");
+        return;
+      }
+
+      if (!uploadedPdfUrl && !window.currentEditingTemplateId) {
+        showAlert("Please select a template");
+        return;
+      }
+
+      // Show letter options modal and wait for user input
+      const optionsConfirmed = await showLetterOptionsModalAsync(null, btn);
+
+      if (!optionsConfirmed) {
+        return; // User cancelled
+      }
+
+      // Proceed with EDDM order
+      await proceedWithEDDMOrder(
+        uploadedPdfUrl ? null : window.currentEditingTemplateId,
+        btn,
+        mode
+      );
+
+      const campaignResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaign_name: campaignName }),
+      });
+
+      if (!campaignResp.ok) {
+        const err = await campaignResp.json();
+        throw new Error(err.detail || "Failed to create campaign");
+      }
+      const campaign = await campaignResp.json();
+
+      const campaignDataPayload = {
+        campaign_id: campaign.id,
+        mailer_name: mailerName,
+        template_id: uploadedPdfUrl ? null : window.currentEditingTemplateId,
+        audience_id: null,
+        schedule_time: null,
+        send_date: new Date().toISOString(),
+        status: "sent",
+        env_mode: mode,
+        res_recipients: window.currentRecordCount,
+      };
+
+      const dataResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(campaignDataPayload),
+      });
+
+      if (!dataResp.ok) {
+        const err = await dataResp.json();
+        throw new Error(err.detail || "Failed to save campaign data");
+      }
+
+      showAlert(
+        "RES OCC letter order placed and campaign saved successfully! ✅"
+      );
+      setTimeout(() => {
+        window.location.href = "dashboard.html";
+      }, 800);
+    }
+
+    if (isMailer) {
+      const mailerName = document
+        .getElementById("mailerNameOnlyInput")
+        .value.trim();
+
+      if (!mailerName) {
+        showAlert("Mailer name is required.");
+        return;
+      }
+
+      if (!uploadedPdfUrl && !window.currentEditingTemplateId) {
+        showAlert("Please select a template.");
+        return;
+      }
+
+      // Show letter options modal and wait for user input
+      const optionsConfirmed = await showLetterOptionsModalAsync(null, btn);
+
+      if (!optionsConfirmed) {
+        return; // User cancelled
+      }
+
+      // Proceed with EDDM order
+      await proceedWithEDDMOrder(
+        uploadedPdfUrl ? null : window.currentEditingTemplateId,
+        btn,
+        mode
+      );
+
+      const mailerPayload = {
+        mailer_name: mailerName,
+        template_id: uploadedPdfUrl ? null : window.currentEditingTemplateId,
+        audience_id: null,
+        schedule_time: null,
+        send_date: new Date().toISOString(),
+        status: "sent",
+        env_mode: mode,
+        res_recipients: window.currentRecordCount,
+      };
+
+      const mailerResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(mailerPayload),
+      });
+
+      if (!mailerResp.ok) {
+        const err = await mailerResp.json();
+        throw new Error(err.detail || "Failed to save mailer one-off data");
+      }
+
+      showAlert(
+        "RES OCC letter order placed and one-off mailer saved successfully! ✅"
+      );
+      setTimeout(() => {
+        window.location.href = "dashboard.html";
+      }, 800);
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    showAlert(error.message || "Something went wrong.");
+  }
+}
+
+// ============================================
+// EDDM ORDER DESIGN FUNCTION
+// ============================================
+
+async function proceedWithEDDMOrder(templateId, button, mode) {
+  try {
+    const confirmSend = confirm(
+      `You are about to send the RES OCC letter in ${mode.toUpperCase()} mode.\n\nDo you want to proceed?`
+    );
+
+    if (!confirmSend) {
+      return false;
+    }
+
+    const todayObj = new Date();
+    const todayISO = todayObj.toISOString().split("T")[0];
+    const formattedDate = todayObj.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    let finalHtml = "";
+
+    if (uploadedPdfUrl) {
+      finalHtml = uploadedPdfUrl;
+    } else if (templateId) {
+      const tplRes = await fetch(
+        `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
+      );
+      if (!tplRes.ok) throw new Error("Failed to load template content");
+      const tpl = await tplRes.json();
+      finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
+    } else {
+      throw new Error("Please select a template or upload a PDF");
+    }
+
+    const token = await getToken(mode);
+
+    const payload = {
+      extRefNbr: "12345",
+      designID: 0,
+      mailClass: "FirstClass",
+      mailDate: todayISO,
+      color: true,
+      printOnBothSides: true,
+      insertAddressingPage: letterOptions.insertAddressingPage,
+      envelope: {
+        font: "Bradley Hand",
+        type: letterOptions.envelopeType,
+        fontColor: "Black",
+      },
+      letter: finalHtml,
+      returnAddress: {
+        firstName: "Mark",
+        lastName: "Fazzini",
+        address: "4175 Woodlands Pkwy",
+        city: "Palm Harbor",
+        state: "FL",
+        zipCode: "34685",
+      },
+      listCountID: window.currentListCountID,
+      recordCount: window.currentRecordCount,
+    };
+    const res = await fetch(
+      "https://v3.pcmintegrations.com/order/letter/with-list-count",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "API request failed");
+
+    showAlert(
+      `✅ RES OCC letter order placed successfully in ${mode.toUpperCase()} mode.`
+    );
+    return true;
+  } catch (err) {
+    showAlert("Error ordering RES OCC letter: " + err.message);
+    return false;
+  }
+}
+
+// Handle form submission
+function initializeEDDMForm() {
+  const form = document.getElementById("eddmForm");
+  if (form) {
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      if (selectedCarrierRoutes.size === 0) {
+        showAlert("Please select at least one carrier route");
+        return;
+      }
+
+      const formData = {
+        listType: document.getElementById("listType").value,
+        zipCode: document.getElementById("zipCode").value,
+        carrierRoutes: Array.from(selectedCarrierRoutes.keys()),
+      };
+
+      showAlert(
+        `Selected ${selectedCarrierRoutes.size} carrier route(s): ${Array.from(
+          selectedCarrierRoutes.values()
+        ).join(", ")}`
+      );
+    });
+  }
+}
+
+// Load demographics data based on list type
+async function loadDemographicsData(listType) {
+  try {
+    // Determine which JSON file to load based on list type
+    let jsonFile;
+    if (listType === "IRL") {
+      jsonFile = "./assets/data/demographics_1.json";
+    } else if (listType === "ACC") {
+      jsonFile = "./assets/data/demographics_2.json";
+    } else if (listType === "HT6") {
+      jsonFile = "./assets/data/demographics_3.json";
+    } else {
+      // Default fallback
+      jsonFile = "./assets/data/demographics_1.json";
+    }
+
+    const response = await fetch(jsonFile);
+    if (!response.ok) throw new Error("Failed to load demographics");
+
+    demographicsData = await response.json();
+    currentListType = listType;
+
+    // Clear previous selections when switching list types
+    clearDemographics();
+
+    // Render new demographics
+    renderDemographics();
+
+    // console.log(`✅ Loaded demographics for list type: ${listType}`);
+  } catch (error) {
+    console.error("Error loading demographics:", error);
+    showAlert(`Error loading demographics: ${error.message}`);
+    demographicsData = [];
+    renderDemographics(); // Render empty state
+  }
+}
+
+// ============================================
+// RENDER DEMOGRAPHICS (WITH INFO MESSAGE)
+// ============================================
+
+// Render demographics filters
+function renderDemographics() {
+  const container = document.getElementById("demographicsContainer");
+  container.innerHTML = "";
+
+  if (demographicsData.length === 0) {
+    if (!currentListType) {
+      container.innerHTML = `
+        <div class="demographics-empty-state">
+          <p style="color: #666; font-style: italic; padding: 1rem; text-align: center;">
+            Please select a List Type first to view available demographics filters.
+          </p>
+        </div>`;
+    } else {
+      container.innerHTML = `
+        <div class="demographics-empty-state">
+          <p style="color: #999; padding: 1rem; text-align: center;">
+            No demographics available for ${getListTypeLabel(currentListType)}
+          </p>
+        </div>`;
+    }
+    return;
+  }
+
+  // Add info message about current list type
+  const infoDiv = document.createElement("div");
+  infoDiv.className = "demographics-info";
+  infoDiv.innerHTML = `
+    <div style="background: #e3f2fd; padding: 0.75rem; border-radius: 5px; margin-bottom: 1rem; border-left: 4px solid #2196f3;">
+      <strong>📊 Demographics for:</strong> ${getListTypeLabel(currentListType)}
+    </div>
+  `;
+  container.appendChild(infoDiv);
+
+  demographicsData.forEach((demographic) => {
+    if (!demographic.values || demographic.values.length === 0) return;
+
+    const filterDiv = document.createElement("div");
+    filterDiv.className = "demographic-filter";
+
+    const headerId = `demographic-header-${demographic.key}`;
+    const optionsId = `demographic-options-${demographic.key}`;
+
+    filterDiv.innerHTML = `
+      <div class="demographic-header" onclick="toggleDemographic(this)">
+        <h4 class="demographic-title">${demographic.label}</h4>
+        <button type="button" class="demographic-toggle">
+          <span class="toggle-icon">▼</span>
+        </button>
+      </div>
+      <div class="demographic-options collapsed" id="${optionsId}" style="display: none;">
+        ${demographic.values
+          .map(
+            (value) => `
+          <div class="demographic-option">
+            <input 
+              type="checkbox" 
+              id="demo_${demographic.key}_${value.key}"
+              value="${value.key}"
+              data-demographic-key="${demographic.key}"
+              data-demographic-label="${demographic.label}"
+              data-value-label="${value.label}"
+              onchange="handleDemographicChange(this)"
+            />
+            <label for="demo_${demographic.key}_${value.key}">
+              ${value.label}
+            </label>
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+    `;
+
+    container.appendChild(filterDiv);
+  });
+
+  // Initialize selected demographics display
+  updateSelectedDemographics();
+}
+
+// Toggle demographic section
+function toggleDemographic(headerElement) {
+  const toggle = headerElement.querySelector(".demographic-toggle");
+  const optionsDiv = headerElement.nextElementSibling;
+
+  toggle.classList.toggle("expanded");
+  optionsDiv.classList.toggle("collapsed");
+  optionsDiv.style.display =
+    optionsDiv.style.display === "none" ? "grid" : "none";
+}
+
+// Handle demographic checkbox change
+function handleDemographicChange(checkbox) {
+  const demographicKey = checkbox.dataset.demographicKey;
+  const valueKey = checkbox.value;
+  const valueLabel = checkbox.dataset.valueLabel;
+
+  if (!selectedDemographics.has(demographicKey)) {
+    selectedDemographics.set(demographicKey, []);
+  }
+
+  const values = selectedDemographics.get(demographicKey);
+
+  if (checkbox.checked) {
+    // Add to selected
+    if (!values.includes(valueKey)) {
+      values.push(valueKey);
+    }
+  } else {
+    // Remove from selected
+    const index = values.indexOf(valueKey);
+    if (index > -1) {
+      values.splice(index, 1);
+    }
+    if (values.length === 0) {
+      selectedDemographics.delete(demographicKey);
+    }
+  }
+
+  updateSelectedDemographics();
+}
+
+function updateSelectedDemographics() {
+  const summary = [];
+
+  selectedDemographics.forEach((values, key) => {
+    const demographic = demographicsData.find((d) => d.key === key);
+    if (demographic) {
+      const selectedLabels = values
+        .map((v) => {
+          const value = demographic.values.find((dv) => dv.key === v);
+          return value ? value.label : v;
+        })
+        .join(", ");
+      summary.push(`${demographic.label}: ${selectedLabels}`);
+    }
+  });
+
+  // console.log("Selected Demographics:", selectedDemographics);
+  // console.log("Summary:", summary);
+}
+
+// Get selected demographics formatted for API
+function getSelectedDemographicsForAPI() {
+  const demographics = [];
+
+  selectedDemographics.forEach((values, key) => {
+    demographics.push({
+      key: key,
+      values: values,
+    });
+  });
+
+  return demographics;
+}
+
+// ============================================
+// UPDATED LIST TYPE CHANGE HANDLER
+// ============================================
+
+// Add event listener to list type dropdown
+function initializeListTypeListener() {
+  const listTypeSelect = document.getElementById("listType");
+  if (listTypeSelect) {
+    listTypeSelect.addEventListener("change", async (e) => {
+      const selectedListType = e.target.value;
+
+      if (selectedListType) {
+        // Clear previous carrier routes and demographics
+        selectedCarrierRoutes.clear();
+        updateSelectedTags();
+
+        const list = document.getElementById("carrierRoutesList");
+        if (list) {
+          list.innerHTML =
+            '<div class="empty-state">Select a zip code and click "Get Carrier Routes"</div>';
+        }
+
+        // Load appropriate demographics
+        await loadDemographicsData(selectedListType);
+
+        //  showAlert(`List type changed to: ${getListTypeLabel(selectedListType)}\n\nDemographics filters have been updated.`);
+      } else {
+        // Clear demographics if no list type selected
+        demographicsData = [];
+        currentListType = null;
+        clearDemographics();
+        renderDemographics();
+      }
+    });
+  }
+}
+
+// Helper function to get readable list type labels
+function getListTypeLabel(listType) {
+  const labels = {
+    HT6: "New Movers",
+    ACC: "Consumer",
+    IRL: "Resident Occupant",
+  };
+  return labels[listType] || listType;
+}
+
+// ============================================
+// UPDATED GET CARRIER ROUTES FUNCTION
+// ============================================
+
+async function getCarrierRoutes() {
+  const listType = document.getElementById("listType").value;
+  const zipCode = document.getElementById("zipCode").value;
+  const btn = document.getElementById("getCarrierRoutesBtn");
+  const list = document.getElementById("carrierRoutesList");
+
+  if (!listType) {
+    showAlert("Please select a list type first");
+    return;
+  }
+
+  if (!zipCode || zipCode.length !== 5) {
+    showAlert("Please enter a valid 5-digit zip code");
+    return;
+  }
+
+  if (!demographicsData.length || currentListType !== listType) {
+    await loadDemographicsData(listType);
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span> Loading...';
+  list.innerHTML =
+    '<div class="empty-state"><span class="loading"></span> Fetching carrier routes...</div>';
+
+  try {
+    const response = await fetchCarrierRoutes(zipCode, listType);
+    const carrierData = response.breakdown?.find(
+      (b) => b.breakdownType === "ZIPCRRT"
+    );
+
+    if (carrierData?.data?.length > 0) {
+      populateCarrierRoutes(carrierData.data);
+    } else {
+      list.innerHTML =
+        '<div class="empty-state">No carrier routes found for this zip code</div>';
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    list.innerHTML = `<div class="empty-state">Error loading routes: ${error.message}</div>`;
+    showAlert(`Error: ${error.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "Get Carrier Routes";
+  }
+}
+
+async function fetchCarrierRoutes(zipCode, listType) {
+  const mode = getCurrentMode();
+  const token = await getToken(mode);
+
+  const payload = {
+    listType: "IRL",
+    breakdownType: "ZipCode",
+    zipCodes: [zipCode],
+    demographics: [{ key: "Gender", values: ["M", "F"] }],
+  };
+
+  const response = await fetch(
+    "https://v3.pcmintegrations.com/list/count/zipcode",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+  return response.json();
+}
+
+// ============================================
+// UPDATED CLEAR DEMOGRAPHICS FUNCTION
+// ============================================
+
+function clearDemographics() {
+  selectedDemographics.clear();
+
+  // Uncheck all checkboxes
+  document
+    .querySelectorAll('.demographic-option input[type="checkbox"]')
+    .forEach((checkbox) => {
+      checkbox.checked = false;
+    });
+
+  updateSelectedDemographics();
+}
+
+// Get List Count ID and Record Count
+async function getListCount() {
+  const listType = document.getElementById("listType").value;
+  const zipCode = document.getElementById("zipCode").value;
+  const btn = document.getElementById("getListCountBtn");
+  const resultDiv = document.getElementById("listCountResult");
+
+  // Validation
+  if (!listType) {
+    showAlert("Please select a list type");
+    return;
+  }
+
+  if (!zipCode || zipCode.length !== 5) {
+    showAlert("Please enter a valid 5-digit zip code");
+    return;
+  }
+
+  if (selectedCarrierRoutes.size === 0) {
+    showAlert("Please select at least one carrier route first");
+    return;
+  }
+
+  // Show loading state
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span> Getting Count...';
+  resultDiv.style.display = "none";
+
+  try {
+    const mode = getCurrentMode();
+    const token = await getToken(mode);
+
+    // Prepare carrier routes array
+    const carrierRoutesArray = Array.from(selectedCarrierRoutes.keys());
+
+    // Prepare demographics array
+    const demographicsArray = getSelectedDemographicsForAPI();
+
+    const payload = {
+      listType: listType,
+      breakdownType: "ZipCode",
+      carrierRoutes: carrierRoutesArray,
+      demographics: demographicsArray,
+    };
+
+    // console.log("List Count Payload:", payload);
+
+    const response = await fetch(
+      "https://v3.pcmintegrations.com/list/count/carrier-route",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `API Error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    // console.log("List Count Response:", data);
+
+    // // Log specific values
+    // console.log("List Count ID:", data.listCountID);
+    // console.log("Record Count:", data.recordCount);
+
+    // Store for later use
+    window.currentListCountID = data.listCountID;
+    window.currentRecordCount = data.recordCount;
+
+    // Display results with new layout
+    displayListCountResults(data.listCountID, data.recordCount, mode);
+
+    showAlert(
+      `✅ Success! Found approximately ${data.recordCount} recipients ready to receive your letter.`
+    );
+  } catch (error) {
+    console.error("Error getting list count:", error);
+    showAlert(`Error: ${error.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "Get List Count ID & Record Count";
+  }
+}
+
+function displayListCountResults(listCountID, recordCount, mode) {
+  const resultDiv = document.getElementById("listCountResult");
+
+  resultDiv.innerHTML = `
+    <div class="list-count-results-container" style="
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 10px;
+      padding: 2rem;
+      color: white;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    ">
+      <div class="results-info" style="
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+      ">
+        <div class="info-box" style="background: rgba(255, 255, 255, 0.1); padding: 1.5rem; border-radius: 8px;">
+          <label style="color:white; display: block; font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">
+            Estimated Recipients
+          </label>
+          <div style="font-size: 1.8rem; font-weight: 700;">
+            ${recordCount.toLocaleString()}
+          </div>
+        </div>
+      </div>
+
+      <div class="recipient-message" style="
+        background: rgba(255, 255, 255, 0.15);
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        border-left: 4px solid rgba(255, 255, 255, 0.5);
+      ">
+        <p style="margin: 0; font-size: 1.1rem; line-height: 1.6;">
+          💌 This letter will be sent to approximately <strong>${recordCount.toLocaleString()} recipients</strong> matching your selected criteria.
+        </p>
+      </div>
+
+      <div class="action-buttons" style="
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      ">
+        <button 
+          onclick="sendLetterViaEDDM()" 
+          style="
+            flex: 1;
+            min-width: 200px;
+            padding: 1rem 2rem;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          "
+          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(0, 0, 0, 0.2)';"
+          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.15)';"
+        >
+          🚀 Send Letter Now
+        </button>
+
+      </div>
+    </div>
+  `;
+
+  resultDiv.style.display = "block";
+  resultDiv.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// ============================================
+// PROCEED WITH EDDM ORDER AFTER LIST COUNT
+// ============================================
+
+async function proceedWithEDDMOrderAfterListCount(mode) {
+  const isCampaign = campaignCard.classList.contains("selected");
+  const isMailer = mailerCard.classList.contains("selected");
+
+  if (!isCampaign && !isMailer) {
+    showAlert("Please select either 'New Campaign' or 'New Mailer' option.");
+    return;
+  }
+
+  try {
+    if (isCampaign) {
+      const campaignName = document
+        .getElementById("campaignNameInput")
+        .value.trim();
+      const mailerName = document
+        .getElementById("mailerNameInput")
+        .value.trim();
+
+      if (!campaignName || !mailerName) {
+        showAlert("Campaign name and Mailer name are required.");
+        return;
+      }
+
+      if (!uploadedPdfUrl && !window.currentEditingTemplateId) {
+        showAlert("Please select a template or upload a PDF.");
+        return;
+      }
+
+      // Show letter options modal and wait for user input
+      const optionsConfirmed = await showLetterOptionsModalAsync(null, null);
+
+      if (!optionsConfirmed) {
+        return; // User cancelled
+      }
+
+      // Proceed with EDDM order
+      const orderSuccess = await proceedWithEDDMOrder(
+        uploadedPdfUrl ? null : window.currentEditingTemplateId,
+        null,
+        mode
+      );
+
+      if (!orderSuccess) {
+        showAlert("Order failed. Campaign not saved.");
+        return;
+      }
+
+      const campaignResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaign_name: campaignName }),
+      });
+
+      if (!campaignResp.ok) {
+        const err = await campaignResp.json();
+        throw new Error(err.detail || "Failed to create campaign");
+      }
+      const campaign = await campaignResp.json();
+
+      const campaignDataPayload = {
+        campaign_id: campaign.id,
+        mailer_name: mailerName,
+        template_id: uploadedPdfUrl ? null : window.currentEditingTemplateId,
+        audience_id: selectedAudienceId,
+        schedule_time: null,
+        send_date: new Date().toISOString(),
+        status: "sent",
+        env_mode: mode,
+      };
+
+      const dataResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(campaignDataPayload),
+      });
+
+      if (!dataResp.ok) {
+        const err = await dataResp.json();
+        throw new Error(err.detail || "Failed to save campaign data");
+      }
+
+      showAlert(
+        "RES OCC letter order placed and campaign saved successfully! ✅"
+      );
+      setTimeout(() => {
+        window.location.href = "dashboard.html";
+      }, 800);
+    }
+
+    if (isMailer) {
+      const mailerName = document
+        .getElementById("mailerNameOnlyInput")
+        .value.trim();
+
+      if (!mailerName) {
+        showAlert("Mailer name is required.");
+        return;
+      }
+
+      if (!uploadedPdfUrl && !window.currentEditingTemplateId) {
+        showAlert("Please select a template or upload a PDF.");
+        return;
+      }
+
+      // Show letter options modal and wait for user input
+      const optionsConfirmed = await showLetterOptionsModalAsync(null, null);
+
+      if (!optionsConfirmed) {
+        return; // User cancelled
+      }
+
+      // Proceed with EDDM order
+      const orderSuccess = await proceedWithEDDMOrder(
+        uploadedPdfUrl ? null : window.currentEditingTemplateId,
+        null,
+        mode
+      );
+
+      if (!orderSuccess) {
+        showAlert("Order failed. Mailer not saved.");
+        return;
+      }
+
+      const mailerPayload = {
+        mailer_name: mailerName,
+        template_id: uploadedPdfUrl ? null : window.currentEditingTemplateId,
+        audience_id: selectedAudienceId,
+        schedule_time: null,
+        send_date: new Date().toISOString(),
+        status: "sent",
+        env_mode: mode,
+        canva_link: null,
+      };
+
+      const mailerResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(mailerPayload),
+      });
+
+      if (!mailerResp.ok) {
+        const err = await mailerResp.json();
+        throw new Error(err.detail || "Failed to save mailer one-off data");
+      }
+
+      showAlert(
+        "RES OCC letter order placed and one-off mailer saved successfully! ✅"
+      );
+      setTimeout(() => {
+        window.location.href = "dashboard.html";
+      }, 800);
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    showAlert(error.message || "Something went wrong.");
+  }
+}
 
 // ============================================
 // PAGINATION & SEARCH VARIABLES
@@ -65,30 +1392,33 @@ let selectedAudienceId = null;
 let currentAudienceData = null;
 
 const existingaudienceCard = document.getElementById("existingaudience");
-const existingaudiencesection = document.getElementById("existingaudiencesection");
+const existingaudiencesection = document.getElementById(
+  "existingaudiencesection"
+);
 
 existingaudienceCard.addEventListener("click", () => {
   existingaudienceCard.classList.add("selected");
   uploadcsvCard.classList.remove("selected");
   BatchsearchCard.classList.remove("selected");
-  
+
   existingaudiencesection.style.display = "block";
   uploadsection.style.display = "none";
   batchsection.style.display = "none";
-  
+
   loadExistingAudiences();
   updateButtonStates();
 });
 
 async function loadExistingAudiences() {
   const audiencesGrid = document.getElementById("audiencesGrid");
-  
+
   if (!audiencesGrid) {
     console.error("Audiences grid not found");
     return;
   }
 
-  audiencesGrid.innerHTML = '<div class="loading-message">Loading audiences...</div>';
+  audiencesGrid.innerHTML =
+    '<div class="loading-message">Loading audiences...</div>';
 
   try {
     const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/audiences");
@@ -111,10 +1441,10 @@ async function loadExistingAudiences() {
 
     audiences.forEach((audience) => {
       // audience_list comes as array from API (already parsed by backend)
-      const audienceList = Array.isArray(audience.audience_list) 
-        ? audience.audience_list 
+      const audienceList = Array.isArray(audience.audience_list)
+        ? audience.audience_list
         : JSON.parse(audience.audience_list);
-      
+
       const recipientCount = audienceList.length;
       const createdDate = new Date(audience.created_at).toLocaleDateString();
 
@@ -143,15 +1473,14 @@ async function loadExistingAudiences() {
       audienceCard
         .querySelector(".view-details-btn")
         .addEventListener("click", () => {
-          const list = Array.isArray(audience.audience_list) 
-            ? audience.audience_list 
+          const list = Array.isArray(audience.audience_list)
+            ? audience.audience_list
             : JSON.parse(audience.audience_list);
           viewAudienceDetails(list, audience.audience_name);
         });
 
       audiencesGrid.appendChild(audienceCard);
     });
-
   } catch (error) {
     console.error("Error loading audiences:", error);
     audiencesGrid.innerHTML = `
@@ -168,7 +1497,9 @@ function viewAudienceDetails(audienceList, audienceName) {
   const modal = document.createElement("div");
   modal.className = "audience-modal";
 
-  const detailsHTML = audienceList.map((item, idx) => `
+  const detailsHTML = audienceList
+    .map(
+      (item, idx) => `
     <tr>
       <td>${idx + 1}</td>
       <td>${item.firstName} ${item.lastName}</td>
@@ -177,7 +1508,9 @@ function viewAudienceDetails(audienceList, audienceName) {
       <td>${item.state}</td>
       <td>${item.zipCode}</td>
     </tr>
-  `).join("");
+  `
+    )
+    .join("");
 
   modal.innerHTML = `
     <div class="modal-content">
@@ -204,38 +1537,43 @@ function viewAudienceDetails(audienceList, audienceName) {
 
 async function selectAudience(audienceId) {
   try {
-    const response = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/audiences/${audienceId}`);
-    
+    const response = await fetch(
+      `https://pcm-app-h8mn8.ondigitalocean.app/audiences/${audienceId}`
+    );
+
     if (!response.ok) {
       throw new Error("Failed to load audience details");
     }
 
     const audience = await response.json();
-    
+
     selectedAudienceId = audienceId;
     currentAudienceData = audience;
 
     // Parse audience_list - it comes as array from API
-    const audienceList = Array.isArray(audience.audience_list) 
-      ? audience.audience_list 
+    const audienceList = Array.isArray(audience.audience_list)
+      ? audience.audience_list
       : JSON.parse(audience.audience_list);
-    
+
     recipientsList = audienceList;
 
-    document.querySelectorAll(".audience-card").forEach(card => {
+    document.querySelectorAll(".audience-card").forEach((card) => {
       card.classList.remove("selected-audience");
     });
-    
-    const selectedCard = document.querySelector(`[data-audience-id="${audienceId}"]`);
+
+    const selectedCard = document.querySelector(
+      `[data-audience-id="${audienceId}"]`
+    );
     if (selectedCard) {
       selectedCard.classList.add("selected-audience");
     }
 
-    showAlert(`✅ Audience "${audience.audience_name}" selected with ${recipientsList.length} recipients`);
-    
+    showAlert(
+      `✅ Audience "${audience.audience_name}" selected with ${recipientsList.length} recipients`
+    );
+
     saveState();
     updateButtonStates();
-
   } catch (error) {
     console.error("Error selecting audience:", error);
     showAlert("Error loading audience: " + error.message);
@@ -244,31 +1582,35 @@ async function selectAudience(audienceId) {
 
 async function deleteAudience(audienceId, event) {
   event.stopPropagation();
-  
-  const confirmDelete = confirm("Are you sure you want to delete this audience? This action cannot be undone.");
-  
+
+  const confirmDelete = confirm(
+    "Are you sure you want to delete this audience? This action cannot be undone."
+  );
+
   if (!confirmDelete) return;
 
   try {
-    const response = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/audiences/${audienceId}`, {
-      method: "DELETE",
-    });
+    const response = await fetch(
+      `https://pcm-app-h8mn8.ondigitalocean.app/audiences/${audienceId}`,
+      {
+        method: "DELETE",
+      }
+    );
 
     if (!response.ok) {
       throw new Error("Failed to delete audience");
     }
 
     showAlert("✅ Audience deleted successfully");
-    
+
     if (selectedAudienceId === audienceId) {
       selectedAudienceId = null;
       currentAudienceData = null;
       recipientsList = [];
       updateButtonStates();
     }
-    
-    loadExistingAudiences();
 
+    loadExistingAudiences();
   } catch (error) {
     console.error("Error deleting audience:", error);
     showAlert("Error deleting audience: " + error.message);
@@ -282,7 +1624,7 @@ async function deleteAudience(audienceId, event) {
 function showAudienceNameModal() {
   const modal = document.getElementById("audienceNameModal");
   const input = document.getElementById("audienceNameInput");
-  
+
   if (modal && input) {
     input.value = "";
     modal.style.display = "flex";
@@ -298,8 +1640,10 @@ function closeAudienceNameModal() {
 }
 
 async function confirmSaveAudience() {
-  const audienceName = document.getElementById("audienceNameInput").value.trim();
-  
+  const audienceName = document
+    .getElementById("audienceNameInput")
+    .value.trim();
+
   if (!audienceName) {
     showAlert("Please enter an audience name");
     return;
@@ -310,12 +1654,12 @@ async function confirmSaveAudience() {
     closeAudienceNameModal();
     return;
   }
-
+  // console.log(recipientsList)
   try {
-  
+    // Backend expects audience_list as array of Address objects
     const payload = {
       audience_name: audienceName,
-      audience_list: recipientsList 
+      audience_list: recipientsList, // Send as array - backend will serialize to JSON
     };
 
     const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/audiences", {
@@ -332,15 +1676,16 @@ async function confirmSaveAudience() {
     }
 
     const savedAudience = await response.json();
-    
+
     selectedAudienceId = savedAudience.id;
     currentAudienceData = savedAudience;
 
-    showAlert(`✅ Audience "${audienceName}" saved successfully with ${recipientsList.length} recipients`);
-    
+    showAlert(
+      `✅ Audience "${audienceName}" saved successfully with ${recipientsList.length} recipients`
+    );
+
     closeAudienceNameModal();
     saveState();
-
   } catch (error) {
     console.error("Error saving audience:", error);
     showAlert("Error saving audience: " + error.message);
@@ -722,11 +2067,11 @@ function restoreState() {
     document.getElementById("mailerName").value = state.mailerName;
   if (state.mailerNameonly)
     document.getElementById("mailerNameOnlyInput").value = state.mailerNameonly;
-  
+
   if (state.recipients && state.recipients.length) {
     recipientsList = state.recipients;
   }
-  
+
   if (state.selectedAudienceId) {
     selectedAudienceId = state.selectedAudienceId;
   }
@@ -922,7 +2267,7 @@ function generateSearchHash(payload) {
 
 function getCachedPage(pageNum) {
   if (!currentSearchHash) {
-    console.log("No search hash available yet");
+    // console.log("No search hash available yet");
     return null;
   }
 
@@ -942,6 +2287,7 @@ function setCachedPage(pageNum, records) {
   }
 
   const cacheKey = `${currentSearchHash}_page_${pageNum}`;
+  // console.log("Caching page", pageNum, "with key:", cacheKey);
 
   const cacheData = {
     records: records,
@@ -1613,6 +2959,7 @@ async function parseCSV(file) {
         const row = Object.fromEntries(
           Object.entries(r).map(([k, v]) => [k.toLowerCase(), v])
         );
+
         return {
           firstName: row.firstname || "Test",
           lastName: row.lastname || "Name",
@@ -1624,7 +2971,7 @@ async function parseCSV(file) {
       });
 
       recipientsList = recipients;
-      
+
       const uploadBox = document.getElementById("uploadBox");
       uploadBox.innerHTML = `
         <div class="upload-icon" style="color: #28a745;">✓</div>
@@ -1632,9 +2979,9 @@ async function parseCSV(file) {
         <div class="upload-sub-text">${recipients.length} recipients loaded from ${file.name}</div>
         <div class="upload-sub-text" style="color: #ff6b6b; font-weight: 600; margin-top: 1rem;">Saving Audience...</div>
       `;
-      
+
       saveState();
-      
+
       // Automatically call save audience modal with a slight delay
       setTimeout(() => {
         showAudienceNameModal();
@@ -2071,6 +3418,24 @@ async function orderDesign(templateId, button) {
       return false;
     }
 
+    // Reset button state before showing modal
+    button.textContent = originalText;
+    button.disabled = false;
+
+    // Show letter options modal and wait for user input
+    const optionsConfirmed = await showLetterOptionsModalAsync(
+      templateId,
+      button
+    );
+
+    if (!optionsConfirmed) {
+      return false; // User cancelled
+    }
+
+    // Now proceed with the order using the selected options
+    button.textContent = "Processing...";
+    button.disabled = true;
+
     const todayObj = new Date();
     const todayISO = todayObj.toISOString().split("T")[0];
     const formattedDate = todayObj.toLocaleDateString("en-US", {
@@ -2096,7 +3461,7 @@ async function orderDesign(templateId, button) {
 
     // Use correct recipients list
     let finalRecipientsList = recipientsList;
-    
+
     // If using existing audience, ensure we have the data
     if (selectedAudienceId && currentAudienceData) {
       const audienceList = Array.isArray(currentAudienceData.audience_list)
@@ -2108,6 +3473,7 @@ async function orderDesign(templateId, button) {
     if (finalRecipientsList.length === 0) {
       throw new Error("No recipients available");
     }
+
     const token = await getToken(mode);
 
     const payload = {
@@ -2117,10 +3483,10 @@ async function orderDesign(templateId, button) {
       mailDate: todayISO,
       color: true,
       printOnBothSides: true,
-      insertAddressingPage: true,
+      insertAddressingPage: letterOptions.insertAddressingPage, // User selected value
       envelope: {
         font: "Bradley Hand",
-        type: "fullWindow",
+        type: letterOptions.envelopeType, // User selected value
         fontColor: "Black",
       },
       recipients: finalRecipientsList,
@@ -2280,16 +3646,16 @@ async function createAndSendLetter() {
         return;
       }
 
-    const mailerPayload = {
-      mailer_name: mailerName,
-      template_id: uploadedPdfUrl ? null : window.currentEditingTemplateId,
-      audience_id: selectedAudienceId,  
-      schedule_time: null,
-      send_date: new Date().toISOString(),
-      status: "sent",
-      env_mode: mode,
-      canva_link: null
-    };
+      const mailerPayload = {
+        mailer_name: mailerName,
+        template_id: uploadedPdfUrl ? null : window.currentEditingTemplateId,
+        audience_id: selectedAudienceId,
+        schedule_time: null,
+        send_date: new Date().toISOString(),
+        status: "sent",
+        env_mode: mode,
+        canva_link: null,
+      };
 
       const mailerResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
         method: "POST",
@@ -2466,10 +3832,13 @@ function handleCanvaNavigation() {
   let mailerName = "";
 
   if (isCampaign) {
-    campaignName = document.getElementById("campaignNameInput")?.value?.trim() || "";
-    mailerName = document.getElementById("mailerNameInput")?.value?.trim() || "";
+    campaignName =
+      document.getElementById("campaignNameInput")?.value?.trim() || "";
+    mailerName =
+      document.getElementById("mailerNameInput")?.value?.trim() || "";
   } else {
-    mailerName = document.getElementById("mailerNameOnlyInput")?.value?.trim() || "";
+    mailerName =
+      document.getElementById("mailerNameOnlyInput")?.value?.trim() || "";
   }
 
   if (isCampaign && !campaignName) {
@@ -2482,12 +3851,6 @@ function handleCanvaNavigation() {
     return;
   }
 
-  if (!recipientsList || recipientsList.length === 0) {
-    showAlert("⚠️ Please add recipients before browsing Canva templates.\n\nYou can:\n• Search for properties\n• Upload a CSV file\n• Select an existing audience");
-    return;
-  }
-
-  console.log("✅ All validations passed!");
   saveCampaignContextForCanva();
 
   window.location.href = "templateGallery.html?view=canva";
@@ -2503,18 +3866,21 @@ function saveCampaignContextForCanva() {
 
   if (isCampaignSelected) {
     mode = "campaign";
-    campaignName = document.getElementById("campaignNameInput")?.value?.trim() || "";
-    mailerName = document.getElementById("mailerNameInput")?.value?.trim() || "";
+    campaignName =
+      document.getElementById("campaignNameInput")?.value?.trim() || "";
+    mailerName =
+      document.getElementById("mailerNameInput")?.value?.trim() || "";
   } else if (isMailerSelected) {
     mode = "mailer";
-    mailerName = document.getElementById("mailerNameOnlyInput")?.value?.trim() || "";
+    mailerName =
+      document.getElementById("mailerNameOnlyInput")?.value?.trim() || "";
   }
 
   const context = {
     mode: mode,
     campaignName: campaignName,
     mailerName: mailerName,
-    recipients: recipientsList,
+    recipients: recipientsList, // May be empty
     selectedAudienceId: selectedAudienceId,
     envMode: getCurrentMode(),
     timestamp: Date.now(),
@@ -2598,7 +3964,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   restoreState();
   updateButtonStates();
+  initializeEDDMForm();
+  initializeListTypeListener();
 
+  // Clear the demographics container with a message
+  const container = document.getElementById("demographicsContainer");
+  if (container) {
+    container.innerHTML = `
+      <div class="demographics-empty-state">
+        <p style="color: #666; font-style: italic;">
+          Please select a List Type first to view available demographics filters.
+        </p>
+      </div>`;
+  }
   document.getElementById("campaignName")?.addEventListener("input", saveState);
   document.getElementById("mailerName")?.addEventListener("input", saveState);
   document
@@ -2609,7 +3987,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.currentEditingTemplateId = null;
   sessionStorage.removeItem("Restored template");
 
-  if (path.includes("templategallery")) {
+  if (path.includes("templateGallery")) {
     loadGalleryTemplates();
   } else if (path.includes("campaign_builder")) {
     await loadTemplates();

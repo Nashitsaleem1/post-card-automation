@@ -5,18 +5,34 @@
 let recipients = [];
 let currentCampaign = null;
 let allMailers = [];
-let currentAudienceId = null; // ✅ NEW: Track audience ID
+let currentAudienceId = null;
 window.currentEditingTemplateId = null;
 window.currentEditingMailerId = null;
 window.currentSideMailerId = null;
 let templatesCache = [];
+// Store default letter options
+let letterOptions = {
+  insertAddressingPage: true,
+  envelopeType: "fullWindow",
+};
+
+// ============================================
+// HELPER: Check if order is Direct Mail or RES OCC
+// ============================================
+
+function isDirectMailOrder(resRecipients) {
+  return resRecipients === null || resRecipients === undefined;
+}
+
+function isResOccOrder(resRecipients) {
+  return resRecipients !== null && resRecipients !== undefined;
+}
 
 // ============================================
 // MODE MANAGEMENT
 // ============================================
 
 let currentMode = sessionStorage.getItem("apiMode") || "testing";
-console.log("Current API Mode:", currentMode);
 
 function getCurrentMode() {
   return sessionStorage.getItem("apiMode") || "testing";
@@ -75,7 +91,6 @@ async function getRecipientsFromAudience(audienceId) {
   if (!audienceId) return [];
 
   try {
-    console.log("📥 Fetching recipients from audience ID:", audienceId);
     const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/audiences/${audienceId}`);
 
     if (!res.ok) throw new Error("Failed to fetch audience");
@@ -85,7 +100,6 @@ async function getRecipientsFromAudience(audienceId) {
       ? audience.audience_list
       : JSON.parse(audience.audience_list);
 
-    console.log("✅ Recipients fetched from audience:", audienceList.length);
     return audienceList;
   } catch (err) {
     console.error("Error fetching audience recipients:", err);
@@ -305,23 +319,13 @@ async function renderRecipientsForContainer(
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  // console.log("📥 renderRecipientsForContainer called with:", {
-  //   recipientCount: list.length,
-  //   mailerStatus,
-  //   templateId,
-  //   filterScanned,
-  // });
-
-  // Only fetch scanned recipients if status is "sent" AND we have a templateId
   if (templateId && mailerStatus === "sent") {
     try {
       const qrCodeId = await getQrCodeIdFromTemplate(templateId);
-      console.log("🔍 QR Code ID retrieved:", qrCodeId);
 
       if (qrCodeId) {
         const scanned = await fetchScannedRecipients(qrCodeId);
 
-        // Map scanned status to original recipients
         list = list.map((r) => {
           const matched = scanned.find(
             (s) =>
@@ -337,15 +341,12 @@ async function renderRecipientsForContainer(
       }
     } catch (err) {
       console.error("❌ Error fetching scanned recipients:", err);
-      // Keep recipients visible even if scan fetch fails
       list = list.map((r) => ({ ...r, scanned: false }));
     }
   } else {
-    // For pending/scheduled, mark all as not scanned
     list = list.map((r) => ({ ...r, scanned: false }));
   }
 
-  // Apply filters AFTER adding scanned status
   let filtered = list.slice();
 
   if (filterScanned) {
@@ -361,9 +362,6 @@ async function renderRecipientsForContainer(
     );
   }
 
-  // console.log("📊 Filtered recipients:", filtered.length);
-
-  //Show message only if TRULY no recipients
   if (!filtered || filtered.length === 0) {
     if (!list || list.length === 0) {
       container.innerHTML =
@@ -422,39 +420,39 @@ function renderMailers(mailers) {
     mailers.length === 1 && mailers[0].status === "pending";
 
   mailers.forEach((mailer) => {
-
-    // ✅ UPDATED: Better recipient parsing
     let recipientCount = 0;
+    let isDirectMail = isDirectMailOrder(mailer.res_recipients);
 
-    if (mailer.audience_id && mailer.audience_list) {
-      try {
-        const audienceList =
-          typeof mailer.audience_list === "string"
-            ? JSON.parse(mailer.audience_list)
-            : mailer.audience_list;
-        recipientCount = Array.isArray(audienceList) ? audienceList.length : 0;
-        console.log("📊 Recipients from audience:", recipientCount);
-      } catch (err) {
-        console.error("Error parsing audience_list:", err);
-        recipientCount = 0;
-      }
-    } else if (mailer.address_list) {
-      try {
-        const addressList =
-          typeof mailer.address_list === "string"
-            ? JSON.parse(mailer.address_list)
-            : mailer.address_list;
-        recipientCount = Array.isArray(addressList) ? addressList.length : 0;
-        console.log("📊 Recipients from address_list:", recipientCount); 
-      } catch (err) {
-        console.error("Error parsing address_list:", err);
-        recipientCount = 0;
+    if (isDirectMail) {
+      // Direct Mail - show recipients from audience_list
+      if (mailer.audience_id && mailer.audience_list) {
+        try {
+          const audienceList =
+            typeof mailer.audience_list === "string"
+              ? JSON.parse(mailer.audience_list)
+              : mailer.audience_list;
+          recipientCount = Array.isArray(audienceList)
+            ? audienceList.length
+            : 0;
+        } catch (err) {
+          console.error("Error parsing audience_list:", err);
+          recipientCount = 0;
+        }
+      } else if (mailer.address_list) {
+        try {
+          const addressList =
+            typeof mailer.address_list === "string"
+              ? JSON.parse(mailer.address_list)
+              : mailer.address_list;
+          recipientCount = Array.isArray(addressList) ? addressList.length : 0;
+        } catch (err) {
+          console.error("Error parsing address_list:", err);
+          recipientCount = 0;
+        }
       }
     }
 
-    
-
-    const totalCost = (recipientCount * 1.31).toFixed(2);
+    const totalCost = isDirectMail ? (recipientCount * 1.31).toFixed(2) : 0;
     const expectedIso = computeExpectedDeliveryForMailer(mailer);
     const expectedText = expectedIso
       ? new Date(expectedIso).toLocaleDateString("en-US", {
@@ -510,18 +508,28 @@ function renderMailers(mailers) {
       }
     `;
 
+    const recipientDisplay = isDirectMail
+      ? `<div class="mailer-meta">Recipients: ${recipientCount}</div>`
+      : `<div class="mailer-meta" style="color: #10b981; font-weight: 600;">
+           Estimated Recipients: ${mailer.res_recipients ? mailer.res_recipients.toLocaleString() : 'TBD'}
+         </div>`;
+
+    const costDisplay = isDirectMail
+      ? `<div style="margin-top:8px" class="mailer-cost">$${totalCost}</div>`
+      : `<div style="color:#94a3b8;font-size:12px;"></div>`;
+
     card.innerHTML = `
       <div>
         <div class="mailer-card-head">
           <div>
             <h3>${mailer.mailer_name || "Unnamed Mailer"}</h3>
-            <div class="mailer-meta">Recipients: ${recipientCount}</div>
+            ${recipientDisplay}
+            ${costDisplay}
           </div>
           <div style="text-align:right">
             <div class="status-badge ${statusClass}">${(
       mailer.status || "pending"
     ).toUpperCase()}</div>
-            <div style="margin-top:8px" class="mailer-cost">$${totalCost}</div>
           </div>
         </div>
         <div style="margin-top:10px;color:#64748b;font-size:13px">Expected delivery: ${expectedText}</div>
@@ -629,7 +637,10 @@ async function deleteCampaign() {
     }
 
     alert(`Campaign deleted successfully!`);
-    window.location.href = "dashboard.html";
+    window.close();
+    setTimeout(() => {
+      window.history.back();
+    }, 100);
   } catch (err) {
     console.error("deleteCampaign error:", err);
     alert("Error deleting campaign: " + err.message);
@@ -671,7 +682,7 @@ function updateDeleteMailerButtonVisibility(mailer) {
 }
 
 // ============================================
-// ✅ UPDATED: NAVIGATE TO CANVA TEMPLATES
+// NAVIGATE TO CANVA TEMPLATES
 // ============================================
 
 function navigateToCanvaTemplates(mailerId) {
@@ -681,7 +692,6 @@ function navigateToCanvaTemplates(mailerId) {
     return;
   }
 
-  // ✅ NEW: Get recipients from audience or address_list
   let recipients = [];
   if (mailer.audience_id && mailer.audience_list) {
     recipients = Array.isArray(mailer.audience_list)
@@ -691,7 +701,6 @@ function navigateToCanvaTemplates(mailerId) {
     recipients = JSON.parse(mailer.address_list || "[]");
   }
 
-  // Create mailer context for sessionStorage
   const CampaignContext = {
     mode: "campaign",
     sourceType: "mailer",
@@ -701,13 +710,13 @@ function navigateToCanvaTemplates(mailerId) {
     campaignName: mailer.campaign_name || currentCampaign.campaign_name,
     recipients: recipients,
     selectedAudienceId: mailer.audience_id || null,
+    res_recipients: mailer.res_recipients || null,
     envMode: mailer.env_mode || "testing",
     timestamp: new Date().toISOString(),
   };
-;
+
   sessionStorage.setItem("mailerContext", JSON.stringify(CampaignContext));
 
-  // Navigate to template gallery with canva view
   window.location.href = "templateGallery.html?view=canva";
 }
 
@@ -756,8 +765,6 @@ async function openSidePanel(mailerId, event) {
     return;
   }
 
-  console.log("👁️ Opening side panel for mailer:", mailer);
-
   if (
     window.currentSideMailerId === mailerId &&
     side.classList.contains("visible")
@@ -779,76 +786,139 @@ async function openSidePanel(mailerId, event) {
   document.getElementById("detailMailerSub").textContent =
     mailer.campaign_name || "";
 
-  // ✅ FIXED: Show loading state
-  document.getElementById("detailRecipients").innerHTML =
-    '<div style="text-align:center;padding:2rem;color:#64748b;">Loading recipients...</div>';
-
-  document.getElementById(
-    "detailStatus"
-  ).parentElement.parentElement.style.display = "block";
-  document.querySelector(
-    '[style*="font-weight: 700"]'
-  ).parentElement.style.display = "block";
-
-  document.getElementById("detailStatus").textContent = (
-    mailer.status || "pending"
-  ).toUpperCase();
-
-  // ✅ CRITICAL FIX: Parse recipients correctly from mailer
-  let recipientsList = [];
-
-
-  // Try audience_list first
-  if (mailer.audience_list) {
-    try {
-      recipientsList =
-        typeof mailer.audience_list === "string"
-          ? JSON.parse(mailer.audience_list)
-          : mailer.audience_list;
-      recipientsList = Array.isArray(recipientsList) ? recipientsList : [];
-    } catch (err) {
-      console.error("❌ Error parsing audience_list:", err);
-      recipientsList = [];
-    }
-  }
-
-  // Fallback to address_list
-  if (recipientsList.length === 0 && mailer.address_list) {
-    try {
-      recipientsList =
-        typeof mailer.address_list === "string"
-          ? JSON.parse(mailer.address_list)
-          : mailer.address_list;
-      recipientsList = Array.isArray(recipientsList) ? recipientsList : [];
-    } catch (err) {
-      console.error("❌ Error parsing address_list:", err);
-      recipientsList = [];
-    }
-  }
-
-
-  // ✅ FIXED: Update cost based on actual recipients
-  document.getElementById("detailCost").textContent =
-    "$" + (recipientsList.length * 1.31).toFixed(2);
-
-  const expectedIso = computeExpectedDeliveryForMailer(mailer);
-  document.getElementById("detailExpected").textContent = expectedIso
-    ? new Date(expectedIso).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : "TBD";
-
-  // ✅ FIXED: Render recipients with proper status
-  await renderRecipientsForContainer(
-    recipientsList,
-    "detailRecipients",
-    mailer.template_id || window.currentEditingTemplateId,
-    mailer.status || "pending",
-    false,
-    ""
+  const isDirectMail = isDirectMailOrder(mailer.res_recipients);
+  const detailRecipientsSection = document.getElementById(
+    "detailRecipientsSection"
   );
+
+  if (isDirectMail) {
+    // Show recipients section for Direct Mail
+    detailRecipientsSection.style.display = "block";
+
+    document.getElementById("detailRecipients").innerHTML =
+      '<div style="text-align:center;padding:2rem;color:#64748b;">Loading recipients...</div>';
+
+    document.getElementById(
+      "detailStatus"
+    ).parentElement.parentElement.style.display = "block";
+    document.querySelector(
+      '[style*="font-weight: 700"]'
+    ).parentElement.style.display = "block";
+
+    document.getElementById("detailStatus").textContent = (
+      mailer.status || "pending"
+    ).toUpperCase();
+
+    let recipientsList = [];
+
+    if (mailer.audience_list) {
+      try {
+        recipientsList =
+          typeof mailer.audience_list === "string"
+            ? JSON.parse(mailer.audience_list)
+            : mailer.audience_list;
+        recipientsList = Array.isArray(recipientsList) ? recipientsList : [];
+      } catch (err) {
+        console.error("❌ Error parsing audience_list:", err);
+        recipientsList = [];
+      }
+    }
+
+    if (recipientsList.length === 0 && mailer.address_list) {
+      try {
+        recipientsList =
+          typeof mailer.address_list === "string"
+            ? JSON.parse(mailer.address_list)
+            : mailer.address_list;
+        recipientsList = Array.isArray(recipientsList) ? recipientsList : [];
+      } catch (err) {
+        console.error("❌ Error parsing address_list:", err);
+        recipientsList = [];
+      }
+    }
+
+    document.getElementById("detailCost").textContent =
+      "$" + (recipientsList.length * 1.31).toFixed(2);
+
+    const expectedIso = computeExpectedDeliveryForMailer(mailer);
+    document.getElementById("detailExpected").textContent = expectedIso
+      ? new Date(expectedIso).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "TBD";
+
+    await renderRecipientsForContainer(
+      recipientsList,
+      "detailRecipients",
+      mailer.template_id || window.currentEditingTemplateId,
+      mailer.status || "pending",
+      false,
+      ""
+    );
+
+    // Search and filter setup
+    const search = document.getElementById("detailSearch");
+    const only = document.getElementById("detailOnlyScanned");
+
+    const searchClone = search.cloneNode(true);
+    search.parentNode.replaceChild(searchClone, search);
+    const onlyClone = only.cloneNode(true);
+    only.parentNode.replaceChild(onlyClone, only);
+
+    const showScannedFilter = (mailer.status || "pending") === "sent";
+    onlyClone.parentElement.style.display = showScannedFilter
+      ? "block"
+      : "none";
+
+    searchClone.addEventListener("input", async () => {
+      await renderRecipientsForContainer(
+        recipientsList,
+        "detailRecipients",
+        mailer.template_id || window.currentEditingTemplateId,
+        mailer.status || "pending",
+        onlyClone.checked,
+        searchClone.value.trim()
+      );
+    });
+
+    onlyClone.addEventListener("change", async () => {
+      await renderRecipientsForContainer(
+        recipientsList,
+        "detailRecipients",
+        mailer.template_id || window.currentEditingTemplateId,
+        mailer.status || "pending",
+        onlyClone.checked,
+        searchClone.value.trim()
+      );
+    });
+  } else {
+    // ✅ NEW: Hide recipients section for RES OCC orders
+    detailRecipientsSection.style.display = "none";
+
+    // Hide status and cost info
+    document.getElementById(
+      "detailStatus"
+    ).parentElement.parentElement.style.display = "none";
+    document.querySelector(
+      '[style*="font-weight: 700"]'
+    ).parentElement.style.display = "none";
+
+    // Show RES OCC message
+    const detailInfoSection = document.getElementById("detailInfoSection");
+    if (detailInfoSection) {
+      detailInfoSection.innerHTML = `
+        <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px; margin-bottom: 1rem;">
+          <h3 style="color: #92400e; margin: 0.5rem 0;">RES OCC Order</h3>
+          <p style="color: #b45309; margin: 0.5rem 0; font-size: 14px;">
+            This order will be sent via RES OCC to selected carrier routes and demographics.
+          </p>
+        </div>
+      `;
+      detailInfoSection.style.display = "block";
+    }
+  }
 
   // View template/canva button logic
   const viewTemplateBtn = document.getElementById("viewTemplateBtn");
@@ -887,40 +957,6 @@ async function openSidePanel(mailerId, event) {
       });
     }
   }
-
-  // Search and filter setup
-  const search = document.getElementById("detailSearch");
-  const only = document.getElementById("detailOnlyScanned");
-
-  const searchClone = search.cloneNode(true);
-  search.parentNode.replaceChild(searchClone, search);
-  const onlyClone = only.cloneNode(true);
-  only.parentNode.replaceChild(onlyClone, only);
-
-  const showScannedFilter = (mailer.status || "pending") === "sent";
-  onlyClone.parentElement.style.display = showScannedFilter ? "block" : "none";
-
-  searchClone.addEventListener("input", async () => {
-    await renderRecipientsForContainer(
-      recipientsList,
-      "detailRecipients",
-      mailer.template_id || window.currentEditingTemplateId,
-      mailer.status || "pending",
-      onlyClone.checked,
-      searchClone.value.trim()
-    );
-  });
-
-  onlyClone.addEventListener("change", async () => {
-    await renderRecipientsForContainer(
-      recipientsList,
-      "detailRecipients",
-      mailer.template_id || window.currentEditingTemplateId,
-      mailer.status || "pending",
-      onlyClone.checked,
-      searchClone.value.trim()
-    );
-  });
 }
 
 function openViewSentMailerModal(templateId, mailer) {
@@ -973,7 +1009,6 @@ async function viewTemplateVersion(templateId) {
 }
 
 function openCanvaLinkInput(mailerId, canvaLink) {
-
   const previewModal = document.createElement("div");
   previewModal.className = "template-preview-modal";
   previewModal.style.cssText = `
@@ -1139,6 +1174,80 @@ async function confirmSchedule() {
   }
 }
 
+function showLetterOptionsModalAsync(templateId, button) {
+  return new Promise((resolve) => {
+    pendingTemplateId = templateId;
+    pendingButton = button;
+
+    const modal = document.getElementById("letterOptionsModal");
+    if (!modal) {
+      resolve(true);
+      return;
+    }
+
+    modal.style.display = "flex";
+
+    document.querySelectorAll(".option-btn").forEach((btn) => {
+      btn.classList.remove("active");
+    });
+    document
+      .querySelector('.option-btn[data-value="yes"]')
+      .classList.add("active");
+
+    const envelopeSelect = document.getElementById("envelopeType");
+    if (envelopeSelect) {
+      envelopeSelect.value = "fullWindow";
+    }
+
+    window.modalResolve = resolve;
+  });
+}
+
+function closeLetterOptionsModal() {
+  const modal = document.getElementById("letterOptionsModal");
+  if (modal) {
+    modal.style.display = "none";
+  }
+
+  if (window.modalResolve) {
+    window.modalResolve(false);
+    window.modalResolve = null;
+  }
+
+  pendingTemplateId = null;
+  pendingButton = null;
+}
+
+function confirmLetterOptions() {
+  const envelopeType = document.getElementById("envelopeType").value;
+
+  if (!envelopeType) {
+    showAlert("Please select an envelope type");
+    return;
+  }
+
+  letterOptions.envelopeType = envelopeType;
+
+  const modal = document.getElementById("letterOptionsModal");
+  if (modal) {
+    modal.style.display = "none";
+  }
+  if (window.modalResolve) {
+    window.modalResolve(true);
+    window.modalResolve = null;
+  }
+
+  pendingTemplateId = null;
+  pendingButton = null;
+}
+
+function selectAddressingOption(value, buttonElement) {
+  const buttons = buttonElement.parentElement.querySelectorAll(".option-btn");
+  buttons.forEach((btn) => btn.classList.remove("active"));
+  buttonElement.classList.add("active");
+  letterOptions.insertAddressingPage = value === "yes";
+}
+
 /* ---------- Send mailer ---------- */
 async function sendMailer(mailerId, button) {
   if (!window.currentEditingTemplateId) {
@@ -1165,8 +1274,6 @@ async function sendMailer(mailerId, button) {
       return false;
     }
 
-    // console.log(`📦 Sending mailer using ${mode.toUpperCase()} environment...`);
-
     const mailer = allMailers.find((m) => m.id === mailerId);
     if (!mailer) throw new Error("Mailer not found");
 
@@ -1187,7 +1294,6 @@ async function sendMailer(mailerId, button) {
 
     const token = await getToken(mode);
 
-    // ✅ NEW: Get recipients from audience or address_list
     let mailerRecipients = [];
     if (mailer.audience_id && mailer.audience_list) {
       mailerRecipients = Array.isArray(mailer.audience_list)
@@ -1197,6 +1303,15 @@ async function sendMailer(mailerId, button) {
       mailerRecipients = JSON.parse(mailer.address_list || "[]");
     }
 
+    const optionsConfirmed = await showLetterOptionsModalAsync(
+      window.currentEditingTemplateId,
+      button
+    );
+
+    if (!optionsConfirmed) {
+      return false;
+    }
+
     const pcmPayload = {
       extRefNbr: "12345",
       designID: 0,
@@ -1204,10 +1319,10 @@ async function sendMailer(mailerId, button) {
       mailDate: todayISO,
       color: true,
       printOnBothSides: true,
-      insertAddressingPage: true,
+      insertAddressingPage: letterOptions.insertAddressingPage,
       envelope: {
         font: "Bradley Hand",
-        type: "fullWindow",
+        type: letterOptions.envelopeType,
         fontColor: "Black",
       },
       recipients: mailerRecipients,
@@ -1330,7 +1445,6 @@ async function createMailer() {
 
   const campaignId = getQueryParam("id");
 
-  // ✅ NEW: Get recipients from audience or address_list
   let baseRecipients = [];
   if (currentCampaign.audience_id && currentCampaign.audience_list) {
     baseRecipients = Array.isArray(currentCampaign.audience_list)
@@ -1346,7 +1460,7 @@ async function createMailer() {
     address_list: currentCampaign.audience_id
       ? null
       : JSON.stringify(baseRecipients),
-    audience_id: currentCampaign.audience_id || null, // ✅ NEW: Store audience_id
+    audience_id: currentCampaign.audience_id || null,
     schedule_time: null,
     send_date: null,
     status: "pending",
@@ -1375,8 +1489,47 @@ async function createMailer() {
   }
 }
 
+function updateCategoryBadge(campaign) {
+  const badge = document.getElementById("categoryBadge");
+  const isDirectMail = isDirectMailOrder(campaign.res_recipients);
+
+  if (isDirectMail) {
+    badge.textContent = "Direct Mail";
+    badge.className = "category-badge direct-mail";
+  } else {
+    badge.textContent = "RES OCC";
+    badge.className = "category-badge res-occ";
+  }
+  badge.style.display = "inline-block";
+}
+
 // ============================================
-// ✅ UPDATED: LOAD CAMPAIGN DETAIL
+// NEW: Disable Create Mailer for RES OCC
+// ============================================
+
+function updateCreateMailerButtonState(campaign) {
+  const createBtn = document.getElementById("openAddMailerBtn");
+  if (!createBtn) return;
+
+  const isDirectMail = isDirectMailOrder(campaign.res_recipients);
+
+  if (!isDirectMail) {
+    // RES OCC - disable the button
+    createBtn.disabled = true;
+    createBtn.style.opacity = "0.5";
+    createBtn.style.cursor = "not-allowed";
+    createBtn.title = "Cannot add mailers to RES OCC campaigns";
+  } else {
+    // Direct Mail - enable the button
+    createBtn.disabled = false;
+    createBtn.style.opacity = "1";
+    createBtn.style.cursor = "pointer";
+    createBtn.title = "Create New Mailer";
+  }
+}
+
+// ============================================
+// LOAD CAMPAIGN DETAIL
 // ============================================
 
 async function loadCampaignDetail() {
@@ -1401,11 +1554,13 @@ async function loadCampaignDetail() {
     allMailers = campaignData;
     currentCampaign = campaignData[0];
 
-    // ✅ NEW: Store audience_id for later use
     currentAudienceId = currentCampaign.audience_id || null;
 
     document.getElementById("campaignName").textContent =
       currentCampaign.campaign_name || "Unnamed Campaign";
+
+    updateCategoryBadge(currentCampaign);
+    updateCreateMailerButtonState(currentCampaign);
 
     renderMailers(campaignData);
     updateDeleteCampaignButtonVisibility();

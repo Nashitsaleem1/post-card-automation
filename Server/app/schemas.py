@@ -60,7 +60,7 @@ class AudienceRead(AudienceBase):
 # ---------- CampaignData ----------
 class CampaignDataBase(BaseModel):
     mailer_name: str
-    audience_id: int  # now FK to Audience table
+    audience_id: Optional[int] = None  # now FK to Audience table
     template_id: Optional[int] = None
     schedule_time: Optional[datetime] = None
     send_date: Optional[datetime] = None
@@ -68,7 +68,8 @@ class CampaignDataBase(BaseModel):
     is_qr_scanned_complete: Optional[bool] = False
     env_mode: Literal["testing", "production"] = "testing"
     canva_link: Optional[str] = None
-
+    res_recipients : Optional[int] =  None
+ #   pdf_link: Optional[str] = None
 
 class CampaignDataCreate(CampaignDataBase):
     campaign_id: int
@@ -83,7 +84,8 @@ class CampaignDataUpdate(BaseModel):
     env_mode: Optional[Literal["testing", "production"]] = None
     canva_link: Optional[str] = None
     audience_id: Optional[int] = None
-
+    res_recipients : Optional[int] =  None
+   # pdf_link: Optional[str] = None
 
 class CampaignDataRead(CampaignDataBase):
     id: int
@@ -119,6 +121,8 @@ class CampaignDataWithCampaignName(BaseModel):
     env_mode: Optional[str] = None
     canva_link: Optional[str] = None
     audience_id: Optional[int] = None
+    res_recipients : Optional[int] =  None
+  #  pdf_link: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -127,14 +131,16 @@ class CampaignDataWithCampaignName(BaseModel):
 # ---------- MailerOneOff ----------
 class MailerOneOffBase(BaseModel):
     mailer_name: str
-    audience_id: Optional[int] = None  # ✅ FIX: remove alias
+    audience_id: Optional[int] = None 
     template_id: Optional[int] = None
     schedule_time: Optional[datetime] = None
     send_date: Optional[datetime] = None
     status: Optional[str] = "pending"
     env_mode: Literal["testing", "production"] = "testing"
     canva_link: Optional[str] = None
-
+    res_recipients : Optional[int] =  None
+   # pdf_link: Optional[str] = None
+    
     class Config:
         from_attributes = True
 
@@ -150,8 +156,8 @@ class MailerOneOffRead(MailerOneOffBase):
 
 class MailerOneOffResponse(MailerOneOffBase):
     id: int
-    audience_name: Optional[str] = None  # ✅ Add
-    audience_list: Optional[list] = []  # ✅ Add
+    audience_name: Optional[str] = None 
+    audience_list: Optional[list] = []  
 
     class Config:
         orm_mode = True
@@ -165,3 +171,5 @@ class MailerOneOffUpdate(BaseModel):
     env_mode: Optional[Literal["testing", "production"]] = None
     canva_link: Optional[str] = None
     audience_id: Optional[int] = None
+    res_recipients : Optional[int] =  None
+   # pdf_link: Optional[str] = None

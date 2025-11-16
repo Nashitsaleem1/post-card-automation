@@ -1,0 +1,16 @@
+[
+    {
+        "key": "Gender",
+        "label": "Gender",
+        "values": [
+            {
+                "key": "M",
+                "label": "Male"
+            },
+            {
+                "key": "F",
+                "label": "Female"
+            }
+        ]
+    }
+]

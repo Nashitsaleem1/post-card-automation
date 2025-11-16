@@ -15,12 +15,10 @@
         margin: 0;
         padding: 0;
         box-sizing: border-box;
-      }
-
-      body {
-        min-height: 100vh;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
           "Helvetica Neue", Arial, sans-serif;
+      }
+      body {
         background: #f8fafc;
         color: #1e293b;
       }
@@ -35,7 +33,7 @@
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
       }
       .top-nav-content {
-        max-width: 1600px;
+        max-width: 100%;
         margin: 0 auto;
         display: flex;
         justify-content: space-between;
@@ -53,10 +51,31 @@
         font-size: 24px;
         font-weight: 700;
         color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .category-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .category-badge.direct-mail {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+
+      .category-badge.res-occ {
+        background: #fef3c7;
+        color: #92400e;
       }
 
       .container {
-        max-width: 1600px;
+        max-width: 100%;
         margin: 0 auto;
         padding: 2rem;
         display: grid;
@@ -142,7 +161,24 @@
         margin-bottom: 0.25rem;
         font-weight: 600;
       }
+      .custom-modal-ok-btn {
+        background: #10b981;
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: var(--transition);
+        box-shadow: var(--shadow-sm);
+      }
 
+      .custom-modal-ok-btn:hover {
+        background: #059669;
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+      }
       .info-item span {
         font-size: 14px;
         color: #0f172a;
@@ -420,6 +456,34 @@
         background: #dc2626;
         transform: scale(1.1);
       }
+      .custom-modal-letter {
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .custom-modal-content {
+        background: white;
+        color: var(--text-primary);
+        width: 450px;
+        max-width: 90%;
+        padding: 2.5rem;
+        border-radius: 14px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        box-shadow: var(--shadow-xl);
+      }
 
       #scheduleModal .preview-content {
         max-width: 400px;
@@ -505,6 +569,83 @@
         margin: 0;
       }
 
+      .letter-options-modal {
+        min-width: 400px;
+      }
+
+      .letter-options-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .letter-options-form .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .option-buttons {
+        display: flex;
+        gap: 0.75rem;
+      }
+
+      .option-btn {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        background: white;
+        cursor: pointer;
+        font-size: 0.95rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        color: #555;
+      }
+
+      .option-btn:hover {
+        border-color: #2b7fff;
+        color: #2b7fff;
+      }
+
+      .option-btn.active {
+        background: #2b7fff;
+        color: white;
+        border-color: #2b7fff;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .form-group label {
+        font-weight: 600;
+        font-size: 13px;
+        color: #333;
+      }
+
+      .res-occ-banner {
+        padding: 2rem;
+        text-align: center;
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-radius: 8px;
+        margin-bottom: 1rem;
+      }
+
+      .res-occ-banner h3 {
+        color: #92400e;
+        margin: 0.5rem 0;
+        font-size: 18px;
+      }
+
+      .res-occ-banner p {
+        color: #b45309;
+        margin: 0.5rem 0;
+        font-size: 14px;
+      }
+
       @media (max-width: 768px) {
         .container {
           padding: 1rem;
@@ -538,7 +679,14 @@
       <div class="top-nav-content">
         <div>
           <div class="mailer-label">One-Off Mailer</div>
-          <div class="mailer-title" id="mailerName">Loading...</div>
+          <div class="mailer-title">
+            <span id="mailerName">Loading...</span>
+            <span
+              id="categoryBadge"
+              class="category-badge"
+              style="display: none"
+            ></span>
+          </div>
         </div>
       </div>
     </div>
@@ -559,6 +707,14 @@
           </div>
 
           <div id="mailerInfoContent" class="info-grid"></div>
+          <!-- For RES OCC: Show Estimated Recipients -->
+          <div id="estimatedRecipientsContainer" style="display: none">
+            <div class="info-item">
+              <strong>Estimated Recipients</strong>
+              <span id="estimatedRecipients">TBD</span>
+            </div>
+          </div>
+
           <div id="actionButtons" class="mailer-actions"></div>
         </div>
 
@@ -567,7 +723,7 @@
           <div class="templates-grid" id="templatesGrid"></div>
         </div>
 
-        <div class="recipients-card">
+        <div class="recipients-card" id="recipientsCard">
           <div class="section-title">Recipients</div>
           <div class="filter-bar" id="filterBar" style="display: none">
             <input type="checkbox" id="filterScanned" />
@@ -603,15 +759,116 @@
         </form>
       </div>
     </div>
+    <div
+      id="letterOptionsModal"
+      class="custom-modal-letter"
+      style="display: none"
+    >
+      <div class="custom-modal-content letter-options-modal">
+        <h3 style="margin-bottom: 1.5rem; color: #333">Letter Options</h3>
+
+        <div class="letter-options-form">
+          <div class="form-group">
+            <label
+              style="font-weight: 600; margin-bottom: 0.75rem; display: block"
+            >
+              Insert Addressing Page
+            </label>
+            <div class="option-buttons">
+              <button
+                type="button"
+                class="option-btn active"
+                onclick="selectAddressingOption('yes', this)"
+                data-value="yes"
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                class="option-btn"
+                onclick="selectAddressingOption('no', this)"
+                data-value="no"
+              >
+                No
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label
+              for="envelopeType"
+              style="font-weight: 600; margin-bottom: 0.75rem; display: block"
+            >
+              Envelope Type
+            </label>
+            <select
+              id="envelopeType"
+              class="form-select"
+              style="
+                width: 100%;
+                padding: 0.75rem;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+              "
+            >
+              <option value="">-- Select Envelope Type --</option>
+              <option value="fullWindow">Full Window</option>
+              <option value="doubleWindow">Double Window</option>
+              <option value="Regular">Regular</option>
+              <option value="BiFold">BiFold</option>
+            </select>
+          </div>
+        </div>
+
+        <div
+          style="
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+          "
+        >
+          <button
+            onclick="closeLetterOptionsModal()"
+            class="custom-modal-ok-btn"
+            style="background-color: #6c757d"
+          >
+            Cancel
+          </button>
+          <button
+            onclick="confirmLetterOptions()"
+            class="custom-modal-ok-btn"
+            style="background-color: #28a745"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    </div>
 
     <script>
       let recipients = [];
       let currentMailer = null;
       let currentSchedulingTemplate = null;
       window.currentEditingTemplateId = null;
-
+      // Store default letter options
+      let letterOptions = {
+        insertAddressingPage: true,
+        envelopeType: "fullWindow",
+      };
       let currentMode = sessionStorage.getItem("apiMode") || "testing";
-      console.log("Current API Mode:", currentMode);
+
+      // ============================================
+      // HELPER: Check if order is Direct Mail or RES OCC
+      // ============================================
+
+      function isDirectMailOrder(resRecipients) {
+        return resRecipients === null || resRecipients === undefined;
+      }
+
+      function isResOccOrder(resRecipients) {
+        return resRecipients !== null && resRecipients !== undefined;
+      }
 
       function getCurrentMode() {
         return sessionStorage.getItem("apiMode") || "testing";
@@ -620,6 +877,20 @@
       function getQueryParam(key) {
         const params = new URLSearchParams(window.location.search);
         return params.get(key);
+      }
+
+      function updateCategoryBadge(mailer) {
+        const badge = document.getElementById("categoryBadge");
+        const isDirectMail = isDirectMailOrder(mailer.res_recipients);
+
+        if (isDirectMail) {
+          badge.textContent = "Direct Mail";
+          badge.className = "category-badge direct-mail";
+        } else {
+          badge.textContent = "RES OCC";
+          badge.className = "category-badge res-occ";
+        }
+        badge.style.display = "inline-block";
       }
 
       function openScheduleModal(templateId) {
@@ -684,16 +955,12 @@
           return;
         }
 
-        console.log("📌 Viewing selected content for mailer:", currentMailer);
-
         if (currentMailer.canva_link) {
-          console.log("✅ Canva link found:", currentMailer.canva_link);
           showCanvaPreview(currentMailer.canva_link);
           return;
         }
 
         if (currentMailer.template_id) {
-          console.log("✅ Template ID found:", currentMailer.template_id);
           await openTemplatePreview(currentMailer.template_id);
           return;
         }
@@ -701,26 +968,46 @@
         alert("⚠️ No template or Canva link available for this mailer");
       }
 
+      function closeAllDynamicModals() {
+        // Remove all dynamically created preview modals
+        const modals = document.querySelectorAll(".template-preview-modal");
+        modals.forEach((modal) => {
+          modal.remove();
+        });
+      }
+
       function showCanvaPreview(canvaLink) {
-        console.log("🎨 Opening Canva PDF preview:", canvaLink);
+
+        // Close any existing modals first
+        closeAllDynamicModals();
 
         const previewModal = document.createElement("div");
         previewModal.className = "template-preview-modal";
         previewModal.style.zIndex = "9999";
         previewModal.innerHTML = `
-    <div class="template-preview-overlay" onclick="this.parentElement.remove()"></div>
-    <div class="template-preview-content">
-      <div class="template-preview-header">
-        <h3>📄 Canva PDF Preview</h3>
-        <button class="btn btn-outline" onclick="this.closest('.template-preview-modal').remove()">Close</button>
-      </div>
-      <iframe 
-        src="${canvaLink}#toolbar=0&navpanes=0&scrollbar=0&zoom=100"
-        style="width:100%;height:80vh;border:none;margin-top:1rem;border-radius:6px;">
-      </iframe>
-    </div>
-  `;
+          <div class="template-preview-overlay" onclick="this.closest('.template-preview-modal').remove(); closeAllDynamicModals();"></div>
+          <div class="template-preview-content">
+            <div class="template-preview-header">
+              <h3>📄 Canva PDF Preview</h3>
+              <button class="btn btn-outline" onclick="this.closest('.template-preview-modal').remove(); closeAllDynamicModals();">Close</button>
+            </div>
+            <iframe 
+              src="${canvaLink}#toolbar=0&navpanes=0&scrollbar=0&zoom=100"
+              style="width:100%;height:80vh;border:none;margin-top:1rem;border-radius:6px;">
+            </iframe>
+          </div>
+        `;
         document.body.appendChild(previewModal);
+
+        // Handle Escape key to close modal
+        const handleEscape = (e) => {
+          if (e.key === "Escape") {
+            previewModal.remove();
+            closeAllDynamicModals();
+            document.removeEventListener("keydown", handleEscape);
+          }
+        };
+        document.addEventListener("keydown", handleEscape);
       }
 
       async function openTemplatePreview(templateId) {
@@ -743,20 +1030,33 @@
             template.html_content || "<p>No content available</p>"
           ).replace(/DATE/g, formattedDate);
 
+          // Close any existing modals first
+          closeAllDynamicModals();
+
           const previewModal = document.createElement("div");
           previewModal.className = "template-preview-modal";
           previewModal.innerHTML = `
-      <div class="template-preview-overlay" onclick="this.parentElement.remove()"></div>
-      <div class="template-preview-content">
-        <div class="template-preview-header">
-          <h3>Template Preview</h3>
-          <button class="btn btn-outline" onclick="this.parentElement.parentElement.remove()">Close</button>
-        </div>
-        <iframe srcdoc="${finalHtml.replace(/"/g, "&quot;")}"
-                style="width:100%;height:80vh;border:none;margin-top:1rem;"></iframe>
-      </div>
-    `;
+            <div class="template-preview-overlay" onclick="this.closest('.template-preview-modal').remove(); closeAllDynamicModals();"></div>
+            <div class="template-preview-content">
+              <div class="template-preview-header">
+                <h3>Template Preview</h3>
+                <button class="btn btn-outline" onclick="this.closest('.template-preview-modal').remove(); closeAllDynamicModals();">Close</button>
+              </div>
+              <iframe srcdoc="${finalHtml.replace(/"/g, "&quot;")}"
+                      style="width:100%;height:80vh;border:none;margin-top:1rem;"></iframe>
+            </div>
+          `;
           document.body.appendChild(previewModal);
+
+          // Handle Escape key to close modal
+          const handleEscape = (e) => {
+            if (e.key === "Escape") {
+              previewModal.remove();
+              closeAllDynamicModals();
+              document.removeEventListener("keydown", handleEscape);
+            }
+          };
+          document.addEventListener("keydown", handleEscape);
         } catch (err) {
           console.error("openTemplatePreview error:", err);
           alert("Could not load template preview. Please try again.");
@@ -805,6 +1105,88 @@
         return data.token;
       }
 
+      // Confirm letter options and proceed
+      function confirmLetterOptions() {
+        const envelopeType = document.getElementById("envelopeType").value;
+
+        if (!envelopeType) {
+          showAlert("Please select an envelope type");
+          return;
+        }
+
+        letterOptions.envelopeType = envelopeType;
+
+        // Close modal
+        const modal = document.getElementById("letterOptionsModal");
+        if (modal) {
+          modal.style.display = "none";
+        }
+        if (window.modalResolve) {
+          window.modalResolve(true);
+          window.modalResolve = null;
+        }
+
+        pendingTemplateId = null;
+        pendingButton = null;
+      }
+
+      // Select addressing page option
+      function selectAddressingOption(value, buttonElement) {
+        const buttons =
+          buttonElement.parentElement.querySelectorAll(".option-btn");
+        buttons.forEach((btn) => btn.classList.remove("active"));
+        buttonElement.classList.add("active");
+        letterOptions.insertAddressingPage = value === "yes";
+      }
+
+      function showLetterOptionsModalAsync(templateId, button) {
+        return new Promise((resolve) => {
+          pendingTemplateId = templateId;
+          pendingButton = button;
+
+          const modal = document.getElementById("letterOptionsModal");
+          if (!modal) {
+            resolve(true); // If modal doesn't exist, proceed anyway
+            return;
+          }
+
+          modal.style.display = "flex";
+
+          // Reset form to defaults
+          document.querySelectorAll(".option-btn").forEach((btn) => {
+            btn.classList.remove("active");
+          });
+          document
+            .querySelector('.option-btn[data-value="yes"]')
+            .classList.add("active");
+
+          const envelopeSelect = document.getElementById("envelopeType");
+          if (envelopeSelect) {
+            envelopeSelect.value = "fullWindow";
+          }
+
+          // Store the resolve function so we can call it later
+          window.modalResolve = resolve;
+        });
+      }
+
+      // Close letter options modal (cancelled)
+      function closeLetterOptionsModal() {
+        const modal = document.getElementById("letterOptionsModal");
+        if (modal) {
+          modal.style.display = "none";
+        }
+
+        // Resolve with false (user cancelled)
+        if (window.modalResolve) {
+          window.modalResolve(false);
+          window.modalResolve = null;
+        }
+
+        pendingTemplateId = null;
+        pendingButton = null;
+      }
+
       async function orderDesign(templateId, button) {
         const originalText = button.textContent;
         button.textContent = "Processing...";
@@ -844,6 +1226,16 @@
             formattedDate
           );
 
+          // Show letter options modal and wait for user input
+          const optionsConfirmed = await showLetterOptionsModalAsync(
+            templateId,
+            button
+          );
+
+          if (!optionsConfirmed) {
+            return false; // User cancelled
+          }
+
           const token = await getToken(mode);
 
           const pcmPayload = {
@@ -853,10 +1245,10 @@
             mailDate: todayISO,
             color: true,
             printOnBothSides: true,
-            insertAddressingPage: true,
+            insertAddressingPage: letterOptions.insertAddressingPage,
             envelope: {
               font: "Bradley Hand",
-              type: "fullWindow",
+              type: letterOptions.envelopeType,
               fontColor: "Black",
             },
             recipients: recipients,
@@ -888,7 +1280,7 @@
           if (!res.ok)
             throw new Error(data.message || "PCM API request failed");
 
-          alert(` Letter sent successfully in ${mode.toUpperCase()} mode!`);
+          alert(`Letter sent successfully in ${mode.toUpperCase()} mode!`);
 
           const updatePayload = {
             status: "sent",
@@ -968,7 +1360,11 @@
               result.status
             }`
           );
-          window.location.href = "dashboard.html";
+          window.close();
+
+          setTimeout(() => {
+            window.history.back();
+          }, 100);
         } catch (err) {
           console.error("Delete mailer error:", err);
           alert("Error deleting mailer: " + err.message);
@@ -1031,12 +1427,216 @@
         );
       }
 
+      // renderMailers function
+      function renderMailers(mailers) {
+        const mailersSection = document.getElementById("mailersSection");
+        mailersSection.innerHTML = "";
+
+        if (!mailers || mailers.length === 0) {
+          mailersSection.innerHTML =
+            "<p style='text-align:center;color:#64748b;padding:2rem;'>No mailers found for this campaign</p>";
+          return;
+        }
+
+        const hasSinglePending =
+          mailers.length === 1 && mailers[0].status === "pending";
+
+        mailers.forEach((mailer) => {
+          let recipientCount = 0;
+          let isDirectMail = isDirectMailOrder(mailer.res_recipients);
+
+          if (isDirectMail) {
+            // Direct Mail - show recipients from audience_list
+            if (mailer.audience_id && mailer.audience_list) {
+              try {
+                const audienceList =
+                  typeof mailer.audience_list === "string"
+                    ? JSON.parse(mailer.audience_list)
+                    : mailer.audience_list;
+                recipientCount = Array.isArray(audienceList)
+                  ? audienceList.length
+                  : 0;
+              } catch (err) {
+                console.error("Error parsing audience_list:", err);
+                recipientCount = 0;
+              }
+            } else if (mailer.address_list) {
+              try {
+                const addressList =
+                  typeof mailer.address_list === "string"
+                    ? JSON.parse(mailer.address_list)
+                    : mailer.address_list;
+                recipientCount = Array.isArray(addressList)
+                  ? addressList.length
+                  : 0;
+              } catch (err) {
+                console.error("Error parsing address_list:", err);
+                recipientCount = 0;
+              }
+            }
+          }
+
+          // Total cost for direct mail orders
+          const totalCost =
+            isDirectMail && recipientCount > 0
+              ? (recipientCount * 1.31).toFixed(2)
+              : 0;
+
+          const expectedIso = computeExpectedDeliveryForMailer(mailer);
+          const expectedText = expectedIso
+            ? new Date(expectedIso).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })
+            : "TBD";
+          const statusClass =
+            mailer.status === "pending"
+              ? "status-pending"
+              : mailer.status === "scheduled"
+              ? "status-scheduled"
+              : "status-sent";
+
+          const card = document.createElement("div");
+          card.className = "mailer-card";
+
+          const canDelete =
+            mailer.status === "pending" || mailer.status === "scheduled";
+
+          const actionButtons = hasSinglePending
+            ? `
+            <button class="btn btn-outline" onclick="openSidePanel(${
+              mailer.id
+            })">View Detail</button>
+            <button class="btn btn-secondary" onclick="openTemplateSelector(${
+              mailer.id
+            }, event)">Select Template</button>
+            <button class="btn btn-secondary" onclick="navigateToCanvaTemplates(${
+              mailer.id
+            })">Select Canva Template</button>
+            <button class="btn btn-secondary" onclick="openScheduleModal(${
+              mailer.id
+            })">Schedule</button>
+            <button class="btn btn-primary" onclick="sendMailer(${
+              mailer.id
+            }, this)">Send Letter</button>
+            ${
+              canDelete
+                ? `<button class="btn btn-danger" onclick="deleteMailer(${mailer.id})">Delete</button>`
+                : ""
+            }
+          `
+            : `
+            <button class="btn btn-outline" onclick="openSidePanel(${
+              mailer.id
+            }, event)">View Detail</button>
+            ${
+              canDelete
+                ? `<button class="btn btn-danger" onclick="deleteMailer(${mailer.id})">Delete</button>`
+                : ""
+            }
+          `;
+
+          const recipientDisplay = isDirectMail
+            ? `<div class="mailer-meta">Recipients: ${recipientCount}</div>`
+            : `<div class="mailer-meta" style="color: #10b981; font-weight: 600;">
+                Estimated Recipients: ${
+                  mailer.res_recipients
+                    ? mailer.res_recipients.toLocaleString()
+                    : "TBD"
+                }
+              </div>`;
+
+          const costDisplay = !isDirectMail
+            ? `<div style="margin-top:8px" class="mailer-cost">${totalCost}</div>`
+            : `<div style="color:#94a3b8;font-size:12px;"></div>`;
+
+          card.innerHTML = `
+            <div>
+              <div class="mailer-card-head">
+                <div>
+                  <h3>${mailer.mailer_name || "Unnamed Mailer"}</h3>
+                  ${recipientDisplay}
+                  ${costDisplay}
+                </div>
+                <div style="text-align:right">
+                  <div class="status-badge ${statusClass}">${(
+            mailer.status || "pending"
+          ).toUpperCase()}</div>
+                </div>
+              </div>
+              <div style="margin-top:10px;color:#64748b;font-size:13px">Expected delivery: ${expectedText}</div>
+            </div>
+            <div class="mailer-actions">
+              ${actionButtons}
+            </div>
+          `;
+
+          mailersSection.appendChild(card);
+        });
+      }
+
+      // renderMailerInfo function
       function renderMailerInfo(mailer) {
         currentMailer = mailer;
 
         document.getElementById("mailerName").textContent = mailer.mailer_name;
         document.getElementById("mailerNameCard").textContent =
           mailer.mailer_name;
+
+        updateCategoryBadge(mailer);
+
+        const isDirectMail = isDirectMailOrder(mailer.res_recipients);
+
+        // Handle Direct Mail - Show Cost
+        if (isDirectMail) {
+          const recipientCount = mailer.address_list
+            ? (typeof mailer.address_list === "string"
+                ? JSON.parse(mailer.address_list)
+                : mailer.address_list
+              ).length
+            : 0;
+
+          const totalCost =
+            recipientCount > 0 ? (recipientCount * 1.31).toFixed(2) : 0;
+
+          const costContainer = document.getElementById("mailerCostContainer");
+          if (costContainer) {
+            costContainer.style.display = "block";
+            document.getElementById("mailerCost").textContent = `$${totalCost}`;
+          }
+
+          // Hide estimated recipients for direct mail
+          const estContainer = document.getElementById(
+            "estimatedRecipientsContainer"
+          );
+          if (estContainer) {
+            estContainer.style.display = "none";
+          }
+        }
+        // Handle RES OCC - Show Estimated Recipients
+        else {
+          const estContainer = document.getElementById(
+            "estimatedRecipientsContainer"
+          );
+          if (estContainer) {
+            estContainer.style.display = "block";
+            const estRecipientsEl = document.getElementById(
+              "estimatedRecipients"
+            );
+            if (estRecipientsEl) {
+              estRecipientsEl.textContent = mailer.res_recipients
+                ? mailer.res_recipients.toLocaleString()
+                : "TBD";
+            }
+          }
+
+          // Hide cost for RES OCC
+          const costContainer = document.getElementById("mailerCostContainer");
+          if (costContainer) {
+            costContainer.style.display = "none";
+          }
+        }
 
         const statusEl = document.getElementById("mailerStatus");
 
@@ -1060,6 +1660,7 @@
       }
 
       function handleScheduledMailer(mailer) {
+        const isDirectMail = isDirectMailOrder(mailer.res_recipients);
         const infoContent = document.getElementById("mailerInfoContent");
         if (!infoContent) return;
 
@@ -1088,16 +1689,20 @@
   `;
         infoContent.appendChild(deliveryItem);
 
-        const recipientCount = mailer.audience_list ? mailer.audience_list.length : 0;
-        const totalCost = (recipientCount * 1.31).toFixed(2);
+        if (isDirectMail) {
+          const recipientCount = mailer.audience_list
+            ? mailer.audience_list.length
+            : 0;
+          const totalCost = (recipientCount * 1.31).toFixed(2);
 
-        const costItem = document.createElement("div");
-        costItem.className = "info-item";
-        costItem.innerHTML = `
-    <strong>Expected Cost</strong>
-    <span>$${totalCost}</span>
-  `;
-        infoContent.appendChild(costItem);
+          const costItem = document.createElement("div");
+          costItem.className = "info-item";
+          costItem.innerHTML = `
+      <strong>Expected Cost</strong>
+      <span>${totalCost}</span>
+    `;
+          infoContent.appendChild(costItem);
+        }
 
         const envModeItem = document.createElement("div");
         envModeItem.className = "info-item";
@@ -1131,7 +1736,13 @@
         actions.appendChild(deleteBtn);
 
         document.getElementById("templateSection").classList.remove("visible");
-        document.getElementById("filterBar").style.display = "none";
+        const recipientsCard = document.getElementById("recipientsCard");
+        if (!isDirectMail) {
+          recipientsCard.style.display = "none";
+        } else {
+          recipientsCard.style.display = "block";
+          document.getElementById("filterBar").style.display = "none";
+        }
       }
 
       function navigateToCanvaWithMailerContext() {
@@ -1148,9 +1759,11 @@
         let recipients = [];
         let selectedAudienceId = currentMailer.audience_id || null;
 
-        if (currentMailer.audience_list && Array.isArray(currentMailer.audience_list)) {
+        if (
+          currentMailer.audience_list &&
+          Array.isArray(currentMailer.audience_list)
+        ) {
           recipients = currentMailer.audience_list;
-        
         }
 
         if (recipients.length === 0) {
@@ -1164,37 +1777,70 @@
           mailerName: currentMailer.mailer_name,
           recipients: recipients,
           selectedAudienceId: selectedAudienceId,
+          res_recipients: currentMailer.res_recipients || null,
           envMode: currentMailer.env_mode || getCurrentMode(),
           timestamp: Date.now(),
         };
 
         sessionStorage.setItem("mailerContext", JSON.stringify(mailerContext));
+
+
         window.location.href = "templateGallery.html?view=canva&source=mailer";
       }
 
       function handlePendingMailer(mailer) {
-        document.getElementById("templateSection").classList.add("visible");
-        loadTemplates();
+        const isDirectMail = isDirectMailOrder(mailer.res_recipients);
+
+        if (isDirectMail) {
+          document.getElementById("templateSection").classList.add("visible");
+          loadTemplates();
+        } else {
+          document
+            .getElementById("templateSection")
+            .classList.remove("visible");
+        }
 
         const infoContent = document.getElementById("mailerInfoContent");
         if (!infoContent) return;
 
         infoContent.innerHTML = "";
 
-        const recipientCount = mailer.audience_list ? mailer.audience_list.length : 0;
-        const totalCost = (recipientCount * 1.31).toFixed(2);
+        if (isDirectMail) {
+          const recipientCount = mailer.audience_list
+            ? mailer.audience_list.length
+            : 0;
+          const totalCost = (recipientCount * 1.31).toFixed(2);
 
-        const costItem = document.createElement("div");
-        costItem.className = "info-item";
-        costItem.innerHTML = `
-    <strong>Estimated Cost</strong>
-    <span>$${totalCost}</span>
-  `;
-        infoContent.appendChild(costItem);
+          const costItem = document.createElement("div");
+          costItem.className = "info-item";
+          costItem.innerHTML = `
+      <strong>Estimated Cost</strong>
+      <span>${totalCost}</span>
+    `;
+          infoContent.appendChild(costItem);
 
-        attachMailerActionsWithCanva(mailer);
+          attachMailerActionsWithCanva(mailer);
+          document.getElementById("filterBar").style.display = "none";
+        } else {
+          // RES OCC Order
+          const resOccBanner = document.createElement("div");
+          resOccBanner.className = "res-occ-banner";
+          resOccBanner.innerHTML = `
+        <h3>🎯 RES OCC Order</h3>
+        <p>This order will be sent via RE OCC to selected carrier routes and demographics.</p>
+        <p style="font-size: 13px; margin-top: 1rem;">Recipient details and estimated count will be determined during RES OCC configuration.</p>
+      `;
+          infoContent.appendChild(resOccBanner);
 
-        document.getElementById("filterBar").style.display = "none";
+          attachMailerActionsWithCanvaRESOCC(mailer);
+        }
+
+        const recipientsCard = document.getElementById("recipientsCard");
+        if (!isDirectMail) {
+          recipientsCard.style.display = "none";
+        } else {
+          recipientsCard.style.display = "block";
+        }
       }
 
       function attachMailerActionsWithCanva(mailer) {
@@ -1230,6 +1876,29 @@
         canvaBtn.style.background =
           "linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)";
         canvaBtn.innerHTML = "🎨 Select & Send Canva Template";
+        canvaBtn.onclick = () => {
+          navigateToCanvaWithMailerContext();
+        };
+        actions.appendChild(canvaBtn);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "btn btn-outline";
+        deleteBtn.innerHTML = "🗑️ Delete";
+        deleteBtn.style.color = "#ef4444";
+        deleteBtn.style.borderColor = "#ef4444";
+        deleteBtn.onclick = () => deleteMailer(mailer.id);
+        actions.appendChild(deleteBtn);
+      }
+
+      function attachMailerActionsWithCanvaRESOCC(mailer) {
+        const actions = document.getElementById("actionButtons");
+        actions.innerHTML = "";
+
+        const canvaBtn = document.createElement("button");
+        canvaBtn.className = "btn btn-primary";
+        canvaBtn.style.background =
+          "linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)";
+        canvaBtn.innerHTML = "🎨 Select & Send via RES OCC";
         canvaBtn.onclick = () => {
           navigateToCanvaWithMailerContext();
         };
@@ -1283,6 +1952,7 @@
       }
 
       function handleSentMailer(mailer) {
+        const isDirectMail = isDirectMailOrder(mailer.res_recipients);
         const infoContent = document.getElementById("mailerInfoContent");
         if (!infoContent) return;
 
@@ -1311,16 +1981,20 @@
   `;
         infoContent.appendChild(deliveryItem);
 
-        const recipientCount = mailer.audience_list ? mailer.audience_list.length : 0;
-        const totalCost = (recipientCount * 1.31).toFixed(2);
+        if (isDirectMail) {
+          const recipientCount = mailer.audience_list
+            ? mailer.audience_list.length
+            : 0;
+          const totalCost = (recipientCount * 1.31).toFixed(2);
 
-        const costItem = document.createElement("div");
-        costItem.className = "info-item";
-        costItem.innerHTML = `
-    <strong>Expected Cost</strong>
-    <span>$${totalCost}</span>
-  `;
-        infoContent.appendChild(costItem);
+          const costItem = document.createElement("div");
+          costItem.className = "info-item";
+          costItem.innerHTML = `
+      <strong>Expected Cost</strong>
+      <span>${totalCost}</span>
+    `;
+          infoContent.appendChild(costItem);
+        }
 
         const envModeItem = document.createElement("div");
         envModeItem.className = "info-item";
@@ -1367,7 +2041,13 @@
         }
 
         document.getElementById("templateSection").classList.remove("visible");
-        document.getElementById("filterBar").style.display = "flex";
+        const recipientsCard = document.getElementById("recipientsCard");
+        if (!isDirectMail) {
+          recipientsCard.style.display = "none";
+        } else {
+          recipientsCard.style.display = "block";
+          document.getElementById("filterBar").style.display = "flex";
+        }
       }
 
       async function loadTemplates(selectedTemplateId = null) {
@@ -1543,7 +2223,7 @@
         if (!currentMailer) return;
 
         const filter = document.getElementById("filterScanned").checked;
-        
+
         const originalList = currentMailer.audience_list || [];
 
         await renderRecipients(
@@ -1567,18 +2247,17 @@
           if (!res.ok) throw new Error("Failed to fetch mailer details");
 
           const mailer = await res.json();
-  
 
           currentMailer = mailer;
 
           if (mailer.audience_list && Array.isArray(mailer.audience_list)) {
             recipients = mailer.audience_list;
-            console.log("✅ Recipients from audience_list:", recipients.length);
           } else {
             recipients = [];
             console.warn("⚠️ No recipients found in mailer data");
           }
-          
+
+
           renderMailerInfo(mailer);
           await updateRecipients();
         } catch (err) {

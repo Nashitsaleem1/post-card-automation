@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PCM</title>
+    <title>PCM - Campaign Builder</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link
       class="taskbar-icon"
@@ -13,6 +13,190 @@
     />
     <link rel="stylesheet" href="./assets/css/index.css" />
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGHD38AZ4tLZzd7T-D0wR0uOpdSM6ceG0&libraries=places"></script>
+    <style>
+      /* Additional styles for better visual separation */
+      .workflow-container {
+        max-width: 1230px;
+        margin: 0 auto;
+        margin-top: 11.6rem;
+        padding: 2rem;
+      }
+
+      .step-section {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .step-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .step-number {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.2rem;
+      }
+
+      .step-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #333;
+        margin: 0;
+      }
+
+      .step-description {
+        color: #666;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+      }
+
+      .divider {
+        height: 2px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        margin: 3rem 0;
+      }
+
+      .mailing-method-section {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-top: 3rem;
+      }
+
+      .mailing-method-header {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+
+      .mailing-method-header h2 {
+        font-size: 2rem;
+        color: #333;
+        margin-bottom: 0.5rem;
+      }
+
+      .mailing-method-header p {
+        color: #666;
+        font-size: 1.1rem;
+      }
+
+      .mailing-options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+      }
+
+      .mailing-option-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        border: 3px solid transparent;
+        cursor: pointer;
+      }
+
+      .mailing-option-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      }
+
+      .mailing-option-card.selected {
+        border-color: #2b7fff;
+        background: #f0f7ff;
+      }
+
+      .option-icon {
+        font-size: 3rem;
+        text-align: center;
+        margin-bottom: 1rem;
+      }
+
+      .option-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        text-align: center;
+        color: #333;
+        margin-bottom: 1rem;
+      }
+
+      .option-description {
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+      }
+
+      .option-features {
+        list-style: none;
+        padding: 0;
+      }
+
+      .option-features li {
+        padding: 0.5rem 0;
+        color: #555;
+        display: flex;
+        align-items: start;
+        gap: 0.5rem;
+      }
+
+      .option-features li:before {
+        content: "✓";
+        color: #28a745;
+        font-weight: bold;
+        flex-shrink: 0;
+      }
+
+      .option-badge {
+        display: inline-block;
+        background: #ffc107;
+        color: #000;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+      }
+
+      .method-content {
+        display: none;
+        margin-top: 2rem;
+      }
+
+      .method-content.active {
+        display: block;
+      }
+
+      .info-box {
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 1rem;
+        border-radius: 4px;
+        margin-bottom: 1.5rem;
+      }
+
+      .info-box strong {
+        color: #1976d2;
+      }
+
+      @media (max-width: 768px) {
+        .mailing-options {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
   </head>
   <body>
     <nav class="navbar">
@@ -45,649 +229,981 @@
 
       <div class="hamburger" id="hamburger">☰</div>
     </nav>
-    <!-- MODE SELECTOR - Place RIGHT AFTER nav, BEFORE container -->
+
     <div class="mode-selector">
       <button id="testingModeBtn" class="mode-btn active">Testing</button>
       <button id="productionModeBtn" class="mode-btn">Production</button>
     </div>
-    <div class="container">
-      <h1 class="heading3">
-        <i>
-          To get started, first create a Campaign<br />
-          or a New Mailer
-        </i>
-      </h1>
 
-      <div class="selection-cards" id="createcampaign">
-        <div class="card" id="newCampaignCard">New Campaign</div>
-        <div class="card" id="newMailerCard">New Mailer</div>
-      </div>
-      <div class="dynamic-form-wrapper">
-        <div class="dynamic-form">
-          <div id="campaignFields" style="display: none">
-            <input
-              type="text"
-              placeholder="Campaign Name"
-              id="campaignNameInput"
-            />
-            <input type="text" placeholder="Mailer Name" id="mailerNameInput" />
-          </div>
+    <div class="workflow-container">
+      <!-- STEP 1: Campaign or Mailer -->
+      <div class="step-section">
+        <div class="step-header">
+          <div class="step-number">1</div>
+          <h2 class="step-title">Choose Your Campaign Type</h2>
+        </div>
+        <p class="step-description">
+          Start by selecting whether you want to create a full campaign with
+          multiple mailers or send a one-time mailer.
+        </p>
 
-          <div id="mailerFields" style="display: none">
-            <input
-              type="text"
-              placeholder="Mailer Name"
-              id="mailerNameOnlyInput"
-            />
+        <div class="selection-cards" id="createcampaign">
+          <div class="card" id="newCampaignCard">New Campaign</div>
+          <div class="card" id="newMailerCard">New Mailer</div>
+        </div>
+
+        <div class="dynamic-form-wrapper">
+          <div class="dynamic-form">
+            <div id="campaignFields" style="display: none">
+              <input
+                type="text"
+                placeholder="Campaign Name"
+                id="campaignNameInput"
+              />
+              <input
+                type="text"
+                placeholder="Mailer Name"
+                id="mailerNameInput"
+              />
+            </div>
+
+            <div id="mailerFields" style="display: none">
+              <input
+                type="text"
+                placeholder="Mailer Name"
+                id="mailerNameOnlyInput"
+              />
+            </div>
           </div>
         </div>
       </div>
-      <h1 class="heading3">
-        <i>
-          Select your audience either by uploading<br />
-          CSV or a Batch Search
-        </i>
-      </h1>
-      <div class="selection-cards" id="addressselection">
-        <div class="card" id="uploadcsv">Upload CSV</div>
-        <div class="card" id="batchsearch">Batch Search</div>
-        <div class="card" id="existingaudience">Existing Audience</div>
-      </div>
-      <div class="upload-section" id="uploadsection" style="display: none">
-        <!-- Two-column layout -->
-        <div class="upload-flex">
-          <div class="info_download">
-            <p class="upload-description">
-              Use our pre-formatted CSV template to ensure your data is
-              structured correctly. The template includes fields such as company
-              name, recipient name, address, state, ZIP code, and other required
-              information. After downloading, simply fill in your campaign
-              details and upload the completed file using the section on the
-              right.
-            </p>
 
-            <div class="download-area">
-              <button class="sample-download-btn" onclick="downloadSampleCSV()">
+      <div class="divider"></div>
+
+      <!-- STEP 2: Select Audience (Optional for EDDM) -->
+      <div class="step-section">
+        <div class="step-header">
+          <div class="step-number">2</div>
+          <h2 class="step-title">
+            Select Your Audience (Optional for RES OCC)
+          </h2>
+        </div>
+        <p class="step-description">
+          Choose your recipients by uploading a CSV file, searching through our
+          database, or selecting a previously saved audience.
+          <strong>Note:</strong> Skip this step if you plan to use the RES OCC
+          Service (Step 5).
+        </p>
+
+        <div class="selection-cards" id="addressselection">
+          <div class="card" id="uploadcsv">
+            Upload CSV
+            <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem">
+              Import your recipient list
+            </p>
+          </div>
+          <div class="card" id="batchsearch">
+            Batch Search
+            <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem">
+              Search our property database
+            </p>
+          </div>
+          <div class="card" id="existingaudience">
+            Existing Audience
+            <p style="font-size: 1rem; color: #666; margin-top: 0.5rem">
+              Use a saved audience
+            </p>
+          </div>
+        </div>
+
+        <!-- Upload CSV Section -->
+        <div class="upload-section" id="uploadsection" style="display: none">
+          <div class="upload-flex">
+            <div class="info_download">
+              <p class="upload-description">
+                Use our pre-formatted CSV template to ensure your data is
+                structured correctly. The template includes fields such as
+                company name, recipient name, address, state, ZIP code, and
+                other required information.
+              </p>
+              <div class="download-area">
+                <button
+                  class="sample-download-btn"
+                  onclick="downloadSampleCSV()"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7,10 12,15 17,10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  Download Sample CSV
+                </button>
+              </div>
+            </div>
+
+            <div class="upload-box" id="uploadBox">
+              <div class="upload-icon">
+                <img
+                  src="./assets/images/icon.png"
+                  alt="Upload"
+                  width="52"
+                  height="52"
+                />
+              </div>
+              <div class="upload-main-text">Drag & drop your CSV file here</div>
+              <div class="upload-sub-text">or click to browse your files</div>
+              <label for="csvFile" class="choose-file-btn">Choose File</label>
+              <input
+                type="file"
+                id="csvFile"
+                accept=".csv"
+                class="hidden-input"
+              />
+              <div class="file-size-info">Max file size: 10MB</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Existing Audience Section -->
+        <div
+          class="existing-audience-section"
+          id="existingaudiencesection"
+          style="display: none"
+        >
+          <div class="audience-list-container">
+            <div class="audience-header">
+              <h2>Select an Existing Audience</h2>
+              <button class="refresh-btn" onclick="loadExistingAudiences()">
                 <svg
-                  width="18"
-                  height="18"
+                  width="16"
+                  height="16"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
                   stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
                 >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7,10 12,15 17,10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                 </svg>
-                Download Sample CSV
+                Refresh
+              </button>
+            </div>
+            <div class="audiences-grid" id="audiencesGrid">
+              <div class="loading-message">Loading audiences...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Batch Search Section -->
+        <div class="main-container" id="batchdatasearch" style="display: none">
+          <div class="search-note">
+            <span style="font-size: 16px">💡</span>
+            <strong>Tip:</strong> Start by typing the
+            <strong>city name</strong> first. Once you select a city, the
+            <strong>ZIP code</strong> field will automatically update with valid
+            options.
+          </div>
+
+          <div class="content-sections">
+            <div class="search-container">
+              <div class="filters-scroll">
+                <div class="filter-box">
+                  <div class="form-group">
+                    <label for="cityInput">City:</label>
+                    <input
+                      type="text"
+                      id="cityInput"
+                      class="form-input"
+                      placeholder="Start typing a city..."
+                    />
+                    <input type="hidden" id="cityApiValue" />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="stateInput">State:</label>
+                    <input
+                      type="text"
+                      id="stateInput"
+                      class="form-input"
+                      placeholder="Auto-filled"
+                      readonly
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="zipInput">Zip Code:</label>
+                    <select id="zipInput" class="form-input">
+                      <option value="">-- Select Zip --</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="streetInput">Street:</label>
+                    <input
+                      type="text"
+                      id="streetInput"
+                      class="form-input"
+                      placeholder="Enter street"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Year Built (Min - Max):</label>
+                    <input
+                      type="number"
+                      id="minYearBuilt"
+                      class="form-input small-input"
+                      placeholder="Min Year"
+                    />
+                    <input
+                      type="number"
+                      id="maxYearBuilt"
+                      class="form-input small-input"
+                      placeholder="Max Year"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Estimated Value (Min - Max):</label>
+                    <input
+                      type="number"
+                      id="minValue"
+                      class="form-input small-input"
+                      placeholder="Min $"
+                    />
+                    <input
+                      type="number"
+                      id="maxValue"
+                      class="form-input small-input"
+                      placeholder="Max $"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Bedrooms (Min - Max):</label>
+                    <select id="minBedrooms" class="form-input small-input">
+                      <option value="">Min</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                      <option value="5">5</option>
+                    </select>
+                    <select id="maxBedrooms" class="form-input small-input">
+                      <option value="">Max</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                      <option value="5">5</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Bathrooms (Min - Max):</label>
+                    <select id="minBathrooms" class="form-input small-input">
+                      <option value="">Min</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                    </select>
+                    <select id="maxBathrooms" class="form-input small-input">
+                      <option value="">Max</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="quickList">Special Filters:</label>
+                    <select id="quickList" class="form-input">
+                      <option value="">-- Select --</option>
+                      <option value="absentee-owner">Absentee Owner</option>
+                      <option value="cash-buyer">Cash Buyer</option>
+                      <option value="high-equity">High Equity</option>
+                      <option value="preforeclosure">Preforeclosure</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="search-actions">
+                <button class="search-btn" onclick="searchProperties(event)">
+                  Search
+                </button>
+                <button class="clear-btn" onclick="clearfilters()">
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+
+            <div class="results-container">
+              <div id="results" class="results">
+                <div class="results-header">
+                  <div class="results-info">
+                    <div class="result-counts">
+                      <span class="count-item"
+                        >Total Results Found: <strong>0</strong></span
+                      >
+                    </div>
+                  </div>
+
+                  <div class="results-actions">
+                    <div class="pagination-controls">
+                      <label>Results per page:</label>
+                      <select id="pageSizeSelect" class="pagination-select">
+                        <option value="20" selected>20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="150">150</option>
+                      </select>
+                    </div>
+                    <button
+                      class="action-btn export-btn"
+                      onclick="exportToCSV()"
+                    >
+                      <span class="btn-icon">📊</span> Export CSV
+                    </button>
+                    <button
+                      class="action-btn save-btn"
+                      onclick="saveAudience()"
+                    >
+                      <span class="btn-icon">💾</span> Save Audience
+                    </button>
+                  </div>
+                </div>
+
+                <div class="pagination-info">No search results yet</div>
+
+                <div class="table-container">
+                  <table class="results-table">
+                    <thead>
+                      <tr>
+                        <th class="checkbox-col">
+                          <label class="select-all-label">
+                            <input
+                              type="checkbox"
+                              id="selectPageCheckbox"
+                              onchange="toggleSelectPage()"
+                            />
+                            <span id="selectAllLabel">Select All</span>
+                          </label>
+                        </th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Address</th>
+                        <th>City</th>
+                        <th>State</th>
+                        <th>Zip Code</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td colspan="7" class="empty-row">
+                          Click "Search" to load properties
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="pagination">
+                  <button
+                    class="pagination-btn"
+                    onclick="goToPage(currentPage - 1)"
+                    disabled
+                  >
+                    Previous
+                  </button>
+                  <div class="page-numbers" id="pageNumbers"></div>
+                  <button
+                    class="pagination-btn"
+                    onclick="goToPage(currentPage + 1)"
+                    disabled
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audience Name Modal -->
+        <div id="audienceNameModal" class="custom-modal" style="display: none">
+          <div class="custom-modal-content">
+            <h3 style="margin-bottom: 1.5rem; color: #333">Save Audience</h3>
+            <div class="form-group" style="margin-bottom: 1.5rem">
+              <label
+                for="audienceNameInput"
+                style="display: block; margin-bottom: 0.5rem; font-weight: 600"
+              >
+                Audience Name:
+              </label>
+              <input
+                type="text"
+                id="audienceNameInput"
+                class="form-input"
+                placeholder="Enter audience name"
+                maxlength="100"
+                style="
+                  width: 100%;
+                  padding: 0.75rem;
+                  border: 1px solid #ddd;
+                  border-radius: 5px;
+                "
+              />
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end">
+              <button
+                onclick="closeAudienceNameModal()"
+                class="custom-modal-ok-btn"
+                style="background-color: #6c757d"
+              >
+                Cancel
+              </button>
+              <button
+                onclick="confirmSaveAudience()"
+                class="custom-modal-ok-btn"
+                style="background-color: #28a745"
+              >
+                Save Audience
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- STEP 3: Choose Template -->
+      <div class="step-section">
+        <div class="step-header">
+          <div class="step-number">3</div>
+          <h2 class="step-title">Choose Your Letter Template</h2>
+        </div>
+        <p class="step-description">
+          Select a template from our gallery, edit an existing template, or use
+          Canva to design your own.
+        </p>
+
+        <div class="templates-grid" id="templatesGrid"></div>
+
+        <div class="template-options" style="margin-top: 2rem">
+          <a href="#templatesGrid" class="template-link"
+            >Use an Existing Template</a
+          >
+          <a
+            href="javascript:void(0)"
+            onclick="handleCanvaNavigation()"
+            class="template-link"
+          >
+            Use Canva Templates
+          </a>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- STEP 4: Choose Mailing Method -->
+      <div class="mailing-method-section">
+        <div class="mailing-method-header">
+          <div class="step-header" style="justify-content: center">
+            <div class="step-number">4</div>
+            <h2 class="step-title">Choose Your Mailing Method</h2>
+          </div>
+          <p>
+            Select how you want to send your letter. Each method has different
+            benefits and requirements.
+          </p>
+        </div>
+
+        <div class="mailing-options">
+          <!-- Direct Mail Option -->
+          <div class="mailing-option-card" id="directMailOption">
+            <h3 class="option-title">Direct Mail</h3>
+            <p class="option-description">
+              Send letters directly to your selected audience. Perfect for
+              personalized campaigns with specific recipients.
+            </p>
+            <ul class="option-features">
+              <li>Use your uploaded CSV or selected audience</li>
+              <li>Personalized addressing for each recipient</li>
+              <li>Ideal for targeted campaigns</li>
+              <li>Full control over recipient list</li>
+            </ul>
+            <div style="text-align: center; margin-top: 1.5rem">
+              <button
+                class="btn btn-primary"
+                onclick="selectMailingMethod('direct')"
+                style="width: 100%"
+              >
+                Select Direct Mail
               </button>
             </div>
           </div>
 
-          <!-- Right side: Upload Box -->
-          <div class="upload-box" id="uploadBox">
-            <div class="upload-icon">
-              <img
-                src="./assets/images/icon.png"
-                alt="Upload"
-                width="52"
-                height="52"
-              />
-            </div>
-            <div class="upload-main-text">Drag & drop your CSV file here</div>
-            <div class="upload-sub-text">or click to browse your files</div>
-
-            <label for="csvFile" class="choose-file-btn">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+          <!-- RES OCC Option -->
+          <div class="mailing-option-card" id="resOccOption">
+            <h3 class="option-title">
+              RES OCC Service
+              <span class="option-badge">EDDM</span>
+            </h3>
+            <p class="option-description">
+              Residential Occupancy mailing reaches every household in selected
+              carrier routes. No recipient list needed!
+            </p>
+            <ul class="option-features">
+              <li>No recipient list required</li>
+              <li>Target by carrier routes and demographics</li>
+              <li>Reaches every household in selected areas</li>
+              <li>Cost-effective for broad coverage</li>
+            </ul>
+            <div style="text-align: center; margin-top: 1.5rem">
+              <button
+                class="btn btn-primary"
+                onclick="selectMailingMethod('resocc')"
+                style="width: 100%"
               >
-                <path
-                  d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
-                />
-                <polyline points="14,2 14,8 20,8" />
-              </svg>
-              Choose File
-            </label>
-            <input
-              type="file"
-              id="csvFile"
-              accept=".csv"
-              class="hidden-input"
-            />
-
-            <div class="file-size-info">Max file size: 10MB</div>
+                Select RES OCC
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-      <!-- NEW: Existing Audience Section -->
-      <div
-        class="existing-audience-section"
-        id="existingaudiencesection"
-        style="display: none"
-      >
-        <div class="audience-list-container">
-          <div class="audience-header">
-            <h2>Select an Existing Audience</h2>
-            <button class="refresh-btn" onclick="loadExistingAudiences()">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <polyline points="23 4 23 10 17 10"></polyline>
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-              </svg>
-              Refresh
+
+        <!-- Direct Mail Content (Hidden by default) -->
+        <div id="directMailContent" class="method-content">
+          <div class="info-box">
+            <strong>📋 Direct Mail Selected:</strong> Your letter will be sent
+            to the recipients you've selected in Step 2. Make sure you've
+            selected audience via uploading CSV, batch search or from existing
+            audiences.
+          </div>
+
+          <div class="template-actions">
+            <button
+              class="btn-primary"
+              onclick="createAndSendLetter()"
+              style="font-size: 1.1rem; padding: 1rem 2rem"
+            >
+              ✉️ Send Direct Mail Letter
+            </button>
+            <button
+              class="btn-primary"
+              onclick="createAndSave()"
+              style="font-size: 1.1rem; padding: 1rem 2rem"
+            >
+              💾 Save as Draft
             </button>
           </div>
+        </div>
 
-          <div class="audiences-grid" id="audiencesGrid">
-            <div class="loading-message">Loading audiences...</div>
+        <div id="resOccContent" class="method-content">
+          <!-- Main Info Box -->
+          <div class="info-box">
+            <strong>🏘️ RES OCC Service Selected:</strong> Configure your
+            residential occupancy campaign below. Follow the steps in order to
+            target specific areas with carrier routes and demographics.
+          </div>
+
+          <!-- Step-by-Step Guide Box -->
+          <div
+            class="info-box"
+            style="
+              background: #fff3e0;
+              border-left: 4px solid #ff9800;
+              margin-bottom: 2rem;
+            "
+          >
+            <strong style="color: #e65100"
+              >📋 Quick Guide - Follow These Steps:</strong
+            >
+            <ol style="margin: 0.75rem 0 0 1.5rem; color: #555; line-height: 2">
+              <li>
+                <strong>Select a List Type</strong> - Choose from New Movers,
+                Consumer, or Resident Occupant
+              </li>
+              <li>
+                <strong>Enter Zip Code</strong> - Type a valid 5-digit zip code
+              </li>
+              <li>
+                <strong>Click "Get Carrier Routes"</strong> - This will load
+                available routes in the dropdown below
+              </li>
+              <li>
+                <strong>Select Carrier Routes</strong> - Choose one or more
+                routes from the dropdown (appears after step 3)
+              </li>
+              <li>
+                <strong>Add Demographics (Optional)</strong> - Refine your
+                audience with filters
+              </li>
+              <li>
+                <strong>Get List Count</strong> - Review recipient count and
+                place your order
+              </li>
+            </ol>
+          </div>
+
+          <div
+            class="eddm-section"
+            style="
+              display: block;
+              background: white;
+              padding: 2rem;
+              border-radius: 8px;
+            "
+          >
+            <form class="eddm-form" id="eddmForm">
+              <!-- Step 1: List Type -->
+              <div class="form-group">
+                <label for="listType">
+                  <span
+                    style="
+                      background: #667eea;
+                      color: white;
+                      padding: 0.25rem 0.5rem;
+                      border-radius: 50%;
+                      margin-right: 0.5rem;
+                      font-size: 0.9rem;
+                    "
+                    >1</span
+                  >
+                  <strong>Select List Type</strong>
+                </label>
+                <p class="description" style="margin: 0.5rem 0 1rem 2rem">
+                  Choose the type of mailing list for your campaign:
+                </p>
+                <select id="listType" class="form-select" required>
+                  <option value="">-- Choose a list type --</option>
+                  <option value="HT6">New Movers [HT6]</option>
+                  <option value="ACC">Consumer [ACC]</option>
+                  <option value="IRL">Resident Occupant [IRL]</option>
+                </select>
+              </div>
+
+              <!-- Step 2: Zip Code -->
+              <div class="form-group">
+                <label for="zipCode">
+                  <span
+                    style="
+                      background: #667eea;
+                      color: white;
+                      padding: 0.25rem 0.5rem;
+                      border-radius: 50%;
+                      margin-right: 0.5rem;
+                      font-size: 0.9rem;
+                    "
+                    >2</span
+                  >
+                  <strong>Enter Zip Code</strong>
+                </label>
+                <p class="description" style="margin: 0.5rem 0 1rem 2rem">
+                  Enter the 5-digit zip code for your target area:
+                </p>
+                <input
+                  type="text"
+                  id="zipCode"
+                  class="form-input"
+                  placeholder="e.g., 10001"
+                  maxlength="5"
+                  pattern="[0-9]{5}"
+                />
+              </div>
+
+              <!-- Step 3: Get Carrier Routes Button -->
+              <div class="form-group">
+                <label>
+                  <span
+                    style="
+                      background: #667eea;
+                      color: white;
+                      padding: 0.25rem 0.5rem;
+                      border-radius: 50%;
+                      margin-right: 0.5rem;
+                      font-size: 0.9rem;
+                    "
+                    >3</span
+                  >
+                  <strong>Load Carrier Routes</strong>
+                </label>
+                <p class="description" style="margin: 0.5rem 0 1rem 2rem">
+                  Click the button below to fetch available carrier routes for
+                  your zip code:
+                </p>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  id="getCarrierRoutesBtn"
+                  onclick="getCarrierRoutes()"
+                  style="display: flex; align-items: center; gap: 0.5rem"
+                >
+                  <span>🔄</span> Get Carrier Routes
+                </button>
+              </div>
+
+              <!-- Step 4: Select Carrier Routes -->
+              <div class="form-group">
+                <label>
+                  <span
+                    style="
+                      background: #667eea;
+                      color: white;
+                      padding: 0.25rem 0.5rem;
+                      border-radius: 50%;
+                      margin-right: 0.5rem;
+                      font-size: 0.9rem;
+                    "
+                    >4</span
+                  >
+                  <strong>Select Carrier Routes</strong>
+                </label>
+                <p class="description" style="margin: 0.5rem 0 1rem 2rem">
+                  <span
+                    style="
+                      background: #e3f2fd;
+                      padding: 0.25rem 0.5rem;
+                      border-radius: 4px;
+                      font-weight: 600;
+                      color: #1976d2;
+                    "
+                  >
+                    ℹ️ Routes will appear here after clicking "Get Carrier
+                    Routes"
+                  </span>
+                </p>
+                <div class="multiselect-dropdown" id="carrierRoutesDropdown">
+                  <div
+                    class="multiselect-header"
+                    onclick="toggleDropdown(event)"
+                  >
+                    <span class="multiselect-header-text"
+                      >-- Click to select carrier routes --</span
+                    >
+                    <span class="multiselect-arrow">▼</span>
+                  </div>
+                  <div class="multiselect-list" id="carrierRoutesList">
+                    <div
+                      class="empty-state"
+                      style="padding: 2rem; text-align: center; color: #999"
+                    >
+                      <div style="font-size: 2rem; margin-bottom: 0.5rem">
+                        📭
+                      </div>
+                      <div style="font-weight: 600; margin-bottom: 0.5rem">
+                        No Routes Loaded Yet
+                      </div>
+                      <div style="font-size: 0.9rem">
+                        Click "Get Carrier Routes" button above to load
+                        available options
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="selected-tags" id="selectedTags"></div>
+              </div>
+
+              <!-- Step 5: Optional Demographics -->
+              <div class="form-group">
+                <label>
+                  <span
+                    style="
+                      background: #667eea;
+                      color: white;
+                      padding: 0.25rem 0.5rem;
+                      border-radius: 50%;
+                      margin-right: 0.5rem;
+                      font-size: 0.9rem;
+                    "
+                    >5</span
+                  >
+                  <strong>Optional Demographics</strong>
+                  <span
+                    style="
+                      background: #ffc107;
+                      color: #000;
+                      padding: 0.15rem 0.5rem;
+                      border-radius: 12px;
+                      font-size: 0.75rem;
+                      margin-left: 0.5rem;
+                    "
+                    >OPTIONAL</span
+                  >
+                </label>
+                <p class="description" style="margin: 0.5rem 0 1rem 2rem">
+                  Refine your audience with demographic filters (you can skip
+                  this step):
+                </p>
+                <div
+                  class="demographics-container"
+                  id="demographicsContainer"
+                ></div>
+              </div>
+            </form>
+
+            <!-- Step 6: Get List Count -->
+            <div
+              class="form-group"
+              style="
+                margin-top: 3rem;
+                padding-top: 2rem;
+                border-top: 2px solid #e0e0e0;
+              "
+            >
+              <label>
+                <span
+                  style="
+                    background: #667eea;
+                    color: white;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 50%;
+                    margin-right: 0.5rem;
+                    font-size: 0.9rem;
+                  "
+                  >6</span
+                >
+                <strong>Review & Place Order</strong>
+              </label>
+              <p class="description" style="margin: 0.5rem 0 1rem 2rem">
+                Click below to see how many recipients will receive your letter
+                and place your order:
+              </p>
+              <button
+                type="button"
+                class="btn btn-success"
+                id="getListCountBtn"
+                onclick="getListCount()"
+                style="
+                  background-color: #28a745;
+                  color: white;
+                  width: 100%;
+                  padding: 1rem;
+                  font-size: 1.1rem;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  gap: 0.5rem;
+                "
+              >
+                <span>📊</span> Get List Count & Place Order
+              </button>
+              <div
+                id="listCountResult"
+                style="margin-top: 1rem; display: none"
+              ></div>
+            </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Audience Name Modal -->
-      <div id="audienceNameModal" class="custom-modal" style="display: none">
-        <div class="custom-modal-content">
-          <h3 style="margin-bottom: 1.5rem; color: #333">Save Audience</h3>
-          <div class="form-group" style="margin-bottom: 1.5rem">
+    <!-- Modals -->
+    <div id="previewOverlay" class="preview-overlay">
+      <div class="preview-content">
+        <button class="close-btn" onclick="closePreview()">✖</button>
+        <div id="previewBody"></div>
+      </div>
+    </div>
+
+    <div
+      id="letterOptionsModal"
+      class="custom-modal-letter"
+      style="display: none"
+    >
+      <div class="custom-modal-content letter-options-modal">
+        <h3 style="margin-bottom: 1.5rem; color: #333">Letter Options</h3>
+
+        <div class="letter-options-form">
+          <div class="form-group">
             <label
-              for="audienceNameInput"
-              style="display: block; margin-bottom: 0.5rem; font-weight: 600"
+              style="font-weight: 600; margin-bottom: 0.75rem; display: block"
             >
-              Audience Name:
+              Insert Addressing Page
             </label>
-            <input
-              type="text"
-              id="audienceNameInput"
-              class="form-input"
-              placeholder="Enter audience name (e.g., 'Florida Homeowners Q1 2025')"
-              maxlength="100"
+            <div class="option-buttons">
+              <button
+                type="button"
+                class="option-btn active"
+                onclick="selectAddressingOption('yes', this)"
+                data-value="yes"
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                class="option-btn"
+                onclick="selectAddressingOption('no', this)"
+                data-value="no"
+              >
+                No
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label
+              for="envelopeType"
+              style="font-weight: 600; margin-bottom: 0.75rem; display: block"
+            >
+              Envelope Type
+            </label>
+            <select
+              id="envelopeType"
+              class="form-select"
               style="
                 width: 100%;
                 padding: 0.75rem;
                 border: 1px solid #ddd;
                 border-radius: 5px;
               "
-            />
-          </div>
-          <div style="display: flex; gap: 1rem; justify-content: flex-end">
-            <button
-              onclick="closeAudienceNameModal()"
-              class="custom-modal-ok-btn"
-              style="background-color: #6c757d"
             >
-              Cancel
-            </button>
-            <button
-              onclick="confirmSaveAudience()"
-              class="custom-modal-ok-btn"
-              style="background-color: #28a745"
-            >
-              Save Audience
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="main-container" id="batchdatasearch" style="display: none">
-        <div class="search-note">
-          <span style="font-size: 16px">💡</span>
-          <strong>Tip:</strong> Start by typing the
-          <strong>city name</strong> first. Once you select a city, the
-          <strong>ZIP code</strong> field will automatically update with valid
-          options.
-          <br />
-          ▪ To find properties in a specific area or neighborhood in a city, select the ZIP code from the dropdown.
-          <br />
-          ▪ The default pagination limit is <strong>20</strong>. You can change
-          this to your preferred number, and all subsequent API calls will
-          automatically use that value.
-        </div>
-
-        <div class="content-sections">
-          <!-- LEFT SIDE - SEARCH FILTERS -->
-          <div class="search-container">
-            <div class="filters-scroll">
-              <div class="filter-box">
-                <div class="form-group">
-                  <label for="cityInput">City:</label>
-                  <input
-                    type="text"
-                    id="cityInput"
-                    class="form-input"
-                    placeholder="Start typing a city..."
-                  />
-                  <input type="hidden" id="cityApiValue" />
-                </div>
-
-                <div class="form-group">
-                  <label for="stateInput">State:</label>
-                  <input
-                    type="text"
-                    id="stateInput"
-                    class="form-input"
-                    placeholder="Auto-filled"
-                    readonly
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="zipInput">Zip Code:</label>
-                  <select id="zipInput" class="form-input">
-                    <option value="">-- Select Zip --</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="streetInput">Street:</label>
-                  <input
-                    type="text"
-                    id="streetInput"
-                    class="form-input"
-                    placeholder="Enter street"
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label>Year Built (Min - Max):</label>
-                  <input
-                    type="number"
-                    id="minYearBuilt"
-                    class="form-input small-input"
-                    placeholder="Min Year"
-                  />
-                  <input
-                    type="number"
-                    id="maxYearBuilt"
-                    class="form-input small-input"
-                    placeholder="Max Year"
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label>Estimated Value (Min - Max):</label>
-                  <input
-                    type="number"
-                    id="minValue"
-                    class="form-input small-input"
-                    placeholder="Min $"
-                  />
-                  <input
-                    type="number"
-                    id="maxValue"
-                    class="form-input small-input"
-                    placeholder="Max $"
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label>Bedrooms (Min - Max):</label>
-                  <select id="minBedrooms" class="form-input small-input">
-                    <option value="">Min</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                  </select>
-                  <select id="maxBedrooms" class="form-input small-input">
-                    <option value="">Max</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label>Bathrooms (Min - Max):</label>
-                  <select id="minBathrooms" class="form-input small-input">
-                    <option value="">Min</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                  </select>
-                  <select id="maxBathrooms" class="form-input small-input">
-                    <option value="">Max</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="quickList">Special Filters:</label>
-                  <select id="quickList" class="form-input">
-                    <option value="">-- Select --</option>
-                    <option value="absentee-owner">Absentee Owner</option>
-                    <option value="active-auction">Active Auction</option>
-                    <option value="active-listing">Active Listing</option>
-                    <option value="canceled-listing">Canceled Listing</option>
-                    <option value="cash-buyer">Cash Buyer</option>
-                    <option value="corporate-owned">Corporate Owned</option>
-                    <option value="expired-listing">Expired Listing</option>
-                    <option value="failed-listing">Failed Listing</option>
-                    <option value="fix-and-flip">Fix & Flip</option>
-                    <option value="free-and-clear">Free & Clear</option>
-                    <option value="for-sale-by-owner">For Sale By Owner</option>
-                    <option value="has-hoa">Has HOA</option>
-                    <option value="has-hoa-fees">Has HOA Fees</option>
-                    <option value="high-equity">High Equity</option>
-                    <option value="inherited">Inherited</option>
-                    <option value="involuntary-lien">Involuntary Lien</option>
-                    <option value="in-state-absentee-owner">
-                      In-State Absentee Owner
-                    </option>
-                    <option value="listed-below-market-price">
-                      Listed Below Market Price
-                    </option>
-                    <option value="low-equity">Low Equity</option>
-                    <option value="mailing-address-vacant">
-                      Mailing Address Vacant
-                    </option>
-                    <option value="notice-of-default">Notice of Default</option>
-                    <option value="notice-of-lis-pendens">
-                      Notice of Lis Pendens
-                    </option>
-                    <option value="notice-of-sale">Notice of Sale</option>
-                    <option value="on-market">On Market</option>
-                    <option value="out-of-state-absentee-owner">
-                      Out-of-State Absentee Owner
-                    </option>
-                    <option value="out-of-state-owner">
-                      Out-of-State Owner
-                    </option>
-                    <option value="owner-occupied">Owner Occupied</option>
-                    <option value="pending-listing">Pending Listing</option>
-                    <option value="preforeclosure">Preforeclosure</option>
-                    <option value="recently-sold">Recently Sold</option>
-                    <option value="same-property-and-mailing-address">
-                      Same Property and Mailing Address
-                    </option>
-                    <option value="tax-default">Tax Default</option>
-                    <option value="tired-landlord">Tired Landlord</option>
-                    <option value="unknown-equity">Unknown Equity</option>
-                    <option value="vacant">Vacant</option>
-                    <option value="vacant-lot">Vacant Lot</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div class="search-actions">
-              <button class="search-btn" onclick="searchProperties(event)">
-                Search
-              </button>
-              <button class="clear-btn" onclick="clearfilters()">
-                Clear Filters
-              </button>
-            </div>
-          </div>
-
-          <!-- RIGHT SIDE - RESULTS -->
-          <div class="results-container">
-            <div id="results" class="results">
-              <div class="results-header">
-                <div class="results-info">
-                  <div class="result-counts">
-                    <span class="count-item"
-                      >Total Results Found: <strong>0</strong></span
-                    >
-                    <!-- <span class="count-item"
-                      >Current Page Results: <strong>0</strong></span
-                    >
-                    <span class="count-item">Selected: <strong>0</strong></span>
-                    <label class="select-all-container">
-                      <input type="checkbox" id="selectAllCheckbox" disabled />
-                      <span>Select All on Page</span>
-                    </label> -->
-                  </div>
-                </div>
-
-                <div class="results-actions">
-                  <div class="pagination-controls">
-                    <label>Results per page:</label>
-                    <select id="pageSizeSelect" class="pagination-select">
-                      <option value="20" selected>20</option>
-                      <option value="50">50</option>
-                      <option value="100">100</option>
-                      <option value="150">150</option>
-                      <option value="250">250</option>
-                      <option value="300">300</option>
-                      <option value="350">350</option>
-                      <option value="400">400</option>
-                    </select>
-                  </div>
-
-                  <button class="action-btn export-btn" onclick="exportToCSV()">
-                    <span class="btn-icon">📊</span> Export CSV
-                  </button>
-                  <button class="action-btn save-btn" onclick="saveAudience()">
-                    <span class="btn-icon">💾</span> Save Audience
-                  </button>
-                </div>
-              </div>
-
-              <div class="pagination-info">No search results yet</div>
-
-              <div class="table-container">
-                <table class="results-table">
-                  <thead>
-                    <tr>
-                      <th class="checkbox-col">
-                        <label class="select-all-label">
-                          <input
-                            type="checkbox"
-                            id="selectPageCheckbox"
-                            onchange="toggleSelectPage()"
-                          />
-                          <span id="selectAllLabel">Select All</span>
-                        </label>
-                      </th>
-                      <th>First Name</th>
-                      <th>Last Name</th>
-                      <th>Address</th>
-                      <th>City</th>
-                      <th>State</th>
-                      <th>Zip Code</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td colspan="7" class="empty-row">
-                        Click "Search" to load properties
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div class="pagination">
-                <!-- <button class="pagination-btn" onclick="goToPage(1)" disabled>
-                  First
-                </button> -->
-                <button
-                  class="pagination-btn"
-                  onclick="goToPage(currentPage - 1)"
-                  disabled
-                >
-                  Previous
-                </button>
-                <div class="page-numbers" id="pageNumbers"></div>
-                <button
-                  class="pagination-btn"
-                  onclick="goToPage(currentPage + 1)"
-                  disabled
-                >
-                  Next
-                </button>
-                <!-- <button
-                  class="pagination-btn"
-                  onclick="goToPage(totalPages)"
-                  disabled
-                >
-                  Last
-                </button> -->
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <h1 class="heading3">
-        <i> Choose the Template you want to send </i>
-      </h1>
-      <div class="templates-grid" id="templatesGrid"></div>
-      <!-- PDF Upload Section (NEW) -->
-      <!-- <div class="pdf-upload-wrapper" style="margin: 3rem 0">
-        <h1 class="heading3">
-          <i> Or Upload Your Own PDF Letter </i>
-        </h1>
-
-        <div class="pdf-upload-section">
-          <div
-            class="pdf-upload-box"
-            id="pdfUploadBox"
-            style="
-              border: 2px dashed #ccc;
-              border-radius: 8px;
-              padding: 2rem;
-              text-align: center;
-              cursor: pointer;
-              transition: all 0.3s ease;
-              background: #f9f9f9;
-            "
-          >
-            <div
-              class="pdf-icon"
-              style="font-size: 3rem; color: #666; margin-bottom: 1rem"
-            >
-              📄
-            </div>
-            <div
-              class="pdf-main-text"
-              style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem"
-            >
-              Drag & drop your PDF file here
-            </div>
-            <div class="pdf-sub-text" style="color: #666; margin-bottom: 1rem">
-              or click to browse your files
-            </div>
-            <label
-              for="pdfFile"
-              class="choose-pdf-btn"
-              style="
-                display: inline-block;
-                padding: 0.75rem 1.5rem;
-                background: #2b7fff;
-                color: white;
-                border-radius: 5px;
-                cursor: pointer;
-                transition: background 0.3s ease;
-                border: none;
-              "
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                style="vertical-align: middle; margin-right: 0.5rem"
-              >
-                <path
-                  d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
-                />
-                <polyline points="14,2 14,8 20,8" />
-              </svg>
-              Choose PDF File
-            </label>
-            <input
-              type="file"
-              id="pdfFile"
-              accept=".pdf"
-              style="display: none"
-            />
-            <div
-              class="pdf-size-info"
-              style="color: #999; font-size: 0.9rem; margin-top: 1rem"
-            >
-              Max file size: 10MB
-            </div>
+              <option value="">-- Select Envelope Type --</option>
+              <option value="fullWindow">Full Window</option>
+              <option value="doubleWindow">Double Window</option>
+              <option value="Regular">Regular</option>
+              <option value="BiFold">BiFold</option>
+            </select>
           </div>
         </div>
 
         <div
-          class="pdf-note"
           style="
-            margin-top: 1rem;
-            padding: 1rem;
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            border-radius: 4px;
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
           "
         >
-          <strong>📌 Note:</strong> If you upload a PDF, it will be used instead
-          of the template selection above. The PDF should be properly formatted
-          for mailing.
-        </div>
-      </div> -->
-      <div id="previewOverlay" class="preview-overlay">
-        <div class="preview-content">
-          <button class="close-btn" onclick="closePreview()">✖</button>
-          <div id="previewBody"></div>
+          <button
+            onclick="closeLetterOptionsModal()"
+            class="custom-modal-ok-btn"
+            style="background-color: #6c757d"
+          >
+            Cancel
+          </button>
+          <button
+            onclick="confirmLetterOptions()"
+            class="custom-modal-ok-btn"
+            style="background-color: #28a745"
+          >
+            Continue
+          </button>
         </div>
       </div>
-      <!-- Template Options -->
-      <div class="template-options">
-        <a href="#templatesGrid" class="template-link">
-          Use an Existing Template
-        </a>
-        <a
-          href="javascript:void(0)"
-          onclick="handleCanvaNavigation()"
-          class="template-link"
-          title="Select recipients first, then browse Canva templates"
-          style="cursor: pointer"
-        >
-          Use Canva Templates
-        </a>
-      </div>
+    </div>
 
-      <!-- Action Buttons -->
-      <div class="template-actions">
-        <button
-          style="margin-top: 4rem"
-          class="btn-primary"
-          onclick="createAndSendLetter()"
-        >
-          Create & Send Letter
-        </button>
-        <button
-          style="margin-top: 4rem"
-          class="btn-primary"
-          onclick="createAndSave()"
-        >
-          Creat & Save
-        </button>
+    <div id="alertModal" class="custom-modal" style="display: none">
+      <div class="custom-modal-content">
+        <div id="alertMessage" class="custom-modal-text"></div>
+        <button id="alertOkBtn" class="custom-modal-ok-btn">OK</button>
       </div>
     </div>
 
@@ -701,93 +1217,7 @@
       </div>
     </div>
 
-    <div id="alertModal" class="custom-modal" style="display: none">
-      <div class="custom-modal-content">
-        <div id="alertMessage" class="custom-modal-text"></div>
-        <button id="alertOkBtn" class="custom-modal-ok-btn">OK</button>
-      </div>
-    </div>
-    <div id="campaignSuccessModal" class="modal-overlay">
-      <div class="modal-box">
-        <h2>✅ Campaign Created & Letter Sent</h2>
-        <p>
-          Your campaign has been successfully created and the letter has been
-          sent.
-        </p>
-        <div class="modal-buttons">
-          <button id="successOkBtn">OK</button>
-          <button id="viewCampaignBtn">View Campaign</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Confirm Modal -->
-    <div id="confirmModal" class="custom-modal" style="display: none">
-      <div class="custom-modal-content">
-        <div id="confirmMessage" class="custom-modal-text"></div>
-        <div>
-          <button
-            id="confirmYesBtn"
-            class="custom-modal-ok-btn"
-            style="background-color: #dc3545"
-          >
-            Yes
-          </button>
-          <button
-            id="confirmNoBtn"
-            class="custom-modal-ok-btn"
-            style="background-color: #6c757d"
-          >
-            No
-          </button>
-        </div>
-      </div>
-    </div>
-    <!-- Create Campaign Modal -->
-    <div id="createCampaignModal" class="modal" style="display: none">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Create Campaign</h3>
-          <button class="close" onclick="closeCreateCampaignModal()">
-            &times;
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="campaignName">Campaign Name:</label>
-            <input
-              type="text"
-              id="campaignName"
-              class="form-input"
-              placeholder="Enter campaign name"
-              maxlength="100"
-            />
-          </div>
-          <div class="form-group">
-            <label for="mailerName">Mailer Name:</label>
-            <input
-              type="text"
-              id="mailerName"
-              class="form-input"
-              placeholder="Enter mailer name"
-              maxlength="100"
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            class="btn btn-secondary"
-            onclick="closeCreateCampaignModal()"
-          >
-            Cancel
-          </button>
-          <button class="btn btn-primary" onclick="saveCampaign()">
-            Create
-          </button>
-        </div>
-      </div>
-    </div>
-    <!-- User Guide Overlay and Icon -->
+    <!-- User Guide -->
     <div id="userGuideIcon">
       <img
         src="./assets/images/question_mark_user_guide_icon.jpg"
@@ -806,107 +1236,97 @@
           <br />
           <ol>
             <li>
-              <strong>Choose Your Starting Point:</strong> You have two options
-              on the dashboard: <em>"New Campaign"</em> or
-              <em>"New Mailer"</em>. Start by creating either a campaign or
-              designing a mailer.
+              <strong>Choose Your Campaign Type:</strong> Select either
+              <em>"New Campaign"</em> or <em>"New Mailer"</em> to get started.
             </li>
             <li>
-              <strong>Select & Save Your Audience:</strong> Once your campaign and
-              mailer are ready, choose your recipients using either
-              <em>"Upload CSV"</em> or <em>"Batch Search"</em> to select your
-              audience. Then save your audience to move forward.
+              <strong>Select Your Audience (Optional for RES OCC):</strong>
+              Upload a CSV, use Batch Search, or select an existing audience.
+              Skip this step if using RES OCC Service.
             </li>
             <li>
-              <strong>Choose or Edit a Template:</strong> You can select an
-              existing template or edit it according to your needs. Any template
-              you edit will automatically be available for your campaign. You can edit canva templates and send them.
+              <strong>Choose a Template:</strong> Select from our gallery or use
+              Canva to design your letter.
             </li>
             <li>
-              <strong>Create or Send Your Letter:</strong> You have two options:
-              <em>"Create and Send"</em> to immediately send the letter, or
-              <em>"Create and Save"</em> to save the campaign or one-off mailer
-              for later use. You can schedule them in dashboard.
+              <strong>Choose Mailing Method:</strong> Select between Direct Mail
+              (for specific recipients) or RES OCC Service (for carrier route
+              targeting).
             </li>
             <li>
-              <strong>Order Tracking and Insights Dashboard:</strong> Access all
-              campaign details in one place. The dashboard lets users schedule
-              pending letters, manage multiple mailers per campaign, and track
-              recipient engagement, such as whether a letter has been scanned.
+              <strong>Send or Save:</strong> Send your campaign immediately or
+              save it as a draft for later scheduling.
             </li>
           </ol>
           <p style="font-weight: 600; color: #10b981">
-            Enjoy using PostcRDMANIA to automate your mailing efficiently!
+            Enjoy using POSTCARDMANIA to automate your mailing efficiently!
           </p>
         </div>
       </div>
     </div>
 
-    <div id="scheduleModal" class="custom-modal-sch" style="display: none">
-      <div class="custom-modal-sch-content schedule-modal">
-        <div class="form-group3">
-          <label for="scheduleDate">Select Date:</label>
-          <input type="date" id="scheduleDate" class="schedule-input" />
-        </div>
-
-        <div class="form-group3">
-          <label for="scheduleTime">Select Time:</label>
-          <input type="time" id="scheduleTime" class="schedule-input" />
-        </div>
-
-        <div class="modal-actions">
-          <button onclick="closeScheduleModal()" class="btn btn-cancel">
-            Cancel
-          </button>
-          <button onclick="confirmSchedule()" class="btn btn-confirm">
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
-    <div id="successModal" class="modal-overlay">
-      <div class="modal-box">
-        <h2>🎉 Success!</h2>
-        <p>Your order has been placed successfully.</p>
-        <div class="modal-buttons">
-          <button class="btn-primary" onclick="closeModal()">OK</button>
-        </div>
-      </div>
-      <!-- Hidden field to store API city -->
-      <input type="hidden" id="cityApiValue" />
-    </div>
-    <!-- Regular JavaScript -->
-    <script src="./assets/js/script.js"></script>
     <script src="./assets/js/campaign_management.js"></script>
+    <script src="./assets/js/script.js"></script>
     <script>
+      // Mailing method selection
+      function selectMailingMethod(method) {
+        const directCard = document.getElementById("directMailOption");
+        const resOccCard = document.getElementById("resOccOption");
+        const directContent = document.getElementById("directMailContent");
+        const resOccContent = document.getElementById("resOccContent");
+
+        // Remove selection from both
+        directCard.classList.remove("selected");
+        resOccCard.classList.remove("selected");
+        directContent.classList.remove("active");
+        resOccContent.classList.remove("active");
+
+        // Add selection to chosen method
+        if (method === "direct") {
+          directCard.classList.add("selected");
+          directContent.classList.add("active");
+
+          // Scroll to direct mail content
+          setTimeout(() => {
+            directContent.scrollIntoView({
+              behavior: "smooth",
+              block: "nearest",
+            });
+          }, 100);
+        } else {
+          resOccCard.classList.add("selected");
+          resOccContent.classList.add("active");
+
+          // Scroll to RES OCC content
+          setTimeout(() => {
+            resOccContent.scrollIntoView({
+              behavior: "smooth",
+              block: "nearest",
+            });
+          }, 100);
+        }
+      }
+
+      // User guide functionality
       document.addEventListener("DOMContentLoaded", () => {
         const guideIcon = document.getElementById("userGuideIcon");
         const guideOverlay = document.getElementById("userGuideOverlay");
         const closeGuide = document.getElementById("closeGuide");
-        const getStartedBtn = document.getElementById("getStartedBtn");
 
-        // Function to close the guide
         function closeUserGuide() {
           if (guideOverlay) guideOverlay.classList.remove("show");
         }
 
-        // Open overlay when clicking icon
         if (guideIcon && guideOverlay) {
           guideIcon.addEventListener("click", () => {
             guideOverlay.classList.add("show");
           });
         }
 
-        // Close overlay buttons
         if (closeGuide) {
           closeGuide.addEventListener("click", closeUserGuide);
         }
 
-        if (getStartedBtn) {
-          getStartedBtn.addEventListener("click", closeUserGuide);
-        }
-
-        // Click outside content to close
         if (guideOverlay) {
           guideOverlay.addEventListener("click", (e) => {
             if (e.target === guideOverlay) {
@@ -915,7 +1335,6 @@
           });
         }
 
-        // ESC key to close
         document.addEventListener("keydown", (e) => {
           if (e.key === "Escape" && guideOverlay?.classList.contains("show")) {
             closeUserGuide();

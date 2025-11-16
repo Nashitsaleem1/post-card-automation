@@ -1,0 +1,414 @@
+[
+    {
+        "key": "Gender",
+        "label": "Gender",
+        "values": [
+            {
+                "key": "M",
+                "label": "Male"
+            },
+            {
+                "key": "F",
+                "label": "Female"
+            }
+        ]
+    },
+    {
+        "key": "ibe7606HOwRent",
+        "label": "Homeowner/Renter",
+        "values": [
+            {
+                "key": "O",
+                "label": "Home Owner"
+            },
+            {
+                "key": "R",
+                "label": "Renter"
+            }
+        ]
+    },
+    {
+        "key": "ibe8642HomMValRngs",
+        "label": "Home Market Value",
+        "values": [
+            {
+                "key": "A",
+                "label": "$1,000 - $24,999"
+            },
+            {
+                "key": "B",
+                "label": "$25,000 - $49,999"
+            },
+            {
+                "key": "C",
+                "label": "$50,000 - $74,999"
+            },
+            {
+                "key": "D",
+                "label": "$75,000 - $99,999"
+            },
+            {
+                "key": "E",
+                "label": "$100,000 - $124,999"
+            },
+            {
+                "key": "F",
+                "label": "$125,000 - $149,999"
+            },
+            {
+                "key": "G",
+                "label": "$150,000 - $174,999"
+            },
+            {
+                "key": "H",
+                "label": "$175,000 - $199,999"
+            },
+            {
+                "key": "I",
+                "label": "$200,000 - $224,999"
+            },
+            {
+                "key": "J",
+                "label": "$225,000 - $249,999"
+            },
+            {
+                "key": "K",
+                "label": "$250,000 - $274,999"
+            },
+            {
+                "key": "L",
+                "label": "$275,000 - $299,999"
+            },
+            {
+                "key": "M",
+                "label": "$300,000 - $349,999"
+            },
+            {
+                "key": "N",
+                "label": "$350,000 - $399,999"
+            },
+            {
+                "key": "O",
+                "label": "$400,000 - $449,999"
+            },
+            {
+                "key": "P",
+                "label": "$450,000 - $499,999"
+            },
+            {
+                "key": "Q",
+                "label": "$500,000 - $749,999"
+            },
+            {
+                "key": "R",
+                "label": "$750,000 - $999,999"
+            },
+            {
+                "key": "S",
+                "label": "$1,000,000 Plus"
+            }
+        ]
+    },
+    {
+        "key": "ibe7671InEstHNR",
+        "label": "Income",
+        "values": [
+            {
+                "key": "1",
+                "label": "Less than $15,000"
+            },
+            {
+                "key": "2",
+                "label": "$15,000 - $19,999"
+            },
+            {
+                "key": "3",
+                "label": "$20,000 - $29,999"
+            },
+            {
+                "key": "4",
+                "label": "$30,000 - $39,999"
+            },
+            {
+                "key": "5",
+                "label": "$40,000 - $49,999"
+            },
+            {
+                "key": "6",
+                "label": "$50,000 - $59,999"
+            },
+            {
+                "key": "7",
+                "label": "$60,000 - $69,999"
+            },
+            {
+                "key": "8",
+                "label": "$70,000 - $79,999"
+            },
+            {
+                "key": "9",
+                "label": "$80,000 - $89,999"
+            },
+            {
+                "key": "A",
+                "label": "$90,000 - $99,999"
+            },
+            {
+                "key": "B",
+                "label": "$100,000 - $124,999"
+            },
+            {
+                "key": "C",
+                "label": "$125,000 - $149,999"
+            },
+            {
+                "key": "D",
+                "label": "Greater than $149,999"
+            }
+        ]
+    },
+    {
+        "key": "ibe7616Age2YrIn",
+        "label": "Age",
+        "values": [
+            {
+                "key": "18",
+                "label": "Age 18 - 19"
+            },
+            {
+                "key": "20",
+                "label": "Age 20 - 21"
+            },
+            {
+                "key": "22",
+                "label": "Age 22 - 23"
+            },
+            {
+                "key": "24",
+                "label": "Age 24 - 25"
+            },
+            {
+                "key": "26",
+                "label": "Age 26 - 27"
+            },
+            {
+                "key": "28",
+                "label": "Age 28 - 29"
+            },
+            {
+                "key": "30",
+                "label": "Age 30 - 31"
+            },
+            {
+                "key": "32",
+                "label": "Age 32 - 33"
+            },
+            {
+                "key": "34",
+                "label": "Age 34 - 35"
+            },
+            {
+                "key": "36",
+                "label": "Age 36 - 37"
+            },
+            {
+                "key": "38",
+                "label": "Age 38 - 39"
+            },
+            {
+                "key": "40",
+                "label": "Age 40 - 41"
+            },
+            {
+                "key": "42",
+                "label": "Age 42 - 43"
+            },
+            {
+                "key": "44",
+                "label": "Age 44 - 45"
+            },
+            {
+                "key": "46",
+                "label": "Age 46 - 47"
+            },
+            {
+                "key": "48",
+                "label": "Age 48 - 49"
+            },
+            {
+                "key": "50",
+                "label": "Age 50 - 51"
+            },
+            {
+                "key": "52",
+                "label": "Age 52 - 53"
+            },
+            {
+                "key": "54",
+                "label": "Age 54 - 55"
+            },
+            {
+                "key": "56",
+                "label": "Age 56 - 57"
+            },
+            {
+                "key": "58",
+                "label": "Age 58 - 59"
+            },
+            {
+                "key": "60",
+                "label": "Age 60 - 61"
+            },
+            {
+                "key": "62",
+                "label": "Age 62 - 63"
+            },
+            {
+                "key": "64",
+                "label": "Age 64 - 65"
+            },
+            {
+                "key": "66",
+                "label": "Age 66 - 67"
+            },
+            {
+                "key": "68",
+                "label": "Age 68 - 69"
+            },
+            {
+                "key": "70",
+                "label": "Age 70 - 71"
+            },
+            {
+                "key": "72",
+                "label": "Age 72 - 73"
+            },
+            {
+                "key": "74",
+                "label": "Age 74 - 75"
+            },
+            {
+                "key": "76",
+                "label": "Age 76 - 77"
+            },
+            {
+                "key": "78",
+                "label": "Age 78 - 79"
+            },
+            {
+                "key": "80",
+                "label": "Age 80 - 81"
+            },
+            {
+                "key": "82",
+                "label": "Age 82 - 83"
+            },
+            {
+                "key": "84",
+                "label": "Age 84 - 85"
+            },
+            {
+                "key": "86",
+                "label": "Age 86 - 87"
+            },
+            {
+                "key": "88",
+                "label": "Age 88 - 89"
+            },
+            {
+                "key": "90",
+                "label": "Age 90 - 91"
+            },
+            {
+                "key": "92",
+                "label": "Age 92 - 93"
+            },
+            {
+                "key": "94",
+                "label": "Age 94 - 95"
+            },
+            {
+                "key": "96",
+                "label": "Age 96 - 97"
+            },
+            {
+                "key": "98",
+                "label": "Age 98 - 99"
+            },
+            {
+                "key": "99",
+                "label": "Age greater than 99"
+            }
+        ]
+    },
+    {
+        "key": "DWELLING_TYPE",
+        "label": "Dwelling Type",
+        "values": [
+            {
+                "key": "1",
+                "label": "Single Family"
+            },
+            {
+                "key": "2",
+                "label": "Multi Family"
+            },
+            {
+                "key": "3",
+                "label": "Uncoded/Null"
+            }
+        ]
+    },
+    {
+        "key": "ZIP4RecordType",
+        "label": "Record Type",
+        "values": [
+            {
+                "key": "F",
+                "label": "Firm address"
+            },
+            {
+                "key": "G",
+                "label": "General Delivery address"
+            },
+            {
+                "key": "H",
+                "label": "Highrise address"
+            },
+            {
+                "key": "P",
+                "label": "PO Box address"
+            },
+            {
+                "key": "R",
+                "label": "Rural Route or Highway Contract address"
+            },
+            {
+                "key": "S",
+                "label": "Rural Route or Highway Contract address"
+            }
+        ]
+    },
+    {
+        "key": "loc_dist",
+        "label": "Distance From Move",
+        "values": [
+            {
+                "key": "L",
+                "label": "Same Zip"
+            },
+            {
+                "key": "O",
+                "label": "Out of Area"
+            },
+            {
+                "key": "S",
+                "label": "Same SCF"
+            },
+            {
+                "key": "U",
+                "label": "Unknown"
+            }
+        ]
+    }
+]

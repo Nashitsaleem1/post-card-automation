@@ -24,9 +24,6 @@ function formatScheduleInfo(info) {
   );
 }
 
-/**
- * Safely parse address list from JSON string
- */
 function safeParseRecipients(addressList) {
   if (!addressList) return [];
   if (typeof addressList === "string") {
@@ -72,7 +69,6 @@ function getCurrentMode() {
  */
 function setMode(newMode) {
   sessionStorage.setItem("apiMode", newMode);
-  console.log("Mode updated to:", newMode);
 }
 
 /**
@@ -244,7 +240,7 @@ async function confirmCampaignSchedule() {
 
     const updatedData = await res.json();
     showAlert(
-      `📅 Schedule updated for ${formatScheduleInfo(updatedData.schedule_time)}`
+      `Schedule updated for ${formatScheduleInfo(updatedData.schedule_time)}`
     );
     closeCampaignScheduleModal();
   } catch (err) {
@@ -265,7 +261,6 @@ async function loadDashboard() {
     const dashboardEl = document.querySelector(".dashboard");
     const mode = getCurrentMode();
 
-    console.log("Loading dashboard with mode:", mode);
 
     // Fetch campaign data
     const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/dashboard/all?mode=${mode}`);
@@ -273,7 +268,7 @@ async function loadDashboard() {
       throw new Error("Failed to load campaigns");
     const data = res.status === 404 ? { data: [] } : await res.json();
 
-    // Fetch one-off mailers (now includes audience)
+    // Fetch one-off mailers
     const oneOffRes = await fetch(
       `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/all?mode=${mode}`
     );
@@ -285,11 +280,16 @@ async function loadDashboard() {
         json.total_one_off_mailers || oneOffData.data.length;
     }
 
-    // Update counts
+    // Categorize data into Direct Mail Orders and RES OCC Orders
+    const categorizedData = categorizeOrders(data, oneOffData);
+    const directMailOrders = categorizedData.directMailOrders;
+    const resOccOrders = categorizedData.resOccOrders;
+
+    // Update counts in cards
     document.getElementById("totalCampaigns").textContent =
-      data.total_campaigns || 0;
+      directMailOrders.length;
     document.getElementById("totalOneOffMailers").textContent =
-      oneOffData.total_one_off_mailers || 0;
+      resOccOrders.length;
 
     // Remove existing table
     const existingTable = dashboardEl.querySelector("#campaignDataTable");
@@ -298,97 +298,209 @@ async function loadDashboard() {
     const detailsDiv = document.createElement("div");
     detailsDiv.id = "campaignDataTable";
 
-    // Deduplicate campaigns
-    let uniqueCampaigns = [];
-    let seenCampaignIds = new Set();
-    if (data.data) {
-      for (let d of data.data) {
-        if (!seenCampaignIds.has(d.campaign_id)) {
-          seenCampaignIds.add(d.campaign_id);
-          uniqueCampaigns.push(d);
-        }
-      }
-    }
+    // Combine all data
+    const combined = [...directMailOrders, ...resOccOrders];
 
-    // ✅ Combine campaigns and one-off mailers (now both have audience info)
-    const combined = [
-      ...uniqueCampaigns.map((d) => ({
-        category: "Campaign",
-        id: d.campaign_id,
-        name: d.campaign_name,
-        audience_name: d.audience_name || "—",
-        audience_id: d.audience_id || null,
-        audience_list: d.audience_list || [],
-        type: "campaign",
-      })),
-      ...oneOffData.data.map((d) => ({
-        category: "One-Off Mailer",
-        id: d.id,
-        name: d.mailer_name,
-        audience_name: d.audience_name || "—",
-        audience_id: d.audience_id || null,
-        audience_list: d.audience_list || [],
-        type: "oneoff",
-      })),
-    ];
-
-    // ✅ Render table
+    // Render table with categorized view
     if (!combined.length) {
-      detailsDiv.innerHTML = `<p style="margin-top:20px; font-size:16px; color:#555;">No data to show.</p>`;
+      detailsDiv.innerHTML = `<p style="margin-top:20px; font-size:16px; color:#555; text-align:center;">No data available. Create a campaign or mailer to get started.</p>`;
     } else {
       detailsDiv.innerHTML = `
-        <table style="width:100%; border-collapse: separate; border-spacing: 0 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden;">
-          <thead style="transform: translateY(-16px);">
-            <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-              <th style="padding:18px;">Type</th>
-              <th style="padding:18px;">Name</th>
-              <th style="padding:18px;">Audience</th>
-              <th style="padding:18px;">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${combined
-              .map(
-                (d) => `
-                <tr style="background:white; box-shadow:0 1px 4px rgba(0,0,0,0.05); border-radius:6px;">
-                  <td style="padding:12px;"><strong>${d.category}</strong></td>
-                  <td style="padding:12px;">${d.name}</td>
-                  <td style="padding:12px;">
+        <div style="margin-top: 24px;">
+          <table style="width:100%; border-collapse: collapse; box-shadow: 0 2px 12px rgba(0,0,0,0.08); border-radius: 12px; overflow: hidden; background: white;">
+            <thead>
+              <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <th style="padding:16px 20px; text-align:left; font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:0.5px;">Type</th>
+                <th style="padding:16px 20px; text-align:left; font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:0.5px;">Name</th>
+                <th style="padding:16px 20px; text-align:left; font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:0.5px;">Category</th>
+                <th style="padding:16px 20px; text-align:left; font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:0.5px;">Audience</th>
+                <th style="padding:16px 20px; text-align:center; font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:0.5px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${combined
+                .map(
+                  (d) => `
+                <tr style="border-bottom: 1px solid #f0f0f0; transition: background 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
+                  <td style="padding:16px 20px;">
+                    <span style="display:inline-block; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:600; 
+                      ${getTypeStyle(d.itemType)}">
+                      ${getTypeLabel(d.itemType)}
+                    </span>
+                  </td>
+                  <td style="padding:16px 20px; font-weight:500; color:#2d3748;">${
+                    d.name
+                  }</td>
+                  <td style="padding:16px 20px;">
+                    <span style="display:inline-block; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:600; 
+                      ${getCategoryStyle(d.category)}">
+                      ${d.category}
+                    </span>
+                  </td>
+                  <td style="padding:16px 20px;">
                     ${
-                      d.audience_list && d.audience_list.length
+                      d.category === "RES OCC Order"
+                        ? `<span style="color:#94a3b8; font-style:italic; font-size:13px;">no audience</span>`
+                        : d.audience_list && d.audience_list.length
                         ? `<button class="view-recipients-btn" 
                             data-id="${d.audience_id || d.id}" 
                             data-name="${d.audience_name}"
-                            data-type="${d.type}"
-                            style="padding:7px 12px; background:#10b981; color:white; border:none; border-radius:5px; cursor:pointer;">
+                            data-type="${d.itemType}"
+                            style="padding:8px 16px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:500; transition: all 0.2s;"
+                            onmouseover="this.style.background='#059669'" 
+                            onmouseout="this.style.background='#10b981'">
                             ${d.audience_name}
                           </button>`
-                        : `<span style="color:#aaa;">—</span>`
+                        : `<span style="color:#94a3b8; font-size:13px;">No audience</span>`
                     }
                   </td>
-                  <td style="padding:12px;">
+                  <td style="padding:16px 20px; text-align:center;">
                     <button class="view-details-btn" 
                             data-id="${d.id}" 
-                            data-type="${d.type}"
-                            style="padding:7px 10px; background:#636185; color:white; border:none; border-radius:5px; cursor:pointer;">
+                            data-type="${d.itemType}"
+                            style="padding:8px 20px; background:#636185; color:white; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:500; transition: all 0.2s;"
+                            onmouseover="this.style.background='#4a4769'" 
+                            onmouseout="this.style.background='#636185'">
                       View Details
                     </button>
                   </td>
                 </tr>
               `
-              )
-              .join("")}
-          </tbody>
-        </table>`;
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </div>`;
     }
 
     dashboardEl.appendChild(detailsDiv);
 
-    // ✅ Attach event listeners
+    // Attach event listeners
     attachTableEventListeners(combined);
   } catch (err) {
     console.error(err);
     showAlert("Failed to load dashboard data");
+  }
+}
+
+/**
+ * Categorize orders into Direct Mail and RES OCC
+ */
+function categorizeOrders(campaignData, oneOffData) {
+  const directMailOrders = [];
+  const resOccOrders = [];
+
+  // Process campaign data
+  let seenCampaignIds = new Set();
+  if (campaignData.data) {
+    for (let d of campaignData.data) {
+      if (!seenCampaignIds.has(d.campaign_id)) {
+        seenCampaignIds.add(d.campaign_id);
+
+        if (!d.res_recipients || d.res_recipients === null) {
+          // Direct Mail Order
+          directMailOrders.push({
+            id: d.campaign_id,
+            itemType: "campaign",
+            name: d.campaign_name,
+            audience_name: d.audience_name || "Unknown",
+            audience_id: d.audience_id || null,
+            audience_list: d.audience_list || [],
+            category: "Direct Mail Order",
+            status: d.status,
+            send_date: d.send_date,
+          });
+        } else {
+          // RES OCC Order
+          resOccOrders.push({
+            id: d.campaign_id,
+            itemType: "campaign",
+            name: d.campaign_name,
+            audience_name: d.audience_name || "Unknown",
+            audience_id: d.audience_id || null,
+            audience_list: d.audience_list || [],
+            category: "RES OCC Order",
+            status: d.status,
+            send_date: d.send_date,
+          });
+        }
+      }
+    }
+  }
+
+  // Process one-off mailers
+  oneOffData.data.forEach((d) => {
+    if (!d.res_recipients || d.res_recipients === null) {
+      // Direct Mail Order
+      directMailOrders.push({
+        id: d.id,
+        itemType: "oneoff",
+        name: d.mailer_name,
+        audience_name: d.audience_name || "Unknown",
+        audience_id: d.audience_id || null,
+        audience_list: d.audience_list || [],
+        category: "Direct Mail Order",
+        status: d.status,
+        send_date: d.send_date,
+      });
+    } else {
+      // RES OCC Order
+      resOccOrders.push({
+        id: d.id,
+        itemType: "oneoff",
+        name: d.mailer_name,
+        audience_name: d.audience_name || "Unknown",
+        audience_id: d.audience_id || null,
+        audience_list: d.audience_list || [],
+        category: "RES OCC Order",
+        status: d.status,
+        send_date: d.send_date,
+      });
+    }
+  });
+
+  return { directMailOrders, resOccOrders };
+}
+
+/**
+ * Get type badge styling
+ */
+function getTypeStyle(type) {
+  switch (type) {
+    case "campaign":
+      return "background:#dbeafe; color:#1e40af;";
+    case "oneoff":
+      return "background:#d1fae5; color:#065f46;";
+    default:
+      return "background:#f3f4f6; color:#4b5563;";
+  }
+}
+
+/**
+ * Get type label
+ */
+function getTypeLabel(type) {
+  switch (type) {
+    case "campaign":
+      return "Campaign";
+    case "oneoff":
+      return "One-Off Mailer";
+    default:
+      return "Unknown";
+  }
+}
+
+/**
+ * Get category badge styling
+ */
+function getCategoryStyle(category) {
+  switch (category) {
+    case "Direct Mail Order":
+      return "background:#fce7f3; color:#9d174d;";
+    case "RES OCC Order":
+      return "background:#fef3c7; color:#92400e;";
+    default:
+      return "background:#f3f4f6; color:#4b5563;";
   }
 }
 
@@ -417,26 +529,30 @@ function attachTableEventListeners(data) {
       const recipients = record.audience_list
         .map(
           (r, i) => `
-          <tr>
-            <td style="padding:6px 10px;">${r.address || ""}</td>
-            <td style="padding:6px 10px;">${r.city || ""}</td>
-            <td style="padding:6px 10px;">${r.state || ""}</td>
-            <td style="padding:6px 10px;">${r.zipCode || ""}</td>
+          <tr style="border-bottom: 1px solid #f0f0f0;">
+            <td style="padding:10px 12px; font-size:13px;">${
+              r.address || ""
+            }</td>
+            <td style="padding:10px 12px; font-size:13px;">${r.city || ""}</td>
+            <td style="padding:10px 12px; font-size:13px;">${r.state || ""}</td>
+            <td style="padding:10px 12px; font-size:13px;">${
+              r.zipCode || ""
+            }</td>
           </tr>`
         )
         .join("");
 
       Swal.fire({
-        title: `${record.audience_name}`,
+        title: `Audience: ${record.audience_name}`,
         html: `
           <div style="max-height:400px; overflow-y:auto; text-align:left;">
             <table style="width:100%; border-collapse: collapse; margin-top:10px;">
               <thead>
-                <tr style="background:#764ba2;">
-                  <th style="padding:8px 10px; text-align:left;">Address</th>
-                  <th style="padding:8px 10px; text-align:left;">City</th>
-                  <th style="padding:8px 10px; text-align:left;">State</th>
-                  <th style="padding:8px 10px; text-align:left;">Zip</th>
+                <tr style="background:#667eea; color:white;">
+                  <th style="padding:12px; text-align:left; font-size:13px; font-weight:600;">Address</th>
+                  <th style="padding:12px; text-align:left; font-size:13px; font-weight:600;">City</th>
+                  <th style="padding:12px; text-align:left; font-size:13px; font-weight:600;">State</th>
+                  <th style="padding:12px; text-align:left; font-size:13px; font-weight:600;">Zip</th>
                 </tr>
               </thead>
               <tbody>${recipients}</tbody>
@@ -448,15 +564,20 @@ function attachTableEventListeners(data) {
       });
     });
   });
+
   // Details button clicks
   document.querySelectorAll(".view-details-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.dataset.id;
       const type = btn.dataset.type;
-      const url =
-        type === "campaign"
-          ? `./campaign_detail.html?id=${id}`
-          : `./mailer_detail.html?id=${id}`;
+
+      let url;
+      if (type === "campaign") {
+        url = `./campaign_detail.html?id=${id}`;
+      } else {
+        url = `./mailer_detail.html?id=${id}`;
+      }
+
       window.open(url, "_blank");
     });
   });

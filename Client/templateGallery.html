@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="./assets/css/template-gallery.css" />
   </head>
   <body>
-    <!-- Existing Navbar -->
+    <!-- Navbar -->
     <nav class="navbar">
       <div class="logo">
         <a
@@ -43,12 +43,13 @@
         <li><a href="campaign_builder.html">Campaign Builder</a></li>
         <li><a href="dashboard.html">Dashboard</a></li>
       </ul>
+
       <div class="hamburger" id="hamburger">☰</div>
     </nav>
 
     <!-- Main Container with Sidebar -->
     <div class="tg-main-container">
-      <!-- Professional Sidebar -->
+      <!-- Sidebar -->
       <aside class="tg-sidebar">
         <div class="tg-sidebar-header">
           <h2>Template Gallery</h2>
@@ -85,12 +86,17 @@
         <div id="canvaView" class="tg-view-content">
           <div class="tg-content-header">
             <h1>Canva Templates</h1>
-            <p>Explore professional, ready-made designs you can easily customize in Canva.</br> Once you’re done editing, return here to send them instantly.</p>
+            <p>
+              Explore professional, ready-made designs you can easily customize
+              in Canva.<br />
+              Once you're done editing, return here to send them instantly.
+            </p>
           </div>
           <div class="tg-canva-grid" id="canvaGrid">
             <!-- Canva templates will be loaded here -->
           </div>
         </div>
+
         <!-- Letter Templates View -->
         <div id="letterView" class="tg-view-content hidden">
           <div class="tg-content-header">
@@ -103,6 +109,7 @@
         </div>
       </main>
     </div>
+
     <!-- Delete Confirmation Modal -->
     <div id="deleteConfirmModal" class="custom-modal" style="display: none">
       <div class="custom-modal-content">
@@ -134,6 +141,7 @@
         </div>
       </div>
     </div>
+
     <!-- Edit Modal -->
     <div id="editModal" class="modal">
       <div class="modal-content">
@@ -196,6 +204,228 @@
       </div>
     </div>
 
+    <div id="eddmModal" class="modal" style="display: none">
+      <div
+        class="modal-content"
+        style="max-width: 900px; max-height: 90vh; overflow-y: auto"
+      >
+        <div class="modal-header">
+          <h2>Use Residential Occupancy (RES OCC) Service</h2>
+          <span class="close" onclick="closeEDDMConfigModal()">&times;</span>
+        </div>
+
+        <div class="modal-body">
+          
+          <form class="eddm-form" id="eddmForm">
+            <!-- List Type Dropdown -->
+            <div class="form-group">
+              <label for="listType"
+                ><strong
+                  >Step 1 - Select the Type of Mailing List</strong
+                ></label
+              >
+              <p class="description">
+                Choose the type of mailing list you want to use for your
+                Residential Occupancy (RES OCC) campaign. The available options
+                are:
+              </p>
+              <ul class="description-list">
+                <li>
+                  <strong>New Movers [HT6]</strong>: Targets individuals who
+                  have recently moved into a new home.
+                </li>
+                <li>
+                  <strong>Consumer [ACC]</strong>: Targets consumers based on
+                  specific demographics or interests.
+                </li>
+                <li>
+                  <strong>Resident Occupant [IRL]</strong>: Targets all
+                  residents in a specific area, including renters and
+                  homeowners.
+                </li>
+              </ul>
+              <select id="listType" class="form-select" required>
+                <option value="">-- Choose a list type --</option>
+                <option value="HT6">New Movers [HT6]</option>
+                <option value="ACC">Consumer [ACC]</option>
+                <option value="IRL">Resident Occupant [IRL]</option>
+              </select>
+            </div>
+
+            <!-- Zip Code Input -->
+            <div class="form-group">
+              <label for="zipCode"
+                ><strong>Step 2 - Enter Your Zip Code</strong></label
+              >
+              <p class="description">
+                Provide the 5-digit zip code for the area you want to target.
+                Click the "Get Carrier Routes" button to load the available
+                carrier routes for that area.
+              </p>
+              <input
+                type="text"
+                id="zipCode"
+                class="form-input"
+                placeholder="e.g., 10001"
+                maxlength="5"
+                pattern="[0-9]{5}"
+              />
+            </div>
+
+            <!-- Get Carrier Routes Button -->
+            <div class="form-group">
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="getCarrierRoutesBtn"
+                onclick="getCarrierRoutesForEDDM()"
+              >
+                Get Carrier Routes
+              </button>
+              <p class="help-text">
+                Once you enter a valid zip code, click this button to load a
+                list of carrier routes for that area.
+              </p>
+            </div>
+
+            <!-- Carrier Routes Multiselect -->
+            <div class="form-group">
+              <label><strong>Step 3 - Select Carrier Routes</strong></label>
+              <p class="description">
+                Choose the carrier routes from the list that appears after you
+                click the "Get Carrier Routes" button. Carrier routes represent
+                the specific delivery routes used by the postal service.
+              </p>
+              <div class="multiselect-dropdown" id="carrierRoutesDropdown">
+                <div class="multiselect-header" onclick="toggleDropdown(event)">
+                  <span class="multiselect-header-text"
+                    >-- Click to select carrier routes --</span
+                  >
+                  <span class="multiselect-arrow">▼</span>
+                </div>
+                <div class="multiselect-list" id="carrierRoutesList">
+                  <div class="empty-state">
+                    Click "Get Carrier Routes" to load options
+                  </div>
+                </div>
+              </div>
+              <div class="selected-tags" id="selectedTags"></div>
+            </div>
+
+            <!-- Demographics Filters Section -->
+            <div class="form-group">
+              <label
+                ><strong>Step 4 - Optional Demographic Filters</strong></label
+              >
+              <p class="description">
+                If you'd like to refine your target audience further, you can
+                apply demographic filters like age, income, or household size.
+                These filters are optional but can help you target specific
+                groups more effectively.
+              </p>
+              <div class="demographics-container" id="demographicsContainer">
+                <!-- Demographics will be dynamically loaded here -->
+              </div>
+            </div>
+
+            <!-- Get List Count Button -->
+            <div class="form-group">
+              <button
+                type="button"
+                class="btn btn-success"
+                id="getListCountBtn"
+                onclick="getListCountForEDDM()"
+                style="
+                  background-color: #28a745;
+                  margin-top: 2rem;
+                  color: white;
+                  width: 100%;
+                "
+              >
+                Get List Count ID & Record Count (Place RES OCC Order)
+              </button>
+              <div
+                id="listCountResult"
+                style="
+                  margin-top: 1rem;
+                  padding: 1rem;
+                  background: #f8f9fa;
+                  border-radius: 5px;
+                  display: none;
+                "
+              >
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 0.5rem;
+                  "
+                >
+                  <strong style="color: #333">List Count Results:</strong>
+                  <span style="font-size: 0.85rem; color: #666"
+                    >✓ Ready to proceed</span
+                  >
+                </div>
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 1rem;
+                  "
+                >
+                  <div>
+                    <span style="color: #666; font-size: 0.9rem"
+                      >List Count ID:</span
+                    >
+                    <div
+                      id="listCountID"
+                      style="
+                        font-size: 1.1rem;
+                        font-weight: 600;
+                        color: #2b7fff;
+                      "
+                    ></div>
+                  </div>
+                  <div>
+                    <span style="color: #666; font-size: 0.9rem"
+                      >Record Count:</span
+                    >
+                    <div
+                      id="recordCount"
+                      style="
+                        font-size: 1.1rem;
+                        font-weight: 600;
+                        color: #28a745;
+                      "
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="closeEDDMConfigModal()"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            id="eddmSendBtn"
+            class="btn btn-primary"
+            onclick="sendCanvaViaEDDM()"
+            style="display: none; background-color: #28a745"
+          >
+            ✅ Send via EDDM
+          </button>
+        </div>
+      </div>
+    </div>
     <!-- Success Modal -->
     <div id="successModal" class="modal-overlay">
       <div class="modal-box">
@@ -279,15 +509,16 @@
               designing a mailer.
             </li>
             <li>
-              <strong>Select & Save Your Audience:</strong> Once your campaign and
-              mailer are ready, choose your recipients using either
+              <strong>Select & Save Your Audience:</strong> Once your campaign
+              and mailer are ready, choose your recipients using either
               <em>"Upload CSV"</em> or <em>"Batch Search"</em> to select your
               audience. Then save your audience to move forward.
             </li>
             <li>
               <strong>Choose or Edit a Template:</strong> You can select an
               existing template or edit it according to your needs. Any template
-              you edit will automatically be available for your campaign. You can edit canva templates and send them.
+              you edit will automatically be available for your campaign. You
+              can edit canva templates and send them.
             </li>
             <li>
               <strong>Create or Send Your Letter:</strong> You have two options:
@@ -308,6 +539,7 @@
         </div>
       </div>
     </div>
+
     <!-- Brochure Preview Modal -->
     <div id="brochurePreviewModal" class="modal" style="display: none">
       <div
@@ -401,6 +633,7 @@
         </div>
       </div>
     </div>
+
     <!-- Scripts -->
     <script src="./assets/js/script.js"></script>
   </body>

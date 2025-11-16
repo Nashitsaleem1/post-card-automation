@@ -29,7 +29,7 @@ API_KEY = "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0"
 API_SECRET = "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl"
 CHILD_REF_NBR = "myAccountReference"
 
-STATIC_DIR = Path("uploads/pdfs")  
+STATIC_DIR = Path("uploads/pdfs")
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
 CLIENT_ID = "OC-AZn4e_GgzZAp"
@@ -41,6 +41,7 @@ TOKENS_FILE = os.path.join(BASE_DIR, "canva_tokens.json")
 # ---------- Scheduler ----------
 scheduler = BackgroundScheduler()
 scheduler.start()
+
 
 # ---------- App ----------
 app = FastAPI(title="PCM Automation", version="1.0.0")
@@ -59,7 +60,6 @@ origins = [
     "http://localhost:5500",
     "http://127.0.0.1:5501",
     "https://physical-mail-automation.netlify.app",
-    "https://physical-mail-automation.netlify.app/",
 ]
 
 
@@ -96,40 +96,36 @@ def is_token_expired(token_data):
 
 
 def refresh_access_token(refresh_token):
-    url = "https://api.canva.com/rest/v1/oauth/token"
-
-    data = {
-        "grant_type": "refresh_token",
-        "refresh_token": refresh_token,
-        "client_id": CLIENT_ID,
-        "client_secret": CLIENT_SECRET,
-    }
+    auth_str = f"{CLIENT_ID}:{CLIENT_SECRET}"
+    b64_auth = base64.b64encode(auth_str.encode()).decode()
 
     headers = {
+        "Authorization": f"Basic {b64_auth}",
         "Content-Type": "application/x-www-form-urlencoded",
     }
 
-    # Make the POST request
-    response = requests.post(url, headers=headers, data=data)
+    data = {"grant_type": "refresh_token", "refresh_token": refresh_token}
 
-    # Log response for debugging
-    print("🔄 Canva token refresh response:", response.status_code)
-
-    # Handle invalid/expired tokens gracefully
-    if response.status_code != 200:
-        try:
-            error = response.json()
-        except Exception:
-            error = response.text
-        raise Exception(f"Failed to refresh token: {error}")
-
-    # Parse response
+    response = requests.post(TOKEN_URL, headers=headers, data=data)
+    response.raise_for_status()
     token_data = response.json()
-
-    with open(TOKENS_FILE, "w") as f:
-        json.dump(token_data, f, indent=2)
-        
+    save_tokens(token_data)
     return token_data
+
+
+@app.get("/get_canva_token")
+def get_canva_token():
+    token_data = load_tokens()
+    if not token_data:
+        return {"error": "No token found. Run initial OAuth first."}
+
+    if is_token_expired(token_data):
+        print("🔁 Access token expired — refreshing...")
+        token_data = refresh_access_token(token_data["refresh_token"])
+        return {"access_token": token_data["access_token"], "status": "refreshed"}
+
+    return {"access_token": token_data["access_token"], "status": "valid"}
+
 
 # ---------- Utility: Token Fetch ----------
 def get_pcm_token():
@@ -168,7 +164,7 @@ def get_campaign_data_recipients(campaign_data):
         if audience:
             recipients = json.loads(audience.audience_list)
             print(
-                f"✅ Recipients fetched from Audience ID {campaign_data.aud}: {len(recipients)} recipients"
+                f"✅ Recipients fetched from Audience ID {campaign_data.audience_id}: {len(recipients)} recipients"
             )
             return recipients
 
@@ -373,7 +369,7 @@ def qr_tracking_job(campaign_data_id: int):
         recipients = get_campaign_data_recipients(campaign_data)
         if not recipients:
             print(
-                f"❌ No recipients found for QR tracking of CampaignData {campaign_data_id}"
+                f"No recipients found for QR tracking of CampaignData {campaign_data_id}"
             )
             return
 
@@ -395,7 +391,7 @@ def qr_tracking_job(campaign_data_id: int):
 
         if matched == total:
             print(
-                f"✅ All {matched} recipients scanned QR for CampaignData {campaign_data_id}"
+                f"All {matched} recipients scanned QR for CampaignData {campaign_data_id}"
             )
             campaign_data.is_qr_scanned_complete = True
             db.commit()
@@ -433,11 +429,11 @@ def qr_tracking_job(campaign_data_id: int):
             )
 
             if next_pending:
-                print(f"📩 Sending next pending CampaignData {next_pending.id}")
+                print(f"Sending next pending CampaignData {next_pending.id}")
                 send_letter_job(next_pending.id)
             else:
                 print(
-                    f"🏁 No more pending mailers left in campaign {campaign_data.campaign_id}"
+                    f" No more pending mailers left in campaign {campaign_data.campaign_id}"
                 )
         else:
             print(f" Only {matched}/{total} recipients scanned QR — retrying in 24h.")
@@ -451,7 +447,7 @@ def qr_tracking_job(campaign_data_id: int):
             )
 
     except Exception as e:
-        print(f"❌ Error in qr_tracking_job: {e}")
+        print(f"Error in qr_tracking_job: {e}")
     finally:
         db.close()
 
@@ -463,7 +459,7 @@ def send_scan_complete_notification(
     Send a notification (can be replaced with email, webhook, etc.)
     """
     print(
-        f"📢 Notification: Mailer '{mailer_name}' (ID {campaign_data_id}) fully scanned by all recipients."
+        f"Notification: Mailer '{mailer_name}' (ID {campaign_data_id}) fully scanned by all recipients."
     )
     print("👥 Scanned Recipients:")
     for r in recipients:
@@ -493,7 +489,7 @@ def campaign_watcher_job():
             send_letter_job(mailer.id)
 
     except Exception as e:
-        print(f"❌ Error in campaign_watcher_job: {e}")
+        print(f"Error in campaign_watcher_job: {e}")
     finally:
         db.close()
 
@@ -523,7 +519,7 @@ def send_oneoff_job(mailer_id: int):
 
         recipients = get_mailer_recipients(mailer)
         if not recipients:
-            print(f"❌ No recipients found for MailerOneOff {mailer_id}")
+            print(f"No recipients found for MailerOneOff {mailer_id}")
             mailer.status = "failed"
             db.commit()
             return
@@ -559,22 +555,22 @@ def send_oneoff_job(mailer_id: int):
         )
 
         data = res.json()
-        print("📨 PCM API Response:", data)
+        print("PCM API Response:", data)
 
         # --- Update status based on response ---
         if all(k in data for k in ["batchID", "orderID", "extRefNbr"]):
             mailer.status = "sent"
             db.commit()
-            print(f"✅ MailerOneOff {mailer_id} marked as SENT")
+            print(f"MailerOneOff {mailer_id} marked as SENT")
         else:
             mailer.status = "failed"
             db.commit()
             print(
-                f"❌ Failed to send MailerOneOff {mailer_id}: Missing response fields"
+                f"Failed to send MailerOneOff {mailer_id}: Missing response fields"
             )
 
     except Exception as e:
-        print(f"❌ Error sending one-off mailer {mailer_id}:", e)
+        print(f"Error sending one-off mailer {mailer_id}:", e)
         try:
             mailer = db.query(MailerOneOff).filter(MailerOneOff.id == mailer_id).first()
             if mailer:
@@ -597,23 +593,7 @@ def healthz():
     return {"status": "ok"}
 
 
-# ---------- Access Token ----------
-@app.get("/get_canva_token")
-def get_canva_token():
-    token_data = load_tokens()
-    if not token_data:
-        return {"error": "No token found. Run initial OAuth first."}
-
-    if is_token_expired(token_data):
-        print("🔁 Access token expired — refreshing...")
-        token_data = refresh_access_token(token_data["refresh_token"])
-        return {"access_token": token_data["access_token"], "status": "refreshed"}
-
-    return {"access_token": token_data["access_token"], "status": "valid"}
-
-
 # ---------- PDF Upload ----------
-
 @app.post("/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...)):
     """
@@ -640,7 +620,6 @@ async def upload_pdf(file: UploadFile = File(...)):
         with open(file_path, "wb") as f:
             f.write(content)
 
-        # change the URL to use /uploads instead of /static
         file_url = f"https://pcm-app-h8mn8.ondigitalocean.app/uploads/pdfs/{unique_filename}"
 
         return {
@@ -794,6 +773,7 @@ def create_campaign_data(
         status=data.status or "pending",
         env_mode=data.env_mode,
         canva_link=data.canva_link,
+        res_recipients=data.res_recipients,
     )
 
     db.add(new_data)
@@ -866,7 +846,7 @@ def get_campaign_data_with_name(campaign_id: int, db: Session = Depends(get_db))
         row["campaign_name"] = cname
         row["env_mode"] = env_mode
         row["canva_link"] = canva_link
-        row["audience_list"] = audience_list  # ✅ Add audience_list to response
+        row["audience_list"] = audience_list
         result.append(row)
 
     return result
@@ -897,7 +877,7 @@ def get_dashboard_all(mode: str, db: Session = Depends(get_db)):
         .options(
             joinedload(CampaignData.template),
             joinedload(CampaignData.campaign),
-            joinedload(CampaignData.audience),  # ✅ Include audience
+            joinedload(CampaignData.audience),
         )
         .filter(CampaignData.env_mode == mode)
         .order_by(desc(CampaignData.id))
@@ -941,6 +921,7 @@ def get_dashboard_all(mode: str, db: Session = Depends(get_db)):
                     if d.audience and d.audience.audience_list
                     else []
                 ),
+                "res_recipients": d.res_recipients,
             }
             for d in all_campaign_data
         ],
@@ -1022,6 +1003,7 @@ def create_mailer_one_off(
             status=payload.status or "pending",
             env_mode=payload.env_mode or "testing",
             canva_link=payload.canva_link,
+            res_recipients=payload.res_recipients,
         )
 
         db.add(mailer)
@@ -1086,6 +1068,7 @@ def get_all_one_off_mailers(mode: str, db: Session = Depends(get_db)):
                         if mailer.audience and mailer.audience.audience_list
                         else []
                     ),
+                    "res_recipients": mailer.res_recipients,
                 }
             )
 
@@ -1127,6 +1110,7 @@ def get_mailer_one_off(mailer_id: int, db: Session = Depends(get_db)):
             "status": mailer.status,
             "env_mode": mailer.env_mode,
             "canva_link": mailer.canva_link,
+            "res_recipients": mailer.res_recipients,
         }
 
     except Exception as e:
