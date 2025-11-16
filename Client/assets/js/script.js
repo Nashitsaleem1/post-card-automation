@@ -754,7 +754,7 @@ async function saveCampaignWithCanva(context, canvaLink) {
       send_date: new Date().toISOString(),
       status: "sent",
       env_mode: context.envMode,
-
+      res_recipient:window.currentRecordCount,
       canva_link: canvaLink,
     };
 
@@ -802,6 +802,7 @@ async function saveMailerWithCanva(context, canvaLink) {
       status: "sent",
       env_mode: context.envMode,
       canva_link: canvaLink,
+      res_recipients: window.currentRecordCount
     };
 
     const mailerRes = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
