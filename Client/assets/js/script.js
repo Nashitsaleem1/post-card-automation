@@ -2296,24 +2296,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.currentEditingTemplateId = null;
   localStorage.removeItem("Restored template");
 
-  if (path.includes("templateGallery")) {
+  if (path.includes("templategallery")) {
     // console.log("🔍 templateGallery page load detected");
 
     const context = getContextFromStorage();
 
     if (!context) {
-      // console.warn("⚠️ No context found - showing button NOW");
+      // console.warn(" No context found - showing button NOW");
       showNoContextButton();
     } else {
-      // console.log("✅ Context available - hiding button");
+      // console.log(" Context available - hiding button");
       hideNoContextButton();
-      // console.log("📋 Context details:", JSON.stringify(context, null, 2));
+      // console.log("Context details:", JSON.stringify(context, null, 2));
 
-      // ✅ NEW: Check res_recipients and show appropriate mail type
       if (isDirectMailOrder(context.res_recipients)) {
-        // console.log("📧 Direct Mail Order detected");
+        // console.log("Direct Mail Order detected");
       } else if (isResOccOrder(context.res_recipients)) {
-   //     console.log("🎯 RES OCC Order detected");
+   //     console.log("RES OCC Order detected");
       }
     }
 
