@@ -857,6 +857,7 @@
         envelopeType: "fullWindow",
       };
       let currentMode = sessionStorage.getItem("apiMode") || "testing";
+      console.log("Current API Mode:", currentMode);
 
       // ============================================
       // HELPER: Check if order is Direct Mail or RES OCC
@@ -955,18 +956,63 @@
           return;
         }
 
+        console.log("Viewing selected content for mailer:", currentMailer);
+
+        if (currentMailer.pdf_link) {
+          console.log("PDF link found:", currentMailer.pdf_link);
+          showPdfPreview(currentMailer.pdf_link);
+          return;
+        }
+
         if (currentMailer.canva_link) {
+          console.log("Canva link found:", currentMailer.canva_link);
           showCanvaPreview(currentMailer.canva_link);
           return;
         }
 
         if (currentMailer.template_id) {
+          console.log("Template ID found:", currentMailer.template_id);
           await openTemplatePreview(currentMailer.template_id);
           return;
         }
 
-        alert("⚠️ No template or Canva link available for this mailer");
+        alert("No template, Canva link, or PDF available for this mailer");
       }
+
+      function showPdfPreview(pdfLink) {
+  console.log("📄 Opening PDF preview:", pdfLink);
+
+  // Close any existing modals first
+  closeAllDynamicModals();
+
+  const previewModal = document.createElement("div");
+  previewModal.className = "template-preview-modal";
+  previewModal.style.zIndex = "9999";
+  previewModal.innerHTML = `
+    <div class="template-preview-overlay" onclick="this.closest('.template-preview-modal').remove(); closeAllDynamicModals();"></div>
+    <div class="template-preview-content">
+      <div class="template-preview-header">
+        <h3>📄 PDF Preview</h3>
+        <button class="btn btn-outline" onclick="this.closest('.template-preview-modal').remove(); closeAllDynamicModals();">Close</button>
+      </div>
+      <iframe 
+        src="${pdfLink}#toolbar=0&navpanes=0&scrollbar=0&zoom=100"
+        style="width:100%;height:80vh;border:none;margin-top:1rem;border-radius:6px;">
+      </iframe>
+    </div>
+  `;
+  document.body.appendChild(previewModal);
+
+  // Handle Escape key to close modal
+  const handleEscape = (e) => {
+    if (e.key === "Escape") {
+      previewModal.remove();
+      closeAllDynamicModals();
+      document.removeEventListener("keydown", handleEscape);
+    }
+  };
+  document.addEventListener("keydown", handleEscape);
+}
 
       function closeAllDynamicModals() {
         // Remove all dynamically created preview modals
@@ -977,6 +1023,7 @@
       }
 
       function showCanvaPreview(canvaLink) {
+        console.log("🎨 Opening Canva PDF preview:", canvaLink);
 
         // Close any existing modals first
         closeAllDynamicModals();
@@ -1371,6 +1418,7 @@
         }
       }
 
+
       function attachMailerActions(mailer) {
         const actions = document.getElementById("actionButtons");
         actions.innerHTML = "";
@@ -1407,6 +1455,7 @@
         deleteBtn.onclick = () => deleteMailer(mailer.id);
         actions.appendChild(deleteBtn);
       }
+
 
       function formatSchedule(dateString) {
         if (!dateString) return "No schedule set";
@@ -1576,9 +1625,11 @@
         });
       }
 
+      
       // renderMailerInfo function
       function renderMailerInfo(mailer) {
         currentMailer = mailer;
+        console.log(currentMailer);
 
         document.getElementById("mailerName").textContent = mailer.mailer_name;
         document.getElementById("mailerNameCard").textContent =
@@ -1659,6 +1710,7 @@
         handlePendingMailer(mailer);
       }
 
+
       function handleScheduledMailer(mailer) {
         const isDirectMail = isDirectMailOrder(mailer.res_recipients);
         const infoContent = document.getElementById("mailerInfoContent");
@@ -1713,14 +1765,15 @@
     }">${mailer.env_mode || "testing"}</span>
   `;
         infoContent.appendChild(envModeItem);
-
         const actions = document.getElementById("actionButtons");
         actions.innerHTML = "";
 
-        if (mailer.template_id || mailer.canva_link) {
+        if (mailer.template_id || mailer.canva_link || mailer.pdf_link) {
           const viewBtn = document.createElement("button");
           viewBtn.className = "btn btn-outline";
-          viewBtn.innerHTML = mailer.canva_link
+          viewBtn.innerHTML = mailer.pdf_link
+            ? "📄 View Selected PDF"
+            : mailer.canva_link
             ? "🎨 View Canva Template"
             : "📄 View Selected Template";
           viewBtn.onclick = () => viewSelectedContent();
@@ -1751,6 +1804,11 @@
           return;
         }
 
+        console.log(
+          "📌 Preparing to navigate to Canva with mailer context:",
+          currentMailer
+        );
+
         if (currentMailer.status !== "pending") {
           alert("⚠️ Only pending mailers can select Canva templates");
           return;
@@ -1764,6 +1822,7 @@
           Array.isArray(currentMailer.audience_list)
         ) {
           recipients = currentMailer.audience_list;
+          console.log("✅ Recipients from audience_list:", recipients.length);
         }
 
         if (recipients.length === 0) {
@@ -1782,9 +1841,14 @@
           timestamp: Date.now(),
         };
 
+        console.log("✅ Mailer context ready:", mailerContext);
+        console.log("📊 Audience ID:", selectedAudienceId);
+        console.log("📊 Recipients count:", recipients.length);
+
         sessionStorage.setItem("mailerContext", JSON.stringify(mailerContext));
+        console.log("💾 Mailer context saved to sessionStorage");
 
-
+        console.log("🔗 Navigating to Canva templates page...");
         window.location.href = "templateGallery.html?view=canva&source=mailer";
       }
 
@@ -2009,16 +2073,17 @@
         const actions = document.getElementById("actionButtons");
         actions.innerHTML = "";
 
-        if (mailer.template_id || mailer.canva_link) {
+        if (mailer.template_id || mailer.canva_link || mailer.pdf_link) {
           const viewBtn = document.createElement("button");
           viewBtn.className = "btn btn-outline";
-          viewBtn.innerHTML = mailer.canva_link
+          viewBtn.innerHTML = mailer.pdf_link
+            ? "📄 View Selected PDF"
+            : mailer.canva_link
             ? "🎨 View Canva Template"
             : "📄 View Selected Template";
           viewBtn.onclick = () => viewSelectedContent();
           actions.appendChild(viewBtn);
         }
-
         const mailerEnvMode = mailer.env_mode || "testing";
         if (mailerEnvMode === "testing") {
           const deleteBtn = document.createElement("button");
@@ -2049,6 +2114,7 @@
           document.getElementById("filterBar").style.display = "flex";
         }
       }
+
 
       async function loadTemplates(selectedTemplateId = null) {
         const templatesGrid = document.getElementById("templatesGrid");
@@ -2121,6 +2187,7 @@
         }
       }
 
+
       function openFullPreview(event, encodedHtml) {
         event.preventDefault();
         event.stopPropagation();
@@ -2137,6 +2204,7 @@
         body.innerHTML = html;
         overlay.style.display = "flex";
       }
+
 
       function closePreview() {
         document.getElementById("previewOverlay").style.display = "none";
@@ -2247,16 +2315,19 @@
           if (!res.ok) throw new Error("Failed to fetch mailer details");
 
           const mailer = await res.json();
+          console.log("📦 Mailer data received:", mailer);
 
           currentMailer = mailer;
 
           if (mailer.audience_list && Array.isArray(mailer.audience_list)) {
             recipients = mailer.audience_list;
+            console.log("✅ Recipients from audience_list:", recipients.length);
           } else {
             recipients = [];
             console.warn("⚠️ No recipients found in mailer data");
           }
 
+          console.log("📊 Total recipients loaded:", recipients.length);
 
           renderMailerInfo(mailer);
           await updateRecipients();

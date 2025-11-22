@@ -511,7 +511,11 @@ function renderMailers(mailers) {
     const recipientDisplay = isDirectMail
       ? `<div class="mailer-meta">Recipients: ${recipientCount}</div>`
       : `<div class="mailer-meta" style="color: #10b981; font-weight: 600;">
-           Estimated Recipients: ${mailer.res_recipients ? mailer.res_recipients.toLocaleString() : 'TBD'}
+           Estimated Recipients: ${
+             mailer.res_recipients
+               ? mailer.res_recipients.toLocaleString()
+               : "TBD"
+           }
          </div>`;
 
     const costDisplay = isDirectMail
@@ -715,6 +719,7 @@ function navigateToCanvaTemplates(mailerId) {
     timestamp: new Date().toISOString(),
   };
 
+  console.log("📌 Storing mailer context:", CampaignContext);
   sessionStorage.setItem("mailerContext", JSON.stringify(CampaignContext));
 
   window.location.href = "templateGallery.html?view=canva";
@@ -752,7 +757,6 @@ async function openTemplateSelector(mailerId, event) {
 // ============================================
 // SIDE PANEL
 // ============================================
-
 async function openSidePanel(mailerId, event) {
   event?.stopPropagation?.();
   const side = document.getElementById("sidePanel");
@@ -790,20 +794,29 @@ async function openSidePanel(mailerId, event) {
   const detailRecipientsSection = document.getElementById(
     "detailRecipientsSection"
   );
+  const detailInfoSection = document.getElementById("detailInfoSection");
 
   if (isDirectMail) {
     // Show recipients section for Direct Mail
     detailRecipientsSection.style.display = "block";
+    if (detailInfoSection) detailInfoSection.style.display = "none";
 
     document.getElementById("detailRecipients").innerHTML =
       '<div style="text-align:center;padding:2rem;color:#64748b;">Loading recipients...</div>';
 
-    document.getElementById(
-      "detailStatus"
-    ).parentElement.parentElement.style.display = "block";
-    document.querySelector(
-      '[style*="font-weight: 700"]'
-    ).parentElement.style.display = "block";
+    // Show status section
+    const detailStatusParent =
+      document.getElementById("detailStatus")?.parentElement?.parentElement;
+    if (detailStatusParent) {
+      detailStatusParent.style.display = "block";
+    }
+
+    // Show cost section - find by ID instead of style attribute
+    const detailCostSection =
+      document.getElementById("detailCost")?.parentElement?.parentElement;
+    if (detailCostSection) {
+      detailCostSection.style.display = "block";
+    }
 
     document.getElementById("detailStatus").textContent = (
       mailer.status || "pending"
@@ -837,17 +850,22 @@ async function openSidePanel(mailerId, event) {
       }
     }
 
-    document.getElementById("detailCost").textContent =
-      "$" + (recipientsList.length * 1.31).toFixed(2);
+    const detailCost = document.getElementById("detailCost");
+    if (detailCost) {
+      detailCost.textContent = "$" + (recipientsList.length * 1.31).toFixed(2);
+    }
 
     const expectedIso = computeExpectedDeliveryForMailer(mailer);
-    document.getElementById("detailExpected").textContent = expectedIso
-      ? new Date(expectedIso).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })
-      : "TBD";
+    const detailExpected = document.getElementById("detailExpected");
+    if (detailExpected) {
+      detailExpected.textContent = expectedIso
+        ? new Date(expectedIso).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })
+        : "TBD";
+    }
 
     await renderRecipientsForContainer(
       recipientsList,
@@ -862,101 +880,214 @@ async function openSidePanel(mailerId, event) {
     const search = document.getElementById("detailSearch");
     const only = document.getElementById("detailOnlyScanned");
 
-    const searchClone = search.cloneNode(true);
-    search.parentNode.replaceChild(searchClone, search);
-    const onlyClone = only.cloneNode(true);
-    only.parentNode.replaceChild(onlyClone, only);
+    if (search && only) {
+      const searchClone = search.cloneNode(true);
+      search.parentNode.replaceChild(searchClone, search);
+      const onlyClone = only.cloneNode(true);
+      only.parentNode.replaceChild(onlyClone, only);
 
-    const showScannedFilter = (mailer.status || "pending") === "sent";
-    onlyClone.parentElement.style.display = showScannedFilter
-      ? "block"
-      : "none";
+      const showScannedFilter = (mailer.status || "pending") === "sent";
+      onlyClone.parentElement.style.display = showScannedFilter
+        ? "block"
+        : "none";
 
-    searchClone.addEventListener("input", async () => {
-      await renderRecipientsForContainer(
-        recipientsList,
-        "detailRecipients",
-        mailer.template_id || window.currentEditingTemplateId,
-        mailer.status || "pending",
-        onlyClone.checked,
-        searchClone.value.trim()
-      );
-    });
+      searchClone.addEventListener("input", async () => {
+        await renderRecipientsForContainer(
+          recipientsList,
+          "detailRecipients",
+          mailer.template_id || window.currentEditingTemplateId,
+          mailer.status || "pending",
+          onlyClone.checked,
+          searchClone.value.trim()
+        );
+      });
 
-    onlyClone.addEventListener("change", async () => {
-      await renderRecipientsForContainer(
-        recipientsList,
-        "detailRecipients",
-        mailer.template_id || window.currentEditingTemplateId,
-        mailer.status || "pending",
-        onlyClone.checked,
-        searchClone.value.trim()
-      );
-    });
+      onlyClone.addEventListener("change", async () => {
+        await renderRecipientsForContainer(
+          recipientsList,
+          "detailRecipients",
+          mailer.template_id || window.currentEditingTemplateId,
+          mailer.status || "pending",
+          onlyClone.checked,
+          searchClone.value.trim()
+        );
+      });
+    }
   } else {
-    // ✅ NEW: Hide recipients section for RES OCC orders
+    // Hide recipients section for RES OCC orders
     detailRecipientsSection.style.display = "none";
 
-    // Hide status and cost info
-    document.getElementById(
-      "detailStatus"
-    ).parentElement.parentElement.style.display = "none";
-    document.querySelector(
-      '[style*="font-weight: 700"]'
-    ).parentElement.style.display = "none";
+    // Hide status section
+    const detailStatusParent =
+      document.getElementById("detailStatus")?.parentElement?.parentElement;
+    if (detailStatusParent) {
+      detailStatusParent.style.display = "none";
+    }
+
+    // Hide cost section
+    const detailCostSection =
+      document.getElementById("detailCost")?.parentElement?.parentElement;
+    if (detailCostSection) {
+      detailCostSection.style.display = "none";
+    }
 
     // Show RES OCC message
-    const detailInfoSection = document.getElementById("detailInfoSection");
     if (detailInfoSection) {
-      detailInfoSection.innerHTML = `
-        <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px; margin-bottom: 1rem;">
-          <h3 style="color: #92400e; margin: 0.5rem 0;">RES OCC Order</h3>
-          <p style="color: #b45309; margin: 0.5rem 0; font-size: 14px;">
-            This order will be sent via RES OCC to selected carrier routes and demographics.
-          </p>
-        </div>
-      `;
+      detailInfoSection.querySelector(".res-occ-box")?.remove(); // Remove old box if exists
+
+      const box = document.createElement("div");
+      box.className = "res-occ-box";
+      box.style.cssText =
+        "padding:2rem;text-align:center;background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);border-radius:8px;margin-bottom:1rem;";
+      box.innerHTML = `
+  <h3 style="color:#92400e;margin:0.5rem 0;">RES OCC Order</h3>
+  <p style="color:#b45309;margin:0.5rem 0;font-size:14px;">
+    This order will be sent via RES OCC to selected carrier routes and demographics.
+  </p>
+  <p style="color:#b45309;margin:0.5rem 0;font-size:14px;font-weight:600;">
+    Estimated Recipients: ${
+      mailer.res_recipients ? mailer.res_recipients.toLocaleString() : "TBD"
+    }
+  </p>
+`;
+
+      detailInfoSection.prepend(box);
       detailInfoSection.style.display = "block";
     }
   }
 
-  // View template/canva button logic
+  // View Template/Design Button - Works for both Direct Mail and RES OCC
   const viewTemplateBtn = document.getElementById("viewTemplateBtn");
-
+  console.log(viewTemplateBtn);
   if (viewTemplateBtn) {
     const templateId = mailer.template_id || window.currentEditingTemplateId;
+    console.log(templateId);
     const hasTemplate = !!templateId;
+    console.log(hasTemplate);
     const hasCanvaLink = !!mailer.canva_link;
+    const hasPdfLink = !!mailer.pdf_link;
 
+    // Show button if ANY design source exists (template, Canva, or PDF)
     viewTemplateBtn.style.display =
-      hasTemplate || hasCanvaLink ? "inline-block" : "none";
+      hasTemplate || hasCanvaLink || hasPdfLink ? "inline-block" : "none";
     viewTemplateBtn.disabled = false;
     viewTemplateBtn.style.opacity = 1;
 
     const newBtn = viewTemplateBtn.cloneNode(true);
     viewTemplateBtn.parentNode.replaceChild(newBtn, viewTemplateBtn);
 
-    if (hasCanvaLink && !hasTemplate) {
-      newBtn.textContent = "🎨 View Canva Design";
+    // Priority: PDF Link > Canva Link > Template
+    if (hasPdfLink && !hasTemplate && !hasCanvaLink) {
+      newBtn.textContent = "See Uploaded PDF";
+      newBtn.addEventListener("click", async () => {
+        openPdfPreview(mailer.pdf_link);
+      });
+    } else if (hasCanvaLink && !hasTemplate && !hasPdfLink) {
+      newBtn.textContent = "View Canva Design";
       newBtn.addEventListener("click", async () => {
         openCanvaLinkInput(mailer.id, mailer.canva_link);
       });
-    } else if (hasTemplate && !hasCanvaLink) {
-      newBtn.textContent = "📄 View Template";
+    } else if (hasTemplate && !hasCanvaLink && !hasPdfLink) {
+      newBtn.textContent = "View Template";
       newBtn.addEventListener("click", async () => {
         await openTemplatePreview(templateId);
       });
-    } else if (hasTemplate && hasCanvaLink) {
-      newBtn.textContent = "👁️ View Design";
+    } else if (hasTemplate || hasCanvaLink || hasPdfLink) {
+      // Multiple sources available - show options
+      newBtn.textContent = "View Design";
       newBtn.addEventListener("click", async () => {
         if (mailer.status === "sent") {
           openViewSentMailerModal(templateId, mailer);
         } else {
-          await openTemplatePreview(templateId);
+          // Show options modal for multiple sources
+          openViewDesignOptionsModal(templateId, mailer);
         }
       });
     }
   }
+}
+
+function openPdfPreview(pdfLink) {
+  const previewModal = document.createElement("div");
+  previewModal.className = "template-preview-modal";
+  previewModal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+  previewModal.innerHTML = `
+    <div class="template-preview-overlay" onclick="this.parentElement.remove()" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: -1;"></div>
+    <div class="template-preview-content" style="position: relative; background: white; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 95%; height: 95vh; display: flex; flex-direction: column; z-index: 10001;">
+      <div class="template-preview-header" style="padding: 1rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0;">📄 Uploaded PDF Preview</h3>
+        <button class="btn btn-outline" onclick="this.closest('.template-preview-modal').remove()" style="padding: 0.5rem 1rem;">Close</button>
+      </div>
+      <iframe 
+        src="${pdfLink}#toolbar=0&navpanes=0&scrollbar=0&zoom=100"
+        style="flex: 1; border: none; margin: 0; border-radius: 0 0 8px 8px;">
+      </iframe>
+    </div>
+  `;
+  document.body.appendChild(previewModal);
+}
+
+function openViewDesignOptionsModal(templateId, mailer) {
+  const modal = document.createElement("div");
+  modal.className = "view-sent-mailer-modal";
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+
+  let buttonsHtml = "";
+
+  if (mailer.pdf_link) {
+    buttonsHtml += `<button class="btn btn-secondary" onclick="openPdfPreview('${mailer.pdf_link}'); this.closest('[style*=&quot;z-index: 10000&quot;]').remove()" style="padding: 0.75rem;">
+      📄 View Uploaded PDF
+    </button>`;
+  }
+
+  if (templateId) {
+    buttonsHtml += `<button class="btn btn-secondary" onclick="viewTemplateVersion(${templateId}); this.closest('[style*=&quot;z-index: 10000&quot;]').remove()" style="padding: 0.75rem;">
+      📄 View Template
+    </button>`;
+  }
+
+  if (mailer.canva_link) {
+    buttonsHtml += `<button class="btn btn-secondary" onclick="openCanvaLinkInput('${mailer.id}', '${mailer.canva_link}'); this.closest('[style*=&quot;z-index: 10000&quot;]').remove()" style="padding: 0.75rem;">
+      🎨 View Canva Link
+    </button>`;
+  }
+
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="this.parentElement.remove()" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: -1;"></div>
+    <div class="modal-content" style="position: relative; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); max-width: 400px; width: 90%;z-index: 10001;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h3 style="margin: 0;">View Design</h3>
+        <button class="btn btn-outline" onclick="this.closest('[style*=&quot;z-index: 10000&quot;]').remove()" style="padding: 0.5rem 1rem;">Close</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:#64748b;margin-bottom:1.5rem;">What would you like to view?</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          ${buttonsHtml}
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
 }
 
 function openViewSentMailerModal(templateId, mailer) {
@@ -973,6 +1104,27 @@ function openViewSentMailerModal(templateId, mailer) {
     justify-content: center;
     z-index: 10000;
   `;
+
+  let buttonsHtml = "";
+
+  if (mailer.pdf_link) {
+    buttonsHtml += `<button class="btn btn-secondary" onclick="openPdfPreview('${mailer.pdf_link}'); this.closest('[style*=&quot;z-index: 10000&quot;]').remove()" style="padding: 0.75rem;">
+      📄 View Uploaded PDF
+    </button>`;
+  }
+
+  if (templateId) {
+    buttonsHtml += `<button class="btn btn-secondary" onclick="viewTemplateVersion(${templateId}); this.closest('[style*=&quot;z-index: 10000&quot;]').remove()" style="padding: 0.75rem;">
+      📄 View Template
+    </button>`;
+  }
+
+  if (mailer.canva_link) {
+    buttonsHtml += `<button class="btn btn-secondary" onclick="openCanvaLinkInput('${mailer.id}', '${mailer.canva_link}'); this.closest('[style*=&quot;z-index: 10000&quot;]').remove()" style="padding: 0.75rem;">
+      🎨 View Canva Link
+    </button>`;
+  }
+
   modal.innerHTML = `
     <div class="modal-overlay" onclick="this.parentElement.remove()" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: -1;"></div>
     <div class="modal-content" style="position: relative; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); max-width: 400px; width: 90%;z-index: 10001;">
@@ -983,20 +1135,7 @@ function openViewSentMailerModal(templateId, mailer) {
       <div class="modal-body">
         <p style="color:#64748b;margin-bottom:1.5rem;">What would you like to view?</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-          ${
-            templateId
-              ? `<button class="btn btn-secondary" onclick="viewTemplateVersion(${templateId}); this.closest('[style*=&quot;z-index: 10000&quot;]').remove()" style="padding: 0.75rem;">
-            📄 View Template
-          </button>`
-              : ""
-          }
-          ${
-            mailer.canva_link
-              ? `<button class="btn btn-secondary" onclick="openCanvaLinkInput('${mailer.id}', '${mailer.canva_link}'); this.closest('[style*=&quot;z-index: 10000&quot;]').remove()" style="padding: 0.75rem;">
-            🎨 View Canva Link
-          </button>`
-              : ""
-          }
+          ${buttonsHtml}
         </div>
       </div>
     </div>

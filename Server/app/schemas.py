@@ -69,7 +69,7 @@ class CampaignDataBase(BaseModel):
     env_mode: Literal["testing", "production"] = "testing"
     canva_link: Optional[str] = None
     res_recipients : Optional[int] =  None
- #   pdf_link: Optional[str] = None
+    pdf_link: Optional[str] = None
 
 class CampaignDataCreate(CampaignDataBase):
     campaign_id: int
@@ -85,7 +85,7 @@ class CampaignDataUpdate(BaseModel):
     canva_link: Optional[str] = None
     audience_id: Optional[int] = None
     res_recipients : Optional[int] =  None
-   # pdf_link: Optional[str] = None
+    pdf_link: Optional[str] = None
 
 class CampaignDataRead(CampaignDataBase):
     id: int
@@ -122,7 +122,7 @@ class CampaignDataWithCampaignName(BaseModel):
     canva_link: Optional[str] = None
     audience_id: Optional[int] = None
     res_recipients : Optional[int] =  None
-  #  pdf_link: Optional[str] = None
+    pdf_link: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -139,7 +139,7 @@ class MailerOneOffBase(BaseModel):
     env_mode: Literal["testing", "production"] = "testing"
     canva_link: Optional[str] = None
     res_recipients : Optional[int] =  None
-   # pdf_link: Optional[str] = None
+    pdf_link: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -172,4 +172,4 @@ class MailerOneOffUpdate(BaseModel):
     canva_link: Optional[str] = None
     audience_id: Optional[int] = None
     res_recipients : Optional[int] =  None
-   # pdf_link: Optional[str] = None
+    pdf_link: Optional[str] = None

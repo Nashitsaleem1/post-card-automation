@@ -38,10 +38,13 @@ function getContextFromStorage() {
   const campaignStored = sessionStorage.getItem("campaignContext");
   if (campaignStored) {
     const context = JSON.parse(campaignStored);
+    console.log(" Campaign context retrieved:", context);
     
     if (context.recipients === null || context.recipients === undefined || context.recipients.length === 0) {
+      console.log("Detected: RES OCC Order (no recipients)");
       context.res_recipients = null; // Signal RES OCC
     } else {
+      console.log("Detected: Direct Mail Order (has recipients)");
       context.res_recipients = context.recipients; // Signal Direct Mail
     }
     
@@ -51,11 +54,14 @@ function getContextFromStorage() {
   const mailerStored = sessionStorage.getItem("mailerContext");
   if (mailerStored) {
     const context = JSON.parse(mailerStored);
+    console.log(" Mailer context retrieved:", context);
     
 
     if (context.recipients === null || context.recipients === undefined || context.recipients.length === 0) {
+      console.log("Detected: RES OCC Order (no recipients)");
       context.res_recipients = null; // Signal RES OCC
     } else {
+      console.log("Detected: Direct Mail Order (has recipients)");
       context.res_recipients = context.recipients; // Signal Direct Mail
     }
     
@@ -65,14 +71,14 @@ function getContextFromStorage() {
   const genericStored = sessionStorage.getItem("context");
   if (genericStored) {
     const context = JSON.parse(genericStored);
-
+    console.log("Generic context retrieved:", context);
     
 
     if (context.recipients === null || context.recipients === undefined || context.recipients.length === 0) {
-
+      console.log("Detected: RES OCC Order (no recipients)");
       context.res_recipients = null; // Signal RES OCC
     } else {
-
+      console.log("Detected: Direct Mail Order (has recipients)");
       context.res_recipients = context.recipients; // Signal Direct Mail
     }
     
@@ -88,6 +94,7 @@ function clearContextFromStorage() {
   sessionStorage.removeItem("campaignContext");
   sessionStorage.removeItem("mailerContext");
   sessionStorage.removeItem("context");
+  console.log("🗑️ All context types cleared (campaign, mailer, generic)");
 }
 
 // ============================================
@@ -95,6 +102,8 @@ function clearContextFromStorage() {
 // ============================================
 
 let currentMode = sessionStorage.getItem("apiMode") || "testing";
+console.log("Current API Mode:", currentMode);
+
 function getCurrentMode() {
   return sessionStorage.getItem("apiMode") || "testing";
 }
@@ -102,6 +111,7 @@ function getCurrentMode() {
 function setApiMode(mode) {
   sessionStorage.setItem("apiMode", mode);
   currentMode = mode;
+  console.log("API Mode set to:", mode);
 }
 
 // ============================================
@@ -290,6 +300,14 @@ async function exportCanvaPdf(designId, designTitle) {
     );
     return;
   }
+
+  console.log(" Context retrieved:", context);
+  console.log(" Order type check:", {
+    res_recipients: context.res_recipients,
+    isDirectMail: isDirectMailOrder(context.res_recipients),
+    isResOcc: isResOccOrder(context.res_recipients),
+  });
+
   if (!isDirectMailOrder(context.res_recipients)) {
     showAlert(
       "This is a RES OCC order. Please use 'Export & Send via RES OCC' instead."
@@ -303,6 +321,10 @@ async function exportCanvaPdf(designId, designTitle) {
     context.selectedAudienceId &&
     (!finalRecipients || finalRecipients.length === 0)
   ) {
+    console.log(
+      " Fetching recipients for audience ID:",
+      context.selectedAudienceId
+    );
     try {
       const response = await fetch(
         `https://pcm-app-h8mn8.ondigitalocean.app/audiences/${context.selectedAudienceId}`
@@ -315,6 +337,10 @@ async function exportCanvaPdf(designId, designTitle) {
         : JSON.parse(audience.audience_list);
 
       finalRecipients = audienceList;
+      console.log(
+        "Recipients fetched from audience:",
+        finalRecipients.length
+      );
     } catch (err) {
       console.error("Error fetching audience:", err);
       showAlert("Failed to fetch recipients from audience");
@@ -328,6 +354,11 @@ async function exportCanvaPdf(designId, designTitle) {
     );
     return;
   }
+
+  console.log(
+    "Context validation passed. Recipients:",
+    finalRecipients.length
+  );
 
   const btn =
     event?.target?.closest(".tg-export-pdf-btn") ||
@@ -384,7 +415,7 @@ async function exportCanvaPdf(designId, designTitle) {
     const exportId = exportData.job?.id;
 
     const pdfUrl = await getExportUrlUntilReady(exportId, accessToken);
-
+    console.log(`PDF URL for ${designTitle}:`, pdfUrl);
 
     const updatedContext = {
       ...context,
@@ -409,6 +440,7 @@ async function getExportUrlUntilReady(
   maxAttempts = 20
 ) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    console.log(`⏳ Checking export status... (Attempt ${attempt})`);
 
     const res = await fetch(
       `https://api.canva.com/rest/v1/exports/${exportId}`,
@@ -422,8 +454,10 @@ async function getExportUrlUntilReady(
     if (!res.ok) throw new Error("Failed to check export status");
 
     const data = await res.json();
+    console.log("Export status:", data.job?.status);
 
     if (data.job?.status === "success") {
+      console.log("✅ Export ready!");
       return data.job?.urls?.[0] || null;
     }
 
@@ -526,6 +560,9 @@ function closeBrochurePreviewModal() {
 
 async function orderDesignWithContext(pdfUrl, designTitle, context) {
   try {
+    console.log("📌 Starting order with context:", context);
+    console.log("🔍 Context sourceType:", context.sourceType);
+    console.log("🔍 Context mode:", context.mode);
 
     // Validate context
     if (!context) {
@@ -583,6 +620,8 @@ async function orderDesignWithContext(pdfUrl, designTitle, context) {
       },
     };
 
+    console.log("📤 Sending order to PCM API...");
+
     // Send to PCM API
     const orderRes = await fetch(
       "https://v3.pcmintegrations.com/order/brochure",
@@ -602,6 +641,7 @@ async function orderDesignWithContext(pdfUrl, designTitle, context) {
     }
 
     const orderData = await orderRes.json();
+    console.log("✅ Order sent successfully:", orderData);
 
     if (context.sourceType === "campaign" || context.mode === "campaign") {
       // --- CAMPAIGN MODE ---
@@ -634,11 +674,20 @@ async function orderDesignWithContext(pdfUrl, designTitle, context) {
 }
 
 // ============================================
-//  EXISTING CAMPAIGN DATA WITH CANVA LINK
+// UPDATE EXISTING CAMPAIGN DATA WITH CANVA LINK
 // ============================================
 
 async function updateCampaignDataWithCanva(context, canvaLink) {
   try {
+    console.log("📌 Updating existing campaign_data with Canva link...");
+    console.log("📦 Context:", {
+      mailerId: context.mailerId || context.campaigndataId,
+      campaignName: context.campaignName,
+      mailerName: context.mailerName,
+      recipientCount: context.recipients?.length || 0,
+      selectedAudienceId: context.selectedAudienceId,
+    });
+
     const recordId = context.campaigndataId || context.mailerId;
     if (!recordId) {
       throw new Error("Campaign data ID not found in context");
@@ -649,6 +698,9 @@ async function updateCampaignDataWithCanva(context, canvaLink) {
       send_date: new Date().toISOString(),
       canva_link: canvaLink,
     };
+
+    console.log("📊 Campaign data update payload:", updatePayload);
+    console.log("📡 Updating campaign_data ID:", recordId);
 
     const updateRes = await fetch(
       `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${recordId}`,
@@ -669,21 +721,30 @@ async function updateCampaignDataWithCanva(context, canvaLink) {
     sessionStorage.clear();
     if (savedApiMode) {
       sessionStorage.setItem("apiMode", savedApiMode);
-
+      console.log("✅ apiMode restored:", savedApiMode);
     }
     window.location.href = "dashboard.html";
   } catch (err) {
-    console.error("Error updating campaign data:", err);
+    console.error("❌ Error updating campaign data:", err);
     throw err;
   }
 }
 
 // ============================================
-// MAILER WITH CANVA LINK (ONE-OFF MAILER)
+// UPDATE MAILER WITH CANVA LINK (ONE-OFF MAILER)
 // ============================================
 
 async function updateMailerWithCanva(context, canvaLink) {
   try {
+    console.log("📌 Updating one-off mailer with Canva link...");
+    console.log("📦 Context:", {
+      mailerId: context.mailerId,
+      mailerName: context.mailerName,
+      recipientCount: context.recipients?.length || 0,
+      selectedAudienceId: context.selectedAudienceId,
+      envMode: context.envMode,
+    });
+
     if (!context.mailerId) {
       throw new Error("Mailer ID not found in context");
     }
@@ -694,6 +755,10 @@ async function updateMailerWithCanva(context, canvaLink) {
       canva_link: canvaLink,
       env_mode: context.envMode || getCurrentMode(),
     };
+
+    console.log("📊 Mailer update payload:", updatePayload);
+    console.log("📡 Updating mailer-one-off ID:", context.mailerId);
+
     const updateRes = await fetch(
       `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${context.mailerId}`,
       {
@@ -712,6 +777,7 @@ async function updateMailerWithCanva(context, canvaLink) {
     sessionStorage.clear();
     if (savedApiMode) {
       sessionStorage.setItem("apiMode", savedApiMode);
+      console.log("✅ apiMode restored:", savedApiMode);
     }
     window.location.href = "dashboard.html";
   } catch (err) {
@@ -726,6 +792,13 @@ async function updateMailerWithCanva(context, canvaLink) {
 
 async function saveCampaignWithCanva(context, canvaLink) {
   try {
+    console.log("📌 Saving campaign with Canva link...");
+    console.log("📊 Context:", {
+      campaignName: context.campaignName,
+      mailerName: context.mailerName,
+      recipientCount: context.recipients.length,
+      selectedAudienceId: context.selectedAudienceId,
+    });
 
     if (!context.campaignName) {
       throw new Error("Campaign name is missing");
@@ -744,7 +817,9 @@ async function saveCampaignWithCanva(context, canvaLink) {
     }
 
     const campaign = await campaignRes.json();
+    console.log("✅ Campaign created with ID:", campaign.id);
 
+    // ✅ UPDATED: Create campaign data with audience_id
     const dataPayload = {
       campaign_id: campaign.id,
       mailer_name: context.mailerName,
@@ -754,7 +829,7 @@ async function saveCampaignWithCanva(context, canvaLink) {
       send_date: new Date().toISOString(),
       status: "sent",
       env_mode: context.envMode,
-      res_recipient:window.currentRecordCount,
+
       canva_link: canvaLink,
     };
 
@@ -769,12 +844,12 @@ async function saveCampaignWithCanva(context, canvaLink) {
       throw new Error(err.detail || "Failed to save campaign data");
     }
 
-
+    console.log("✅ Campaign data saved successfully");
     const savedApiMode = sessionStorage.getItem("apiMode");
     sessionStorage.clear();
     if (savedApiMode) {
       sessionStorage.setItem("apiMode", savedApiMode);
-  
+      console.log("✅ apiMode restored:", savedApiMode);
     }
     window.location.href = "dashboard.html";
   } catch (err) {
@@ -789,6 +864,13 @@ async function saveCampaignWithCanva(context, canvaLink) {
 
 async function saveMailerWithCanva(context, canvaLink) {
   try {
+    console.log("📌 Saving mailer with Canva link...");
+    console.log("📊 Context:", {
+      mailerName: context.mailerName,
+      recipientCount: context.recipients.length,
+      selectedAudienceId: context.selectedAudienceId,
+    });
+
     if (!context.mailerName) {
       throw new Error("Mailer name is missing");
     }
@@ -802,7 +884,6 @@ async function saveMailerWithCanva(context, canvaLink) {
       status: "sent",
       env_mode: context.envMode,
       canva_link: canvaLink,
-      res_recipients: window.currentRecordCount
     };
 
     const mailerRes = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
@@ -815,11 +896,13 @@ async function saveMailerWithCanva(context, canvaLink) {
       const err = await mailerRes.json();
       throw new Error(err.detail || "Failed to save mailer");
     }
+
+    console.log("✅ Mailer saved successfully");
     const savedApiMode = sessionStorage.getItem("apiMode");
     sessionStorage.clear();
     if (savedApiMode) {
       sessionStorage.setItem("apiMode", savedApiMode);
-    
+      console.log("✅ apiMode restored:", savedApiMode);
     }
     window.location.href = "dashboard.html";
   } catch (err) {
@@ -1051,6 +1134,7 @@ async function saveAsNewTemplate() {
     if (templateDiv) {
       const qrIdStr = templateDiv.dataset.qrCodeId;
       qrCodeId = qrIdStr ? parseInt(qrIdStr) : null;
+      console.log("Fetched QR Code ID:", qrCodeId);
     } else {
       console.warn("Template div not found for currentEditingTemplateId");
     }
@@ -1168,12 +1252,12 @@ function initializeUserGuide() {
 // ============================================
 
 function showNoContextButton() {
-  // console.log("🔔 showNoContextButton() called");
+  console.log("🔔 showNoContextButton() called");
 
   // Check if button already exists
   const existingButton = document.getElementById("noContextButton");
   if (existingButton) {
-    // console.log("🔔 Button exists, making visible");
+    console.log("🔔 Button exists, making visible");
     existingButton.style.display = "block";
     return;
   }
@@ -1212,20 +1296,21 @@ function showNoContextButton() {
   // Insert button at top of body
   document.body.appendChild(button);
 
-  //console.log("✅ No-context button created and appended to body");
+  console.log("✅ No-context button created and appended to body");
 }
 
 function hideNoContextButton() {
   const button = document.getElementById("noContextButton");
   if (button) {
     button.style.display = "none";
-    // console.log("✅ Button hidden");
+    console.log("✅ Button hidden");
   } else {
-    // console.log("⚠️ No button to hide");
+    console.log("⚠️ No button to hide");
   }
 }
 
 function navigateToCampaignBuilder() {
+  console.log("🔗 Navigating to campaign builder...");
   window.location.href = "campaign_builder.html";
 }
 
@@ -1254,6 +1339,12 @@ function updateCanvaExportButtons(context) {
   const isDirectMail = isDirectMailOrder(context.res_recipients);
   const isResOcc = isResOccOrder(context.res_recipients);
 
+  console.log("📊 Mail Type Analysis:", {
+    res_recipients: context.res_recipients,
+    isDirectMail,
+    isResOcc,
+    recipientCount: Array.isArray(context.res_recipients) ? context.res_recipients.length : 0,
+  });
 
   // Find all export buttons
   const exportButtons = document.querySelectorAll(".tg-export-pdf-btn");
@@ -1300,6 +1391,12 @@ async function exportCanvaPdfViaEDDM(designId, designTitle) {
     );
     return;
   }
+
+  console.log("🔍 RES OCC Order type check:", {
+    res_recipients: context.res_recipients,
+    isResOcc: isResOccOrder(context.res_recipients),
+    isDirectMail: isDirectMailOrder(context.res_recipients),
+  });
 
   if (!isResOccOrder(context.res_recipients)) {
     showAlert(
@@ -1459,7 +1556,7 @@ async function loadDemographicsData(listType) {
     if (!response.ok) throw new Error("Failed to load demographics");
 
     demographicsData = await response.json();
-;
+    console.log(demographicsData);
     currentListType = listType;
 
     // Clear previous selections when switching list types
@@ -1468,6 +1565,7 @@ async function loadDemographicsData(listType) {
     // Render new demographics
     renderDemographics();
 
+    console.log(`✅ Loaded demographics for list type: ${listType}`);
   } catch (error) {
     console.error("Error loading demographics:", error);
     showAlert(`Error loading demographics: ${error.message}`);
@@ -1760,6 +1858,9 @@ function updateSelectedDemographics() {
       summary.push(`${demographic.label}: ${selectedLabels}`);
     }
   });
+
+  console.log("Selected Demographics:", selectedDemographics);
+  console.log("Summary:", summary);
 }
 // ============================================
 // GET CARRIER ROUTES FOR EDDM (NEW)
@@ -1983,7 +2084,7 @@ async function fetchCarrierRoutes(zipCode, listType) {
     }
 
     const data = await response.json();
-
+    console.log(data);
     return data;
   } catch (error) {
     console.error("Error fetching carrier routes:", error);
@@ -2034,6 +2135,8 @@ async function getListCountForEDDM() {
       demographics: demographicsArray,
     };
 
+    console.log("List Count Payload:", payload);
+
     const response = await fetch(
       "https://v3.pcmintegrations.com/list/count/carrier-route",
       {
@@ -2053,7 +2156,7 @@ async function getListCountForEDDM() {
     }
 
     const data = await response.json();
-    // console.log("List Count Response:", data);
+    console.log("List Count Response:", data);
 
     window.currentListCountID = data.listCountID;
     window.currentRecordCount = data.recordCount;
@@ -2297,23 +2400,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.currentEditingTemplateId = null;
   localStorage.removeItem("Restored template");
 
-  if (path.includes("templategallery")) {
-    // console.log("🔍 templateGallery page load detected");
+  if (path.includes("templateGallery")) {
+    console.log("🔍 templateGallery page load detected");
 
     const context = getContextFromStorage();
 
     if (!context) {
-      // console.warn(" No context found - showing button NOW");
+      console.warn("⚠️ No context found - showing button NOW");
       showNoContextButton();
     } else {
-      // console.log(" Context available - hiding button");
+      console.log("✅ Context available - hiding button");
       hideNoContextButton();
-      // console.log("Context details:", JSON.stringify(context, null, 2));
+      console.log("📋 Context details:", JSON.stringify(context, null, 2));
 
+      // ✅ NEW: Check res_recipients and show appropriate mail type
       if (isDirectMailOrder(context.res_recipients)) {
-        // console.log("Direct Mail Order detected");
+        console.log("📧 Direct Mail Order detected");
       } else if (isResOccOrder(context.res_recipients)) {
-   //     console.log("RES OCC Order detected");
+        console.log("🎯 RES OCC Order detected");
       }
     }
 
@@ -2339,17 +2443,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       </div>`;
     }
 
-    // if (context) {
-    //   console.log("Context Info:", {
-    //     sourceType: context.sourceType,
-    //     mode: context.mode,
-    //     campaignName: context.campaignName,
-    //     mailerName: context.mailerName,
-    //     recipientCount: context.recipients?.length || 0,
-    //     envMode: context.envMode,
-    //     res_recipients: context.res_recipients,
-    //     timestamp: context.timestamp,
-    //   });
-    // }
+    if (context) {
+      console.log("Context Info:", {
+        sourceType: context.sourceType,
+        mode: context.mode,
+        campaignName: context.campaignName,
+        mailerName: context.mailerName,
+        recipientCount: context.recipients?.length || 0,
+        envMode: context.envMode,
+        res_recipients: context.res_recipients,
+        timestamp: context.timestamp,
+      });
+    }
   }
 });

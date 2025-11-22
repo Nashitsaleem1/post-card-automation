@@ -2,6 +2,19 @@
 // ============================================
 // GLOBAL VARIABLES & CONFIGURATION
 // ============================================
+let isUploading = false;
+
+// Disable the "Cancel/Reload" dialog during file uploads
+window.addEventListener("beforeunload", (e) => {
+  // If NOT uploading, allow page to reload normally
+  if (!isUploading) {
+    return;
+  }
+  
+  // If uploading, prevent the reload dialog from showing
+  e.preventDefault();
+  e.returnValue = "";
+});
 
 const campaignCard = document.getElementById("newCampaignCard");
 const mailerCard = document.getElementById("newMailerCard");
@@ -13,6 +26,7 @@ const uploadcsvCard = document.getElementById("uploadcsv");
 const BatchsearchCard = document.getElementById("batchsearch");
 const uploadsection = document.getElementById("uploadsection");
 const batchsection = document.getElementById("batchdatasearch");
+let uploadedPdfFile = null;
 
 let cityAutocomplete;
 let recipientsList = [];
@@ -39,11 +53,266 @@ const API_KEYS = {
     apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
     apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
   },
-  production: {
-    apiKey: "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy",
-    apiSecret: "ZDFjNmUwM2MtOTcwNi00MjBiLWE4NDItM2Y5MjAzMDJiMTVh",
-  },
+  production: {
+    apiKey: "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy",
+    apiSecret: "ZDFjNmUwM2MtOTcwNi00MjBiLWE4NDItM2Y5MjAzMDJiMTVh",
+  },
 };
+
+
+function setupPdfSectionDragAndDrop() {
+  const uploadBox = document.getElementById("pdfUploadBox");
+  const fileInput = document.getElementById("pdfUploadFile");
+
+  if (!uploadBox || !fileInput) {
+    console.warn("PDF upload section elements not found");
+    return;
+  }
+
+  // Skip if already initialized
+  if (uploadBox.dataset.initialized === "true") {
+    return;
+  }
+  uploadBox.dataset.initialized = "true";
+
+  // Prevent default drag behaviors
+  ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+    uploadBox.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
+
+  // Highlight box on drag
+  ["dragenter", "dragover"].forEach((eventName) => {
+    uploadBox.addEventListener(eventName, () => {
+      uploadBox.style.borderColor = "#667eea";
+      uploadBox.style.backgroundColor = "#f0f7ff";
+    });
+  });
+
+  // Remove highlight on leave/drop
+  ["dragleave", "drop"].forEach((eventName) => {
+    uploadBox.addEventListener(eventName, () => {
+      uploadBox.style.borderColor = "#ccc";
+      uploadBox.style.backgroundColor = "transparent";
+    });
+  });
+
+  // Handle drop
+  uploadBox.addEventListener("drop", (e) => {
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handlePdfSectionFileSelect(files[0]);
+    }
+  });
+
+  // Handle file input change
+  fileInput.addEventListener("change", (e) => {
+    if (e.target.files.length > 0) {
+      handlePdfSectionFileSelect(e.target.files[0]);
+    }
+  });
+
+  console.log("✅ PDF Drag and Drop initialized");
+}
+
+/**
+ * Handle PDF File Selection in Upload Section
+ */
+function handlePdfSectionFileSelect(file) {
+  // Validate file type
+  if (file.type !== "application/pdf") {
+    showAlert("❌ Please upload a valid PDF file");
+    return;
+  }
+
+  // Validate file size (10MB max)
+  const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+  if (file.size > maxSize) {
+    showAlert(
+      `File size exceeds 10MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB`
+    );
+    return;
+  }
+
+  uploadedPdfFile = file;
+
+  // Display file info
+  displayPdfSectionFileInfo(file);
+
+  console.log("✅ PDF file selected:", file.name);
+}
+
+/**
+ * Display PDF File Information in Upload Section
+ */
+function displayPdfSectionFileInfo(file) {
+  const statusDiv = document.getElementById("pdfUploadStatus");
+  const statusContent = document.getElementById("pdfStatusContent");
+
+  if (!statusDiv || !statusContent) return;
+
+  const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+  const fileDate = new Date(file.lastModified).toLocaleDateString();
+
+  statusContent.innerHTML = `
+    <div style="display: flex; align-items: flex-start; gap: 1rem;">
+      <div style="font-size: 1.5rem; color: #28a745; flex-shrink: 0;">✓</div>
+      <div style="flex: 1;">
+        <div style="font-weight: 600; color: #28a745; margin-bottom: 0.75rem;">
+          PDF File Selected Successfully
+        </div>
+        <div style="
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1rem;
+          margin-bottom: 1rem;
+          color: #666;
+          font-size: 0.9rem;
+        ">
+          <div>
+            <strong>File Name:</strong>
+            <div style="word-break: break-all; margin-top: 0.25rem;">${file.name}</div>
+          </div>
+          <div>
+            <strong>File Size:</strong>
+            <div style="margin-top: 0.25rem;">${fileSizeMB} MB</div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onclick="removePdfSectionFile()"
+          style="
+            padding: 0.5rem 1rem;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+          "
+          onmouseover="this.style.background='#c82333'; this.style.transform='translateY(-2px)'"
+          onmouseout="this.style.background='#dc3545'; this.style.transform=''"
+        >
+          Remove PDF
+        </button>
+      </div>
+    </div>
+  `;
+
+  statusDiv.style.display = "block";
+
+  console.log("✅ PDF file info displayed");
+}
+
+/**
+ * Remove Selected PDF File from Upload Section
+ */
+function removePdfSectionFile() {
+  uploadedPdfFile = null;
+  uploadedPdfUrl = null;
+
+  const statusDiv = document.getElementById("pdfUploadStatus");
+  const fileInput = document.getElementById("pdfUploadFile");
+  const uploadBox = document.getElementById("pdfUploadBox");
+
+  if (statusDiv) statusDiv.style.display = "none";
+  if (fileInput) fileInput.value = "";
+
+  delete uploadBox.dataset.initialized;
+  setupPdfSectionDragAndDrop();
+
+  showAlert("✅ PDF file removed");
+  console.log("✅ PDF file removed");
+}
+
+/**
+ * Handle Upload Letter PDF Link Click
+ */
+function handleUploadLetterPdf() {
+  const isCampaign = campaignCard?.classList.contains("selected");
+  const isMailer = mailerCard?.classList.contains("selected");
+
+  if (!isCampaign && !isMailer) {
+    showAlert("⚠️ Please select either 'New Campaign' or 'New Mailer' first.");
+    return;
+  }
+
+  let campaignName = "";
+  let mailerName = "";
+
+  if (isCampaign) {
+    campaignName = document.getElementById("campaignNameInput")?.value?.trim() || "";
+    mailerName = document.getElementById("mailerNameInput")?.value?.trim() || "";
+  } else {
+    mailerName = document.getElementById("mailerNameOnlyInput")?.value?.trim() || "";
+  }
+
+  if (isCampaign && !campaignName) {
+    showAlert("⚠️ Please enter Campaign Name before uploading PDF.");
+    return;
+  }
+
+  if (!mailerName) {
+    showAlert("⚠️ Please enter Mailer Name before uploading PDF.");
+    return;
+  }
+
+  // Show PDF upload section and scroll to it
+  showPdfUploadSection();
+}
+
+/**
+ * Show PDF Upload Section
+ */
+function showPdfUploadSection() {
+  const section = document.getElementById("uploadPdfSection");
+  if (section) {
+    section.style.display = "block";
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+    setupPdfSectionDragAndDrop();
+  }
+  console.log("✅ PDF upload section shown");
+}
+
+/**
+ * Hide PDF Upload Section
+ */
+function hidePdfUploadSection() {
+  const section = document.getElementById("uploadPdfSection");
+  if (section) {
+    section.style.display = "none";
+  }
+}
+
+/**
+ * Get Uploaded PDF URL
+ */
+function getUploadedPdfUrl() {
+  return uploadedPdfUrl;
+}
+
+/**
+ * Check if PDF is uploaded
+ */
+function isPdfUploaded() {
+  return uploadedPdfFile !== null && uploadedPdfUrl !== null;
+}
+
+/**
+ * Initialize PDF Upload Section on page load
+ */
+function initializePdfUploadSection() {
+  const section = document.getElementById("uploadPdfSection");
+  if (section && section.style.display !== "none") {
+    setupPdfSectionDragAndDrop();
+  }
+  console.log("✅ PDF Upload Section initialized");
+}
+
 
 function toggleEDDMSection() {
   const isCampaign = campaignCard.classList.contains("selected");
@@ -222,7 +491,7 @@ async function fetchCarrierRoutes(zipCode, listType) {
     }
 
     const data = await response.json();
-    // console.log(data);
+    console.log(data);
     return data;
   } catch (error) {
     console.error("Error fetching carrier routes:", error);
@@ -402,6 +671,7 @@ function handleSelectAllRoutes(checkbox) {
 // ============================================
 // EDDM SEND LETTER FUNCTION
 // ============================================
+
 async function sendLetterViaEDDM() {
   const btn = document.querySelector("button[onclick='sendLetterViaEDDM()']");
   const isCampaign = campaignCard.classList.contains("selected");
@@ -442,8 +712,9 @@ async function sendLetterViaEDDM() {
         return;
       }
 
+      // FIX: Check for EITHER PDF upload OR template selection
       if (!uploadedPdfUrl && !window.currentEditingTemplateId) {
-        showAlert("Please select a template");
+        showAlert("Please select a template or upload a PDF.");
         return;
       }
 
@@ -454,12 +725,9 @@ async function sendLetterViaEDDM() {
         return; // User cancelled
       }
 
-      // Proceed with EDDM order
-      await proceedWithEDDMOrder(
-        uploadedPdfUrl ? null : window.currentEditingTemplateId,
-        btn,
-        mode
-      );
+      // Proceed with EDDM order - pass null for templateId if using PDF
+      const templateId = uploadedPdfUrl ? null : window.currentEditingTemplateId;
+      await proceedWithEDDMOrder(templateId, btn, mode);
 
       const campaignResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns", {
         method: "POST",
@@ -483,6 +751,7 @@ async function sendLetterViaEDDM() {
         status: "sent",
         env_mode: mode,
         res_recipients: window.currentRecordCount,
+        pdf_link: uploadedPdfUrl || null, // Store PDF link if used
       };
 
       const dataResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
@@ -514,8 +783,9 @@ async function sendLetterViaEDDM() {
         return;
       }
 
+      // FIX: Check for EITHER PDF upload OR template selection
       if (!uploadedPdfUrl && !window.currentEditingTemplateId) {
-        showAlert("Please select a template.");
+        showAlert("Please select a template or upload a PDF.");
         return;
       }
 
@@ -526,12 +796,9 @@ async function sendLetterViaEDDM() {
         return; // User cancelled
       }
 
-      // Proceed with EDDM order
-      await proceedWithEDDMOrder(
-        uploadedPdfUrl ? null : window.currentEditingTemplateId,
-        btn,
-        mode
-      );
+      // Proceed with EDDM order - pass null for templateId if using PDF
+      const templateId = uploadedPdfUrl ? null : window.currentEditingTemplateId;
+      await proceedWithEDDMOrder(templateId, btn, mode);
 
       const mailerPayload = {
         mailer_name: mailerName,
@@ -542,6 +809,7 @@ async function sendLetterViaEDDM() {
         status: "sent",
         env_mode: mode,
         res_recipients: window.currentRecordCount,
+        pdf_link: uploadedPdfUrl || null, // Store PDF link if used
       };
 
       const mailerResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
@@ -569,7 +837,7 @@ async function sendLetterViaEDDM() {
 }
 
 // ============================================
-// EDDM ORDER DESIGN FUNCTION
+// EDDM ORDER DESIGN FUNCTION 
 // ============================================
 
 async function proceedWithEDDMOrder(templateId, button, mode) {
@@ -592,8 +860,10 @@ async function proceedWithEDDMOrder(templateId, button, mode) {
 
     let finalHtml = "";
 
+    // FIX: Check uploadedPdfUrl first (similar to orderDesign)
     if (uploadedPdfUrl) {
       finalHtml = uploadedPdfUrl;
+      console.log("Using uploaded PDF for EDDM order:", uploadedPdfUrl);
     } else if (templateId) {
       const tplRes = await fetch(
         `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
@@ -601,6 +871,7 @@ async function proceedWithEDDMOrder(templateId, button, mode) {
       if (!tplRes.ok) throw new Error("Failed to load template content");
       const tpl = await tplRes.json();
       finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
+      console.log("Using template for EDDM order:", templateId);
     } else {
       throw new Error("Please select a template or upload a PDF");
     }
@@ -632,6 +903,7 @@ async function proceedWithEDDMOrder(templateId, button, mode) {
       listCountID: window.currentListCountID,
       recordCount: window.currentRecordCount,
     };
+
     const res = await fetch(
       "https://v3.pcmintegrations.com/order/letter/with-list-count",
       {
@@ -713,7 +985,7 @@ async function loadDemographicsData(listType) {
     // Render new demographics
     renderDemographics();
 
-    // console.log(`✅ Loaded demographics for list type: ${listType}`);
+    console.log(`✅ Loaded demographics for list type: ${listType}`);
   } catch (error) {
     console.error("Error loading demographics:", error);
     showAlert(`Error loading demographics: ${error.message}`);
@@ -865,8 +1137,8 @@ function updateSelectedDemographics() {
     }
   });
 
-  // console.log("Selected Demographics:", selectedDemographics);
-  // console.log("Summary:", summary);
+  console.log("Selected Demographics:", selectedDemographics);
+  console.log("Summary:", summary);
 }
 
 // Get selected demographics formatted for API
@@ -1071,7 +1343,7 @@ async function getListCount() {
       demographics: demographicsArray,
     };
 
-    // console.log("List Count Payload:", payload);
+    console.log("List Count Payload:", payload);
 
     const response = await fetch(
       "https://v3.pcmintegrations.com/list/count/carrier-route",
@@ -1092,7 +1364,7 @@ async function getListCount() {
     }
 
     const data = await response.json();
-    // console.log("List Count Response:", data);
+    console.log("List Count Response:", data);
 
     // // Log specific values
     // console.log("List Count ID:", data.listCountID);
@@ -1722,22 +1994,30 @@ function closePreview() {
 
 // ============================================
 // PDF UPLOAD MANAGEMENT
-// ============================================
+// ===========================================
 
+/**
+ * Setup PDF Upload - Initialize drag and drop + file input
+ */
 function setupPdfUpload() {
   const pdfUploadBox = document.getElementById("pdfUploadBox");
   const pdfFileInput = document.getElementById("pdfFile");
 
   if (!pdfUploadBox || !pdfFileInput) {
-    console.warn("PDF upload elements not found, skipping setup");
+    console.warn("❌ PDF upload elements not found in DOM");
     return;
   }
 
+  // Skip if already initialized
   if (pdfUploadBox.dataset.initialized === "true") {
+    console.log("⚠️ PDF upload already initialized, skipping...");
     return;
   }
   pdfUploadBox.dataset.initialized = "true";
 
+  console.log("✅ Setting up PDF upload...");
+
+  // ========== DRAG & DROP EVENTS ==========
   ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
     pdfUploadBox.addEventListener(eventName, (e) => {
       e.preventDefault();
@@ -1745,6 +2025,7 @@ function setupPdfUpload() {
     });
   });
 
+  // Highlight on drag
   ["dragenter", "dragover"].forEach((eventName) => {
     pdfUploadBox.addEventListener(eventName, () => {
       pdfUploadBox.style.borderColor = "#2b7fff";
@@ -1752,6 +2033,7 @@ function setupPdfUpload() {
     });
   });
 
+  // Remove highlight on leave/drop
   ["dragleave", "drop"].forEach((eventName) => {
     pdfUploadBox.addEventListener(eventName, () => {
       pdfUploadBox.style.borderColor = "#ccc";
@@ -1759,40 +2041,66 @@ function setupPdfUpload() {
     });
   });
 
-  pdfUploadBox.addEventListener("drop", async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type === "application/pdf") {
-      await uploadPdfFile(file);
-    } else {
-      showAlert("Please upload a valid PDF file");
+  // ========== DROP EVENT ==========
+  pdfUploadBox.addEventListener("drop", (e) => {
+    console.log("📥 Files dropped");
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      uploadPdfFile(files[0]);
     }
   });
 
-  pdfFileInput.addEventListener("change", async (e) => {
-    e.preventDefault();
-    const file = e.target.files[0];
-    if (file) {
-      await uploadPdfFile(file);
-      e.target.value = "";
+  // ========== FILE INPUT CHANGE ==========
+  pdfFileInput.addEventListener("change", (e) => {
+    console.log("📥 File selected from input");
+    if (e.target.files.length > 0) {
+      uploadPdfFile(e.target.files[0]);
     }
   });
+
+  console.log("✅ PDF upload setup complete");
 }
 
+/**
+ * Upload PDF File to Backend
+ */
 async function uploadPdfFile(file) {
-  if (file.size > 10 * 1024 * 1024) {
-    showAlert("File size exceeds 10MB limit");
+  console.log("🔍 Validating PDF file...", file.name);
+
+  // Validate file type
+  if (file.type !== "application/pdf") {
+    console.error("❌ Invalid file type:", file.type);
+    showAlert("❌ Please upload a valid PDF file");
     return;
   }
 
-  const pdfUploadBox = document.getElementById("pdfUploadBox");
-  if (!pdfUploadBox) return;
+  // Validate file size (10MB max)
+  const maxSize = 10 * 1024 * 1024;
+  if (file.size > maxSize) {
+    console.error("❌ File too large:", file.size);
+    showAlert(
+      `❌ File size exceeds 10MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB`
+    );
+    return;
+  }
 
+  console.log("✅ File validation passed");
+
+  const pdfUploadBox = document.getElementById("pdfUploadBox");
+  if (!pdfUploadBox) {
+    console.error("❌ PDF upload box not found");
+    return;
+  }
+
+  // ⭐ FIX: Set isUploading flag to prevent page reload
+  isUploading = true;
+
+  // Show loading state
   pdfUploadBox.innerHTML = `
-    <div style="padding: 2rem;">
+    <div style="padding: 2rem; text-align: center;">
       <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
       <div style="font-size: 1.1rem; color: #666;">Uploading PDF...</div>
+      <div style="font-size: 0.9rem; color: #999; margin-top: 0.5rem;">${file.name}</div>
     </div>
   `;
 
@@ -1800,62 +2108,141 @@ async function uploadPdfFile(file) {
     const formData = new FormData();
     formData.append("file", file);
 
+    console.log("📡 Sending PDF to backend...");
+    console.log("📍 Endpoint: https://pcm-app-h8mn8.ondigitalocean.app/upload-pdf");
+    console.log("📦 File:", file.name, `(${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+
     const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/upload-pdf", {
       method: "POST",
       body: formData,
+      // DO NOT set Content-Type header - let browser set it with boundary
     });
 
+    console.log("📊 Response status:", response.status);
+    console.log("📊 Response headers:", response.headers);
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Upload failed");
+      const errorData = await response.json().catch(() => ({}));
+      console.error("❌ Backend error:", errorData);
+      throw new Error(errorData.detail || `Upload failed: ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log("✅ Backend response:", data);
+
+    // CRITICAL: Store BOTH the URL and the file
     uploadedPdfUrl = data.url;
+    uploadedPdfFile = file;
 
-    pdfUploadBox.innerHTML = `
-      <div style="padding: 2rem;">
-        <div style="font-size: 2rem; color: #28a745; margin-bottom: 1rem;">✓</div>
-        <div style="font-size: 1.1rem; color: #28a745; font-weight: 600; margin-bottom: 0.5rem;">
-          PDF uploaded successfully!
-        </div>
-        <div style="color: #666; margin-bottom: 1rem;">
-          ${file.name} (${(data.size / 1024).toFixed(2)} KB)
-        </div>
-        <button class="remove-pdf-btn" onclick="removePdf('${
-          data.filename
-        }')" style="
-          padding: 0.5rem 1rem;
-          background: #dc3545;
-          color: white;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-        ">
-          Remove PDF
-        </button>
-      </div>
-    `;
+    console.log("✅ PDF stored successfully!");
+    console.log("   URL:", uploadedPdfUrl);
+    console.log("   Filename:", data.filename);
 
+    // Display success UI
+    displayPdfUploadSuccess(file, data.filename);
+
+    // Clear template selection when PDF is uploaded
     document.querySelectorAll(".template-card").forEach((card) => {
       card.classList.remove("selected");
     });
     window.currentEditingTemplateId = null;
 
+    // Update button states
     updateButtonStates();
+
+    console.log("✅ Ready to send letter with PDF");
   } catch (error) {
-    console.error("PDF upload error:", error);
+    console.error("❌ PDF upload error:", error);
     showAlert("Error uploading PDF: " + error.message);
     resetPdfUploadBox();
+  } finally {
+    // ⭐ FIX: Always reset isUploading flag after upload completes
+    isUploading = false;
   }
 }
 
-function resetPdfUploadBox() {
+/**
+ * Display PDF Upload Success
+ */
+function displayPdfUploadSuccess(file, filename) {
   const pdfUploadBox = document.getElementById("pdfUploadBox");
   if (!pdfUploadBox) return;
 
+  const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+  const fileDate = new Date(file.lastModified).toLocaleDateString();
+
+  pdfUploadBox.innerHTML = `
+    <div style="display: flex; align-items: flex-start; gap: 1rem;">
+      <div style="font-size: 1.5rem; color: #28a745; flex-shrink: 0;">✓</div>
+      <div style="flex: 1;">
+        <div style="font-weight: 600; color: #28a745; margin-bottom: 0.75rem;">
+          ✅ PDF File Uploaded Successfully
+        </div>
+        <div style="
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1rem;
+          margin-bottom: 1rem;
+          color: #666;
+          font-size: 0.9rem;
+        ">
+          <div>
+            <strong>📄 File Name:</strong>
+            <div style="word-break: break-all; margin-top: 0.25rem;">${file.name}</div>
+          </div>
+          <div>
+            <strong>💾 File Size:</strong>
+            <div style="margin-top: 0.25rem;">${fileSizeMB} MB</div>
+          </div>
+          <div>
+            <strong>📅 Modified:</strong>
+            <div style="margin-top: 0.25rem;">${fileDate}</div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onclick="removePdf('${filename}')"
+          style="
+            padding: 0.5rem 1rem;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+          "
+          onmouseover="this.style.background='#c82333'; this.style.transform='translateY(-2px)'"
+          onmouseout="this.style.background='#dc3545'; this.style.transform=''"
+        >
+          🗑️ Remove PDF
+        </button>
+      </div>
+    </div>
+  `;
+
+  console.log("✅ PDF success UI displayed");
+}
+
+/**
+ * Reset PDF Upload Box to Initial State
+ */
+function resetPdfUploadBox() {
+  const pdfUploadBox = document.getElementById("pdfUploadBox");
+  const pdfFileInput = document.getElementById("pdfFile");
+
+  if (!pdfUploadBox) return;
+
+  // Clear initialization flag
   delete pdfUploadBox.dataset.initialized;
 
+  // Reset file input
+  if (pdfFileInput) {
+    pdfFileInput.value = "";
+  }
+
+  // Reset UI
   pdfUploadBox.innerHTML = `
     <div class="pdf-icon" style="font-size: 3rem; color: #666; margin-bottom: 1rem;">📄</div>
     <div class="pdf-main-text" style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">
@@ -1871,6 +2258,7 @@ function resetPdfUploadBox() {
       color: white;
       border-radius: 5px;
       cursor: pointer;
+      font-weight: 600;
     ">
       Choose PDF File
     </label>
@@ -1880,60 +2268,43 @@ function resetPdfUploadBox() {
     </div>
   `;
 
+  // Re-initialize
   setupPdfUpload();
 }
 
-async function removePdf(filename) {
-  try {
-    const response = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/delete-pdf/${filename}`,
-      {
-        method: "DELETE",
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to delete PDF");
-    }
-
-    uploadedPdfUrl = null;
-
-    const pdfUploadBox = document.getElementById("pdfUploadBox");
-    if (pdfUploadBox) {
-      delete pdfUploadBox.dataset.initialized;
-
-      pdfUploadBox.innerHTML = `
-        <div class="pdf-icon" style="font-size: 3rem; color: #666; margin-bottom: 1rem;">📄</div>
-        <div class="pdf-main-text" style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">
-          Drag & drop your PDF file here
-        </div>
-        <div class="pdf-sub-text" style="color: #666; margin-bottom: 1rem;">
-          or click to browse your files
-        </div>
-        <label for="pdfFile" class="choose-pdf-btn" style="
-          display: inline-block;
-          padding: 0.75rem 1.5rem;
-          background: #2b7fff;
-          color: white;
-          border-radius: 5px;
-          cursor: pointer;
-        ">
-          Choose PDF File
-        </label>
-        <input type="file" id="pdfFile" accept=".pdf" style="display: none;" />
-        <div class="pdf-size-info" style="color: #999; font-size: 0.9rem; margin-top: 1rem;">
-          Max file size: 10MB
-        </div>
-      `;
-      setupPdfUpload();
-    }
-
-    updateButtonStates();
-  } catch (error) {
-    console.error("Error removing PDF:", error);
-    showAlert("Error removing PDF: " + error.message);
-  }
+/**
+ * Check if PDF is uploaded
+ */
+function isPdfUploaded() {
+  const isUploaded = uploadedPdfFile !== null && uploadedPdfUrl !== null;
+  console.log("🔍 isPdfUploaded():", isUploaded);
+  return isUploaded;
 }
+
+/**
+ * Get uploaded PDF URL
+ */
+function getUploadedPdfUrl() {
+  console.log("🔍 getUploadedPdfUrl():", uploadedPdfUrl);
+  return uploadedPdfUrl;
+}
+
+/**
+ * Initialize PDF Upload on page load
+ */
+function initializePdfUpload() {
+  console.log("🔄 Initializing PDF Upload...");
+
+  // Reset variables
+  uploadedPdfFile = null;
+  uploadedPdfUrl = null;
+
+  // Reset UI
+  resetPdfUploadBox();
+
+  console.log("✅ PDF Upload initialized");
+}
+
 
 // ============================================
 // CARD SELECTION HANDLERS
@@ -2267,7 +2638,7 @@ function generateSearchHash(payload) {
 
 function getCachedPage(pageNum) {
   if (!currentSearchHash) {
-    // console.log("No search hash available yet");
+    console.log("No search hash available yet");
     return null;
   }
 
@@ -2969,7 +3340,7 @@ async function parseCSV(file) {
           zipCode: row.zipcode || "",
         };
       });
-
+      console.log(recipients);
       recipientsList = recipients;
 
       const uploadBox = document.getElementById("uploadBox");
@@ -3446,8 +3817,10 @@ async function orderDesign(templateId, button) {
 
     let finalHtml = "";
 
+    // FIX: Check uploadedPdfUrl first since it's a full URL/content
     if (uploadedPdfUrl) {
       finalHtml = uploadedPdfUrl;
+      console.log("Using uploaded PDF:", uploadedPdfUrl);
     } else if (templateId) {
       const tplRes = await fetch(
         `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
@@ -3455,6 +3828,7 @@ async function orderDesign(templateId, button) {
       if (!tplRes.ok) throw new Error("Failed to load template content");
       const tpl = await tplRes.json();
       finalHtml = (tpl.html_content || "").replace(/DATE/g, formattedDate);
+      console.log("Using template:", templateId);
     } else {
       throw new Error("Please select a template or upload a PDF");
     }
@@ -3483,10 +3857,10 @@ async function orderDesign(templateId, button) {
       mailDate: todayISO,
       color: true,
       printOnBothSides: true,
-      insertAddressingPage: letterOptions.insertAddressingPage, // User selected value
+      insertAddressingPage: letterOptions.insertAddressingPage,
       envelope: {
         font: "Bradley Hand",
-        type: letterOptions.envelopeType, // User selected value
+        type: letterOptions.envelopeType,
         fontColor: "Black",
       },
       recipients: finalRecipientsList,
@@ -3563,15 +3937,15 @@ async function createAndSendLetter() {
         return;
       }
 
+      // FIX: Check for EITHER PDF upload OR template selection
       if (!uploadedPdfUrl && !window.currentEditingTemplateId) {
         showAlert("Please select a template or upload a PDF.");
         return;
       }
 
-      const orderSuccess = await orderDesign(
-        uploadedPdfUrl ? null : window.currentEditingTemplateId,
-        btn
-      );
+      const templateId = uploadedPdfUrl ? null : window.currentEditingTemplateId;
+      const orderSuccess = await orderDesign(templateId, btn);
+      
       if (!orderSuccess) {
         showAlert("Order failed. Campaign not saved.");
         return;
@@ -3598,6 +3972,7 @@ async function createAndSendLetter() {
         send_date: new Date().toISOString(),
         status: "sent",
         env_mode: mode,
+        pdf_link: uploadedPdfUrl
       };
 
       const dataResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
@@ -3637,10 +4012,10 @@ async function createAndSendLetter() {
         return;
       }
 
-      const orderSuccess = await orderDesign(
-        uploadedPdfUrl ? null : window.currentEditingTemplateId,
-        btn
-      );
+      // FIX: Pass the correct template ID or null for PDF
+      const templateId = uploadedPdfUrl ? null : window.currentEditingTemplateId;
+      const orderSuccess = await orderDesign(templateId, btn);
+      
       if (!orderSuccess) {
         showAlert("Order failed. Mailer not saved.");
         return;
@@ -3655,6 +4030,7 @@ async function createAndSendLetter() {
         status: "sent",
         env_mode: mode,
         canva_link: null,
+        pdf_link : uploadedPdfUrl
       };
 
       const mailerResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
@@ -3851,8 +4227,10 @@ function handleCanvaNavigation() {
     return;
   }
 
+  console.log("✅ All validations passed!");
   saveCampaignContextForCanva();
 
+  console.log("🔗 Navigating to Canva templates...");
   window.location.href = "templateGallery.html?view=canva";
 }
 
@@ -3889,6 +4267,7 @@ function saveCampaignContextForCanva() {
   const key = mode === "mailer" ? "mailerContext" : "campaignContext";
   sessionStorage.setItem(key, JSON.stringify(context));
 
+  console.log(`📦 Saved ${mode} context to sessionStorage → ${key}`, context);
 }
 
 // ============================================
@@ -3966,7 +4345,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateButtonStates();
   initializeEDDMForm();
   initializeListTypeListener();
-
+  initializePdfUpload();
+  setupPdfUpload();
   // Clear the demographics container with a message
   const container = document.getElementById("demographicsContainer");
   if (container) {

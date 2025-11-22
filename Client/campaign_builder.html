@@ -708,6 +708,64 @@
           >
             Use Canva Templates
           </a>
+          <a
+            href="javascript:void(0)"
+            onclick="handleUploadLetterPdf()"
+            class="template-link"
+          >
+            Upload Letter Pdf
+          </a>
+        </div>
+        <!-- Upload PDF Section -->
+        <div class="upload-section" id="uploadPdfSection" style="display: none">
+          <div class="upload-flex">
+            <div class="info_download">
+              <p class="upload-description">
+                Upload your custom letter PDF to send with your campaign. Ensure
+                your PDF is properly formatted, includes all necessary content,
+                and meets required specifications for professional mailing.
+              </p>
+            </div>
+
+            <div class="upload-box" id="pdfUploadBox">
+              <div class="upload-icon">
+                <img
+                  src="./assets/images/icon.png"
+                  alt="Upload PDF"
+                  width="52"
+                  height="52"
+                />
+              </div>
+              <div class="upload-main-text">Drag & drop your PDF file here</div>
+              <div class="upload-sub-text">or click to browse your files</div>
+              <label for="pdfUploadFile" class="choose-file-btn"
+                >Choose File</label
+              >
+              <input
+                type="file"
+                id="pdfUploadFile"
+                accept=".pdf"
+                class="hidden-input"
+              />
+              <div class="file-size-info">
+                Max file size: 10MB • PDF format only
+              </div>
+            </div>
+          </div>
+
+          <!-- PDF Upload Status -->
+          <div id="pdfUploadStatus" style="display: none; margin-top: 1.5rem">
+            <div
+              style="
+                background: #e3f2fd;
+                border-left: 4px solid #2196f3;
+                padding: 1.5rem;
+                border-radius: 4px;
+              "
+            >
+              <div id="pdfStatusContent"></div>
+            </div>
+          </div>
         </div>
       </div>
 

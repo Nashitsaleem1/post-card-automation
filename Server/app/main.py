@@ -774,6 +774,7 @@ def create_campaign_data(
         env_mode=data.env_mode,
         canva_link=data.canva_link,
         res_recipients=data.res_recipients,
+        pdf_link = data.pdf_link
     )
 
     db.add(new_data)
@@ -825,12 +826,13 @@ def get_campaign_data_with_name(campaign_id: int, db: Session = Depends(get_db))
             Campaign.campaign_name.label("campaign_name"),
             CampaignData.env_mode.label("env_mode"),
             CampaignData.canva_link.label("canva_link"),
-            Audience.audience_list.label("audience_list"),  # ✅ Get audience_list
+            Audience.audience_list.label("audience_list"),
+            CampaignData.pdf_link.label("pdf_link")
         )
         .join(Campaign, Campaign.id == CampaignData.campaign_id)
         .outerjoin(
             Audience, Audience.id == CampaignData.audience_id
-        )  # ✅ Left join Audience
+        )  
         .filter(CampaignData.campaign_id == campaign_id)
         .all()
     )
@@ -840,13 +842,14 @@ def get_campaign_data_with_name(campaign_id: int, db: Session = Depends(get_db))
 
     # Convert to list of dicts for response
     result = []
-    for cd, cname, env_mode, canva_link, audience_list in data:
+    for cd, cname, env_mode, canva_link, audience_list, pdf_link in data:
         row = cd.__dict__.copy()
         row.pop("_sa_instance_state", None)
         row["campaign_name"] = cname
         row["env_mode"] = env_mode
         row["canva_link"] = canva_link
         row["audience_list"] = audience_list
+        row["pdf_link"] = pdf_link
         result.append(row)
 
     return result
@@ -1004,6 +1007,7 @@ def create_mailer_one_off(
             env_mode=payload.env_mode or "testing",
             canva_link=payload.canva_link,
             res_recipients=payload.res_recipients,
+            pdf_link = payload.pdf_link
         )
 
         db.add(mailer)
@@ -1111,6 +1115,7 @@ def get_mailer_one_off(mailer_id: int, db: Session = Depends(get_db)):
             "env_mode": mailer.env_mode,
             "canva_link": mailer.canva_link,
             "res_recipients": mailer.res_recipients,
+            "pdf_link": mailer.pdf_link
         }
 
     except Exception as e:

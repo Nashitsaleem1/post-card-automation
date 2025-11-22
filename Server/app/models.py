@@ -43,7 +43,7 @@ class CampaignData(Base):
     env_mode: Mapped[str] = mapped_column(String(20), nullable=False, default="testing")
     canva_link: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     res_recipients: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
-  #  pdf_link: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
+    pdf_link: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     # Relationships
     campaign: Mapped["Campaign"] = relationship(back_populates="items")
     template: Mapped["Template"] = relationship(back_populates="campaign_data")
@@ -69,7 +69,7 @@ class MailerOneOff(Base):
     schedule_time: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     send_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=True, default="pending")
-  #  pdf_link: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
+    pdf_link: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     env_mode: Mapped[str] = mapped_column(String(20), nullable=False, default="testing")
     canva_link: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
 
