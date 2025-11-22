@@ -1528,13 +1528,6 @@ function listTypeChangeHandler(e) {
   }
 }
 
-function closeEDDMConfigModal() {
-  const eddmSection = document.querySelector(".eddm-section");
-  if (eddmSection) {
-    eddmSection.style.display = "none";
-  }
-}
-
 // Load demographics data based on list type
 async function loadDemographicsData(listType) {
   try {
