@@ -69,6 +69,7 @@ function getCurrentMode() {
  */
 function setMode(newMode) {
   sessionStorage.setItem("apiMode", newMode);
+  console.log("Mode updated to:", newMode);
 }
 
 /**
@@ -261,6 +262,7 @@ async function loadDashboard() {
     const dashboardEl = document.querySelector(".dashboard");
     const mode = getCurrentMode();
 
+    console.log("Loading dashboard with mode:", mode);
 
     // Fetch campaign data
     const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/dashboard/all?mode=${mode}`);
@@ -276,8 +278,6 @@ async function loadDashboard() {
     if (oneOffRes.ok) {
       const json = await oneOffRes.json();
       oneOffData.data = Array.isArray(json) ? json : json.data || [];
-      oneOffData.total_one_off_mailers =
-        json.total_one_off_mailers || oneOffData.data.length;
     }
 
     // Categorize data into Direct Mail Orders and RES OCC Orders
@@ -285,11 +285,11 @@ async function loadDashboard() {
     const directMailOrders = categorizedData.directMailOrders;
     const resOccOrders = categorizedData.resOccOrders;
 
-    // Update counts in cards
-    document.getElementById("totalCampaigns").textContent =
-      directMailOrders.length;
-    document.getElementById("totalOneOffMailers").textContent =
-      resOccOrders.length;
+    // ============================================
+    // UPDATE CARD COUNTS - Direct Mail & RES OCC
+    // ============================================
+    document.getElementById("totalDirectMailOrders").textContent = directMailOrders.length;
+    document.getElementById("totalResOccOrders").textContent = resOccOrders.length;
 
     // Remove existing table
     const existingTable = dashboardEl.querySelector("#campaignDataTable");
@@ -328,9 +328,11 @@ async function loadDashboard() {
                       ${getTypeLabel(d.itemType)}
                     </span>
                   </td>
-                  <td style="padding:16px 20px; font-weight:500; color:#2d3748;">${
-                    d.name
-                  }</td>
+                  <td style="padding:16px 20px;">
+                    <span style="display:inline-block; padding:6px 12px; border-radius:6px; font-size:13px; font-weight:600; background: #d3e0e2ff; color: #1a5b6eff;">
+                      ${d.name}
+                    </span>
+                  </td>
                   <td style="padding:16px 20px;">
                     <span style="display:inline-block; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:600; 
                       ${getCategoryStyle(d.category)}">
