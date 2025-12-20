@@ -729,7 +729,7 @@ async function sendLetterViaEDDM() {
       const templateId = uploadedPdfUrl ? null : window.currentEditingTemplateId;
       await proceedWithEDDMOrder(templateId, btn, mode);
 
-      const campaignResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns", {
+      const campaignResp = await fetch("https://pcm-app.duckdns.org/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ campaign_name: campaignName }),
@@ -754,7 +754,7 @@ async function sendLetterViaEDDM() {
         pdf_link: uploadedPdfUrl || null, // Store PDF link if used
       };
 
-      const dataResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
+      const dataResp = await fetch("https://pcm-app.duckdns.org/campaign-data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(campaignDataPayload),
@@ -812,7 +812,7 @@ async function sendLetterViaEDDM() {
         pdf_link: uploadedPdfUrl || null, // Store PDF link if used
       };
 
-      const mailerResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
+      const mailerResp = await fetch("https://pcm-app.duckdns.org/mailer-one-off", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(mailerPayload),
@@ -866,7 +866,7 @@ async function proceedWithEDDMOrder(templateId, button, mode) {
       console.log("Using uploaded PDF for EDDM order:", uploadedPdfUrl);
     } else if (templateId) {
       const tplRes = await fetch(
-        `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
+        `https://pcm-app.duckdns.org/templates/${templateId}`
       );
       if (!tplRes.ok) throw new Error("Failed to load template content");
       const tpl = await tplRes.json();
@@ -1516,7 +1516,7 @@ async function proceedWithEDDMOrderAfterListCount(mode) {
         return;
       }
 
-      const campaignResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns", {
+      const campaignResp = await fetch("https://pcm-app.duckdns.org/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ campaign_name: campaignName }),
@@ -1539,7 +1539,7 @@ async function proceedWithEDDMOrderAfterListCount(mode) {
         env_mode: mode,
       };
 
-      const dataResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
+      const dataResp = await fetch("https://pcm-app.duckdns.org/campaign-data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(campaignDataPayload),
@@ -1603,7 +1603,7 @@ async function proceedWithEDDMOrderAfterListCount(mode) {
         canva_link: null,
       };
 
-      const mailerResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
+      const mailerResp = await fetch("https://pcm-app.duckdns.org/mailer-one-off", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(mailerPayload),
@@ -1693,7 +1693,7 @@ async function loadExistingAudiences() {
     '<div class="loading-message">Loading audiences...</div>';
 
   try {
-    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/audiences");
+    const response = await fetch("https://pcm-app.duckdns.org/audiences");
     if (!response.ok) throw new Error("Failed to load audiences");
 
     const audiences = await response.json();
@@ -1810,7 +1810,7 @@ function viewAudienceDetails(audienceList, audienceName) {
 async function selectAudience(audienceId) {
   try {
     const response = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/audiences/${audienceId}`
+      `https://pcm-app.duckdns.org/audiences/${audienceId}`
     );
 
     if (!response.ok) {
@@ -1863,7 +1863,7 @@ async function deleteAudience(audienceId, event) {
 
   try {
     const response = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/audiences/${audienceId}`,
+      `https://pcm-app.duckdns.org/audiences/${audienceId}`,
       {
         method: "DELETE",
       }
@@ -1934,7 +1934,7 @@ async function confirmSaveAudience() {
       audience_list: recipientsList, // Send as array - backend will serialize to JSON
     };
 
-    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/audiences", {
+    const response = await fetch("https://pcm-app.duckdns.org/audiences", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -2109,10 +2109,10 @@ async function uploadPdfFile(file) {
     formData.append("file", file);
 
     console.log("📡 Sending PDF to backend...");
-    console.log("📍 Endpoint: https://pcm-app-h8mn8.ondigitalocean.app/upload-pdf");
+    console.log("📍 Endpoint: https://pcm-app.duckdns.org/upload-pdf");
     console.log("📦 File:", file.name, `(${(file.size / 1024 / 1024).toFixed(2)}MB)`);
 
-    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/upload-pdf", {
+    const response = await fetch("https://pcm-app.duckdns.org/upload-pdf", {
       method: "POST",
       body: formData,
       // DO NOT set Content-Type header - let browser set it with boundary
@@ -3436,7 +3436,7 @@ async function loadTemplates() {
   if (!templatesGrid) return;
 
   try {
-    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates");
+    const response = await fetch("https://pcm-app.duckdns.org/templates");
     const templates = await response.json();
 
     templatesGrid.innerHTML = "";
@@ -3823,7 +3823,7 @@ async function orderDesign(templateId, button) {
       console.log("Using uploaded PDF:", uploadedPdfUrl);
     } else if (templateId) {
       const tplRes = await fetch(
-        `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
+        `https://pcm-app.duckdns.org/templates/${templateId}`
       );
       if (!tplRes.ok) throw new Error("Failed to load template content");
       const tpl = await tplRes.json();
@@ -3951,7 +3951,7 @@ async function createAndSendLetter() {
         return;
       }
 
-      const campaignResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns", {
+      const campaignResp = await fetch("https://pcm-app.duckdns.org/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ campaign_name: campaignName }),
@@ -3975,7 +3975,7 @@ async function createAndSendLetter() {
         pdf_link: uploadedPdfUrl
       };
 
-      const dataResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
+      const dataResp = await fetch("https://pcm-app.duckdns.org/campaign-data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(campaignDataPayload),
@@ -4033,7 +4033,7 @@ async function createAndSendLetter() {
         pdf_link : uploadedPdfUrl
       };
 
-      const mailerResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
+      const mailerResp = await fetch("https://pcm-app.duckdns.org/mailer-one-off", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(mailerPayload),
@@ -4085,7 +4085,7 @@ async function createAndSave() {
         return;
       }
 
-      const campaignResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns", {
+      const campaignResp = await fetch("https://pcm-app.duckdns.org/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ campaign_name: campaignName }),
@@ -4108,7 +4108,7 @@ async function createAndSave() {
         env_mode: mode,
       };
 
-      const dataResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
+      const dataResp = await fetch("https://pcm-app.duckdns.org/campaign-data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(campaignDataPayload),
@@ -4150,7 +4150,7 @@ async function createAndSave() {
         env_mode: mode,
       };
 
-      const mailerResp = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
+      const mailerResp = await fetch("https://pcm-app.duckdns.org/mailer-one-off", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(mailerPayload),

@@ -226,7 +226,7 @@ async function confirmCampaignSchedule() {
 
   try {
     const res = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${campaignDataId}`,
+      `https://pcm-app.duckdns.org/campaign-data/${campaignDataId}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -265,14 +265,14 @@ async function loadDashboard() {
     console.log("Loading dashboard with mode:", mode);
 
     // Fetch campaign data
-    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/dashboard/all?mode=${mode}`);
+    const res = await fetch(`https://pcm-app.duckdns.org/dashboard/all?mode=${mode}`);
     if (!res.ok && res.status !== 404)
       throw new Error("Failed to load campaigns");
     const data = res.status === 404 ? { data: [] } : await res.json();
 
     // Fetch one-off mailers
     const oneOffRes = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/all?mode=${mode}`
+      `https://pcm-app.duckdns.org/mailer-one-off/all?mode=${mode}`
     );
     let oneOffData = { data: [] };
     if (oneOffRes.ok) {

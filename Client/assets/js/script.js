@@ -327,7 +327,7 @@ async function exportCanvaPdf(designId, designTitle) {
     );
     try {
       const response = await fetch(
-        `https://pcm-app-h8mn8.ondigitalocean.app/audiences/${context.selectedAudienceId}`
+        `https://pcm-app.duckdns.org/audiences/${context.selectedAudienceId}`
       );
       if (!response.ok) throw new Error("Failed to fetch audience");
 
@@ -383,7 +383,7 @@ async function exportCanvaPdf(designId, designTitle) {
   `;
 
   try {
-    const tokenRes = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/get_canva_token");
+    const tokenRes = await fetch("https://pcm-app.duckdns.org/get_canva_token");
     if (!tokenRes.ok) {
       throw new Error("Failed to fetch access token");
     }
@@ -703,7 +703,7 @@ async function updateCampaignDataWithCanva(context, canvaLink) {
     console.log("📡 Updating campaign_data ID:", recordId);
 
     const updateRes = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${recordId}`,
+      `https://pcm-app.duckdns.org/campaign-data/${recordId}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -760,7 +760,7 @@ async function updateMailerWithCanva(context, canvaLink) {
     console.log("📡 Updating mailer-one-off ID:", context.mailerId);
 
     const updateRes = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${context.mailerId}`,
+      `https://pcm-app.duckdns.org/mailer-one-off/${context.mailerId}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -805,7 +805,7 @@ async function saveCampaignWithCanva(context, canvaLink) {
     }
 
     // Create campaign
-    const campaignRes = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaigns", {
+    const campaignRes = await fetch("https://pcm-app.duckdns.org/campaigns", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ campaign_name: context.campaignName }),
@@ -833,7 +833,7 @@ async function saveCampaignWithCanva(context, canvaLink) {
       canva_link: canvaLink,
     };
 
-    const dataRes = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
+    const dataRes = await fetch("https://pcm-app.duckdns.org/campaign-data", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(dataPayload),
@@ -886,7 +886,7 @@ async function saveMailerWithCanva(context, canvaLink) {
       canva_link: canvaLink,
     };
 
-    const mailerRes = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off", {
+    const mailerRes = await fetch("https://pcm-app.duckdns.org/mailer-one-off", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(mailerPayload),
@@ -951,7 +951,7 @@ async function loadGalleryTemplates() {
   if (!templatesGrid) return;
 
   try {
-    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates");
+    const response = await fetch("https://pcm-app.duckdns.org/templates");
     const templates = await response.json();
 
     templatesGrid.innerHTML = "";
@@ -1062,7 +1062,7 @@ function closeDeleteConfirmModal() {
 async function deleteTemplate(templateId) {
   try {
     const response = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`,
+      `https://pcm-app.duckdns.org/templates/${templateId}`,
       {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
@@ -1141,7 +1141,7 @@ async function saveAsNewTemplate() {
   }
 
   try {
-    const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates", {
+    const response = await fetch("https://pcm-app.duckdns.org/templates", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1426,7 +1426,7 @@ async function exportCanvaPdfViaEDDM(designId, designTitle) {
   `;
 
   try {
-    const tokenRes = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/get_canva_token");
+    const tokenRes = await fetch("https://pcm-app.duckdns.org/get_canva_token");
     if (!tokenRes.ok) {
       throw new Error("Failed to fetch access token");
     }

@@ -91,7 +91,7 @@ async function getRecipientsFromAudience(audienceId) {
   if (!audienceId) return [];
 
   try {
-    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/audiences/${audienceId}`);
+    const res = await fetch(`https://pcm-app.duckdns.org/audiences/${audienceId}`);
 
     if (!res.ok) throw new Error("Failed to fetch audience");
 
@@ -149,7 +149,7 @@ async function fetchScannedRecipients(qrCodeId) {
 async function getQrCodeIdFromTemplate(templateId) {
   if (!templateId) return null;
   try {
-    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`);
+    const res = await fetch(`https://pcm-app.duckdns.org/templates/${templateId}`);
     if (!res.ok) return null;
     const tpl = await res.json();
     return tpl.qr_code_id || null;
@@ -193,7 +193,7 @@ function addDaysToDate(dateString, days) {
 
 async function loadTemplates() {
   try {
-    const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates");
+    const res = await fetch("https://pcm-app.duckdns.org/templates");
     if (!res.ok) throw new Error("Failed to fetch templates");
     const templates = await res.json();
     templatesCache = templates || [];
@@ -254,7 +254,7 @@ async function renderTemplateGrid(templates, containerId, selectable = true) {
 
   templates.forEach(async (tpl) => {
     try {
-      const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${tpl.id}`);
+      const res = await fetch(`https://pcm-app.duckdns.org/templates/${tpl.id}`);
       if (res.ok) {
         const templateData = await res.json();
         const previewHtml =
@@ -280,7 +280,7 @@ async function previewTemplate(templateId, event) {
   if (event) event.stopPropagation();
 
   try {
-    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`);
+    const res = await fetch(`https://pcm-app.duckdns.org/templates/${templateId}`);
     if (!res.ok) throw new Error("Failed to load template");
     const tpl = await res.json();
 
@@ -585,7 +585,7 @@ async function deleteMailer(mailerId) {
   if (!confirmDelete) return;
 
   try {
-    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${mailerId}`, {
+    const res = await fetch(`https://pcm-app.duckdns.org/campaign-data/${mailerId}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
     });
@@ -630,7 +630,7 @@ async function deleteCampaign() {
   if (!confirmDelete) return;
 
   try {
-    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/campaigns/${campaignId}`, {
+    const res = await fetch(`https://pcm-app.duckdns.org/campaigns/${campaignId}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
     });
@@ -1196,7 +1196,7 @@ function openCanvaLink() {
 
 async function openTemplatePreview(templateId) {
   try {
-    const res = await fetch(`https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`);
+    const res = await fetch(`https://pcm-app.duckdns.org/templates/${templateId}`);
     if (!res.ok) {
       throw new Error("Failed to fetch template");
     }
@@ -1291,7 +1291,7 @@ async function confirmSchedule() {
       status: "scheduled",
     };
     const res = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${window.currentEditingMailerId}`,
+      `https://pcm-app.duckdns.org/campaign-data/${window.currentEditingMailerId}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -1417,7 +1417,7 @@ async function sendMailer(mailerId, button) {
     if (!mailer) throw new Error("Mailer not found");
 
     const tplRes = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/templates/${window.currentEditingTemplateId}`
+      `https://pcm-app.duckdns.org/templates/${window.currentEditingTemplateId}`
     );
     if (!tplRes.ok) throw new Error("Failed to load template content");
     const tpl = await tplRes.json();
@@ -1500,7 +1500,7 @@ async function sendMailer(mailerId, button) {
     };
 
     const updateRes = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data/${mailerId}`,
+      `https://pcm-app.duckdns.org/campaign-data/${mailerId}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -1610,7 +1610,7 @@ async function createMailer() {
   };
 
   try {
-    const res = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/campaign-data", {
+    const res = await fetch("https://pcm-app.duckdns.org/campaign-data", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestData),
@@ -1680,7 +1680,7 @@ async function loadCampaignDetail() {
 
   try {
     const res = await fetch(
-      `https://pcm-app-h8mn8.ondigitalocean.app/campaign-data-with-name/${campaignId}`
+      `https://pcm-app.duckdns.org/campaign-data-with-name/${campaignId}`
     );
     if (!res.ok) throw new Error("Failed to fetch campaign details");
     const campaignData = await res.json();

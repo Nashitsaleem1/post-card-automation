@@ -928,7 +928,7 @@
           };
 
           const res = await fetch(
-            `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${mailerId}`,
+            `https://pcm-app.duckdns.org/mailer-one-off/${mailerId}`,
             {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
@@ -1060,7 +1060,7 @@
       async function openTemplatePreview(templateId) {
         try {
           const res = await fetch(
-            `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
+            `https://pcm-app.duckdns.org/templates/${templateId}`
           );
           if (!res.ok) {
             throw new Error("Failed to fetch template");
@@ -1264,7 +1264,7 @@
           });
 
           const tplRes = await fetch(
-            `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
+            `https://pcm-app.duckdns.org/templates/${templateId}`
           );
           if (!tplRes.ok) throw new Error("Failed to load template content");
           const tpl = await tplRes.json();
@@ -1336,7 +1336,7 @@
           };
 
           const updateRes = await fetch(
-            `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${mailerId}`,
+            `https://pcm-app.duckdns.org/mailer-one-off/${mailerId}`,
             {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
@@ -1389,7 +1389,7 @@
 
         try {
           const res = await fetch(
-            `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${mailerId}`,
+            `https://pcm-app.duckdns.org/mailer-one-off/${mailerId}`,
             {
               method: "DELETE",
               headers: { "Content-Type": "application/json" },
@@ -2120,7 +2120,7 @@
         const templatesGrid = document.getElementById("templatesGrid");
 
         try {
-          const response = await fetch("https://pcm-app-h8mn8.ondigitalocean.app/templates");
+          const response = await fetch("https://pcm-app.duckdns.org/templates");
           const templates = await response.json();
 
           templatesGrid.innerHTML = "";
@@ -2215,7 +2215,7 @@
         if (!templateId) return null;
         try {
           const res = await fetch(
-            `https://pcm-app-h8mn8.ondigitalocean.app/templates/${templateId}`
+            `https://pcm-app.duckdns.org/templates/${templateId}`
           );
           if (!res.ok) throw new Error("Failed to fetch template for QR code");
           const template = await res.json();
@@ -2310,7 +2310,7 @@
 
         try {
           const res = await fetch(
-            `https://pcm-app-h8mn8.ondigitalocean.app/mailer-one-off/${mailerId}`
+            `https://pcm-app.duckdns.org/mailer-one-off/${mailerId}`
           );
           if (!res.ok) throw new Error("Failed to fetch mailer details");
 

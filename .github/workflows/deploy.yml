@@ -1,0 +1,37 @@
+name: Deploy FastAPI App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to DigitalOcean
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # 1. Enter the root project folder
+            cd /var/www/fastapi-app
+            
+            # 2. Pull the latest code
+            git pull origin main
+            
+            # 3. Enter the backend folder where the app actually lives
+            cd Server
+            
+            # 4. Use the venv and update
+            source venv/bin/activate
+            pip install -r requirements.txt
+            
+            # 5. Restart the PM2 process
+            pm2 restart fastapi-backend
