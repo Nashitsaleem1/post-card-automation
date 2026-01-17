@@ -1,0 +1,282 @@
+{
+  "status": "complete",
+  "awaiting_next_chunk": false,
+  "results": {
+    "Safety Issues": [
+      {
+        "system": "Exterior",
+        "finding": "Exterior finish paint is failing and flaking in multiple areas, potentially exposing older lead-based paint and requiring professional remediation.",
+        "page_number": 54,
+        "estimated_cost": "$1,500–$6,000",
+        "duration": "2–5 days"
+      },
+      {
+        "system": "Exterior",
+        "finding": "The step down from the rear deck to the yard is excessively high and presents a tripping hazard.",
+        "page_number": 54,
+        "estimated_cost": "$500–$2,000",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "Garage",
+        "finding": "The door between the garage and the interior of the home is not fire-rated, reducing protection during a garage fire.",
+        "page_number": 55,
+        "estimated_cost": "$600–$1,500",
+        "duration": "4–6 hours"
+      },
+      {
+        "system": "Plumbing System",
+        "finding": "PEX water supply lines are installed within six inches of the water heater flue, creating a heat damage and fire risk.",
+        "page_number": 59,
+        "estimated_cost": "$300–$800",
+        "duration": "2–4 hours"
+      },
+      {
+        "system": "Electrical System",
+        "finding": "An exterior receptacle tested ungrounded and did not trip when tested, presenting a shock and fire hazard.",
+        "page_number": 55,
+        "estimated_cost": "$150–$400",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "Heating / Central Air Conditioning",
+        "finding": "Fireplace firebricks in the living room are loose, missing, or have deteriorated grout, compromising firebox safety.",
+        "page_number": 46,
+        "estimated_cost": "$500–$1,500",
+        "duration": "4–8 hours"
+      }
+    ],
+    "Infestation": [
+      {
+        "system": "Structural Components",
+        "finding": "Animal feces were observed in multiple attic locations, indicating current or prior animal intrusion requiring removal and sanitation.",
+        "page_number": 55,
+        "estimated_cost": "$500–$2,000",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "Exterior",
+        "finding": "Firewood is stored too close to the structure, which can attract termites and other wood-destroying insects.",
+        "page_number": 58,
+        "estimated_cost": "$0–$200",
+        "duration": "1–2 hours"
+      }
+    ],
+    "Evaluate": [
+      {
+        "system": "Structural Components",
+        "finding": "Temporary support posts were observed in the crawlspace and should be evaluated and replaced with permanent supports.",
+        "page_number": 59,
+        "estimated_cost": "$1,000–$5,000",
+        "duration": "1–3 days"
+      },
+      {
+        "system": "Structural Components",
+        "finding": "Rafter spread was observed along the attic ridge in several locations and requires further structural evaluation.",
+        "page_number": 59,
+        "estimated_cost": "$1,500–$6,000",
+        "duration": "1–3 days"
+      },
+      {
+        "system": "Interiors",
+        "finding": "Interior floors slope in multiple areas of the home and should be evaluated by a qualified contractor.",
+        "page_number": 59,
+        "estimated_cost": "$1,000–$10,000",
+        "duration": "1–5 days"
+      },
+      {
+        "system": "Heating / Central Air Conditioning",
+        "finding": "No evidence of recent HVAC servicing was observed, and a qualified HVAC contractor should inspect and service the system.",
+        "page_number": 45,
+        "estimated_cost": "$200–$600",
+        "duration": "2–4 hours"
+      }
+    ],
+    "Minor Concerns": [
+      {
+        "system": "Roofing",
+        "finding": "Drip edge flashing is missing in areas of the roof.",
+        "page_number": 57,
+        "estimated_cost": "$300–$900",
+        "duration": "4–6 hours"
+      },
+      {
+        "system": "Roofing",
+        "finding": "At least one plumbing vent does not meet required clearance from the roof surface.",
+        "page_number": 57,
+        "estimated_cost": "$200–$600",
+        "duration": "2–4 hours"
+      },
+      {
+        "system": "Roofing",
+        "finding": "Gutters contain debris that should be cleaned to prevent concealed rust or leaks.",
+        "page_number": 57,
+        "estimated_cost": "$100–$300",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "Exterior",
+        "finding": "Brick veneer is in contact with soil or landscaping in areas, which can trap moisture.",
+        "page_number": 58,
+        "estimated_cost": "$500–$2,000",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "Exterior",
+        "finding": "Brick veneer drainage holes are missing or blocked in several locations.",
+        "page_number": 58,
+        "estimated_cost": "$500–$2,000",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "Exterior",
+        "finding": "Light cracking is present in exterior brick veneer.",
+        "page_number": 58,
+        "estimated_cost": "$300–$1,200",
+        "duration": "1 day"
+      },
+      {
+        "system": "Garage",
+        "finding": "The garage ceiling does not provide proper air separation from the attic.",
+        "page_number": 58,
+        "estimated_cost": "$800–$2,500",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "Garage",
+        "finding": "The garage floor has several small cracks.",
+        "page_number": 58,
+        "estimated_cost": "$200–$800",
+        "duration": "2–4 hours"
+      },
+      {
+        "system": "Garage",
+        "finding": "Daylight is visible around the rear entry garage door when closed.",
+        "page_number": 59,
+        "estimated_cost": "$200–$600",
+        "duration": "2–4 hours"
+      },
+      {
+        "system": "Interiors",
+        "finding": "Flooring shows delamination and separation in multiple areas.",
+        "page_number": 59,
+        "estimated_cost": "$1,000–$6,000",
+        "duration": "1–3 days"
+      },
+      {
+        "system": "Interiors",
+        "finding": "Interior doors are missing door stoppers or stoppers do not function properly.",
+        "page_number": 59,
+        "estimated_cost": "$50–$150",
+        "duration": "1 hour"
+      },
+      {
+        "system": "Interiors",
+        "finding": "One set of bedroom closet doors does not close completely.",
+        "page_number": 59,
+        "estimated_cost": "$150–$500",
+        "duration": "2–4 hours"
+      },
+      {
+        "system": "Interiors",
+        "finding": "A small gap is present between a window and the sill at the laundry room.",
+        "page_number": 59,
+        "estimated_cost": "$150–$400",
+        "duration": "2–3 hours"
+      },
+      {
+        "system": "Plumbing System",
+        "finding": "A toilet at the owner's bath is loose at the floor and may require resetting with a new wax seal.",
+        "page_number": 59,
+        "estimated_cost": "$200–$500",
+        "duration": "2–3 hours"
+      },
+      {
+        "system": "Plumbing System",
+        "finding": "At least two waste lines in the crawlspace appear to have improper slope.",
+        "page_number": 59,
+        "estimated_cost": "$500–$2,000",
+        "duration": "1 day"
+      },
+      {
+        "system": "Plumbing System",
+        "finding": "The water heater flue is missing required fasteners at multiple joints.",
+        "page_number": 60,
+        "estimated_cost": "$150–$400",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "Electrical System",
+        "finding": "Several three-prong electrical outlets are loose in walls throughout the home.",
+        "page_number": 60,
+        "estimated_cost": "$150–$400",
+        "duration": "2–3 hours"
+      },
+      {
+        "system": "Heating / Central Air Conditioning",
+        "finding": "The fireplace damper lid is missing or not installed.",
+        "page_number": 60,
+        "estimated_cost": "$300–$800",
+        "duration": "2–4 hours"
+      },
+      {
+        "system": "Heating / Central Air Conditioning",
+        "finding": "The exterior air conditioning condenser is dirty and requires cleaning.",
+        "page_number": 60,
+        "estimated_cost": "$100–$300",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "Insulation & Ventilation",
+        "finding": "Attic insulation levels are light in most areas.",
+        "page_number": 60,
+        "estimated_cost": "$1,000–$3,500",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "Insulation & Ventilation",
+        "finding": "The crawlspace vapor barrier is missing in areas.",
+        "page_number": 51,
+        "estimated_cost": "$800–$2,500",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "Insulation & Ventilation",
+        "finding": "Bathroom exhaust ducts terminate in the attic rather than venting to the exterior.",
+        "page_number": 51,
+        "estimated_cost": "$300–$1,200",
+        "duration": "4–8 hours"
+      }
+    ],
+    "Prepare": [
+      {
+        "system": "Exterior",
+        "finding": "Exterior light fixtures should be sealed to the wall surface to prevent moisture intrusion.",
+        "page_number": 62,
+        "estimated_cost": "$100–$300",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "Interiors",
+        "finding": "Cracked or deteriorated grout in the hall bathroom tile walls should be repaired.",
+        "page_number": 62,
+        "estimated_cost": "$200–$600",
+        "duration": "2–4 hours"
+      },
+      {
+        "system": "Heating / Central Air Conditioning",
+        "finding": "A loose handle on the fireplace door should be repaired or replaced.",
+        "page_number": 63,
+        "estimated_cost": "$100–$300",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "Insulation & Ventilation",
+        "finding": "Dryer vents longer than ten feet or installed vertically should be cleaned annually to reduce fire risk.",
+        "page_number": 51,
+        "estimated_cost": "$100–$200",
+        "duration": "1 hour"
+      }
+    ]
+  }
+}

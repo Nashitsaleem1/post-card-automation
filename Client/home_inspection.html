@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro-Inspect Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-dark: #0f172a;
+            --brand-blue: #2563eb;
+            --bg-page: #f1f5f9; /* Slightly darker page bg to make cards pop */
+            --border-color: #e2e8f0;
+            --header-height: 70px;
+            /* Category Colors */
+            --color-safety: #ef4444;
+            --color-infestation: #f97316;
+            --color-evaluate: #eab308;
+            --color-minor: #0ea5e9;
+            --color-prepare: #22c55e;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-page);
+            height: 100vh;
+            overflow: hidden; 
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Global Header --- */
+        .main-header {
+            height: var(--header-height);
+            background: white;
+            color: var(--brand-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Centered Heading */
+            padding: 0 40px;
+            z-index: 1000;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .main-header h1 {
+            font-weight: 800;
+            font-size: 1.5rem;
+            letter-spacing: -0.5px;
+            color: var(--brand-dark);
+        }
+
+        /* --- Main Layout --- */
+        .app-container {
+            display: flex;
+            height: calc(100vh - var(--header-height));
+            width: 100%;
+            padding: 20px; /* Space around the cards */
+            gap: 20px;
+        }
+
+        /* Left Side: PDF Card */
+        .pdf-card {
+            flex: 0.9; /* Reduced width to make it less overwhelming */
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            padding: 15px 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        .pdf-content {
+            flex: 1;
+            background: #525659;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Right Side: Analysis Card */
+        .analysis-card {
+            flex: 1.1;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border-color);
+        }
+
+        .analysis-scroll {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        /* Summary Stats Styling */
+        .summary-ribbon {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .stat-chip {
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .stat-chip .count { font-weight: 800; display: block; font-size: 1.2rem; }
+        .stat-chip .label { font-size: 0.7rem; text-transform: uppercase; color: #64748b; font-weight: 600; margin-top: 4px; }
+
+        /* Finding Card Styling */
+        .finding-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border-left: 6px solid var(--border-color);
+        }
+
+        .finding-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.05);
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .system-tag {
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: #eff6ff;
+            color: var(--brand-blue);
+            padding: 5px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .page-link { font-size: 0.8rem; color: #94a3b8; font-weight: 500; }
+
+        .description { font-size: 0.95rem; line-height: 1.6; color: #334155; margin-bottom: 15px; }
+
+        .badge-row { display: flex; gap: 10px; }
+        .badge {
+            background: #f8fafc;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Color Variations */
+        .safety { border-left-color: var(--color-safety); }
+        .infestation { border-left-color: var(--color-infestation); }
+        .evaluate { border-left-color: var(--color-evaluate); }
+        .minor { border-left-color: var(--color-minor); }
+        .prepare { border-left-color: var(--color-prepare); }
+
+        .cost { color: #b91c1c; }
+        .time { color: #0369a1; }
+
+        /* Custom Scrollbar */
+        .analysis-scroll::-webkit-scrollbar { width: 6px; }
+        .analysis-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <h1>Home Inspection Report</h1>
+    </header>
+
+    <div class="app-container">
+        <div class="pdf-card">
+            <div class="card-header">Original Document</div>
+            <div class="pdf-content">
+                <iframe 
+                    src="assets/data/1600_Somewhere_Dr_Indianapolis_IN_46240_Sample_Report_1600_Somewhere_Dr_Indianapolis_IN_46240.pdf#toolbar=0&navpanes=0&view=FitH" 
+                    title="Inspection Report PDF">
+                </iframe>
+            </div>
+        </div>
+
+        <div class="analysis-card">
+            <div class="card-header">Automated Insights & Findings</div>
+            <div class="analysis-scroll">
+                
+                <div class="summary-ribbon" id="stats">
+                    </div>
+
+                <div id="findings-container">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const config = {
+            "Safety Issues": { class: "safety", color: "#ef4444" },
+            "Infestation": { class: "infestation", color: "#f97316" },
+            "Evaluate": { class: "evaluate", color: "#eab308" },
+            "Minor Concerns": { class: "minor", color: "#0ea5e9" },
+            "Prepare": { class: "prepare", color: "#22c55e" }
+        };
+
+        fetch('assets/data/test.json')
+            .then(res => res.json())
+            .then(data => {
+                const results = data.results || data;
+                renderApp(results);
+            })
+            .catch(err => console.error("Error loading JSON:", err));
+
+        function renderApp(data) {
+            const statsDiv = document.getElementById('stats');
+            const container = document.getElementById('findings-container');
+
+            Object.entries(data).forEach(([category, items]) => {
+                const meta = config[category] || { class: "minor", color: "#64748b" };
+
+                statsDiv.innerHTML += `
+                    <div class="stat-chip">
+                        <span class="count" style="color: ${meta.color}">${items.length}</span>
+                        <span class="label">${category.split(' ')[0]}</span>
+                    </div>
+                `;
+
+                items.forEach(item => {
+                    container.innerHTML += `
+                        <div class="finding-card ${meta.class}">
+                            <div class="card-meta">
+                                <span class="system-tag">${item.system}</span>
+                                <span class="page-link">Report Page ${item.page_number}</span>
+                            </div>
+                            <div class="description">${item.finding}</div>
+                            <div class="badge-row">
+                                <div class="badge cost">${item.estimated_cost}</div>
+                                <div class="badge time">${item.duration}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+    </script>
+</body>
+</html>
