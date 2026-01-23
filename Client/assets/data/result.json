@@ -1,0 +1,472 @@
+
+{
+  "status": "complete",
+  "awaiting_next_chunk": false,
+  "results": {
+    "Safety Issues": [
+      {
+        "system": "3. Exterior",
+        "finding": "The finish paint on exterior wall cladding, wood trim, soffits, and other areas is failing and flaking, and due to the age of the home there is a possibility of lead-based paint exposure, which poses a potential health risk and requires repair by a qualified professional.",
+        "page_number": [11, 12, 54],
+        "estimated_cost": "$1,500–$4,000",
+        "duration": "2–5 days"
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "The step from the rear deck into the yard is a large drop and presents a tripping hazard, and repair or modification by a qualified contractor is recommended.",
+        "page_number": [20, 54],
+        "estimated_cost": "$500–$1,500",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "4. Garage",
+        "finding": "The occupant door from the garage to the interior of the home is not fire rated, which does not provide required fire separation protection in the event of a garage fire, and the door should be replaced with a fire-rated door.",
+        "page_number": [25, 55],
+        "estimated_cost": "$400–$1,200",
+        "duration": "4–8 hours"
+      },
+      {
+        "system": "6. Structural Components",
+        "finding": "Signs of animal feces are present in the attic in multiple areas, indicating animal activity and a potential health and contamination hazard, and removal and cleaning by a qualified contractor is recommended.",
+        "page_number": [32, 33, 55],
+        "estimated_cost": "$800–$2,500",
+        "duration": "1–3 days"
+      },
+      {
+        "system": "7. Plumbing System",
+        "finding": "PEX water supply lines are installed within approximately six inches of the water heater flue, which is unsafe due to heat exposure risk, and repair or rerouting by a qualified plumbing specialist is recommended.",
+        "page_number": [35, 59],
+        "estimated_cost": "$300–$1,200",
+        "duration": "2–6 hours"
+      },
+      {
+        "system": "8. Electrical System",
+        "finding": "One electrical outlet at the front of the home tested ungrounded and did not trip when tested, which presents a shock hazard, and repair or replacement by a licensed electrician is recommended.",
+        "page_number": [43, 56],
+        "estimated_cost": "$150–$500",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "9. Heating / Central Air Conditioning",
+        "finding": "The furnace flue is missing required fasteners at several joints, which can allow exhaust gases to escape, and repair or replacement by a qualified contractor is recommended.",
+        "page_number": [45, 56],
+        "estimated_cost": "$200–$800",
+        "duration": "2–4 hours"
+      },
+      {
+        "system": "9. Heating / Central Air Conditioning",
+        "finding": "Fireplace firebricks have loose, missing, or deteriorated grout in the living room, compromising the fireproof burn area, and repairs must be completed according to manufacturer specifications.",
+        "page_number": [46, 56],
+        "estimated_cost": "$500–$2,000",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "9. Heating / Central Air Conditioning",
+        "finding": "The fireplace damper lid is missing or not installed, which can allow heat loss and improper venting, and repair or replacement by a qualified contractor is recommended.",
+        "page_number": [47, 56],
+        "estimated_cost": "$300–$1,200",
+        "duration": "4–8 hours"
+      }
+    ],
+    "Infestation": [
+      {
+        "system": "3. Exterior",
+        "finding": "Cut firewood is stored very close to the structure, which can attract pests such as termites, carpenter ants, or other insects and increase the risk of infestation, and the wood pile should be moved farther away from the home.",
+        "page_number": [21, 58],
+        "estimated_cost": "$0–$200",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "6. Structural Components",
+        "finding": "Animal activity is evidenced in the attic by the presence of feces in several locations, indicating a potential infestation that should be addressed by a qualified professional.",
+        "page_number": [32, 33, 55],
+        "estimated_cost": "$1,000–$3,500",
+        "duration": "1–4 days"
+      }
+    ],
+    "Evaluate": [
+      {
+        "system": "1. General Comments",
+        "finding": "The home is currently lived in or staged with furniture and household items, which hindered full inspection access and may have caused some issues to go unnoticed, and a thorough walkthrough is recommended once items are removed.",
+        "page_number": [5],
+        "estimated_cost": "$0–$300",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "2. Roofing",
+        "finding": "Gutters are full of debris in areas, concealing potential rust, deterioration, or leaks, and the inspector was unable to determine if such conditions exist until cleaning is performed.",
+        "page_number": [8, 57],
+        "estimated_cost": "$150–$350",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "Brick veneer is in contact with the ground or landscaping in multiple exterior areas, which can contribute to moisture intrusion or concealed damage, and evaluation and repair by a qualified contractor is recommended.",
+        "page_number": [13, 14, 15, 16, 58],
+        "estimated_cost": "$800–$2,500",
+        "duration": "1–3 days"
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "The brick veneer is missing drainage holes or existing drainage holes are covered in areas along the bottom of the veneer and below windows or above lintels, and inspection and repair by a qualified contractor is recommended.",
+        "page_number": [14, 15, 58],
+        "estimated_cost": "$600–$2,000",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "There is a negative slope toward the rear of the home that does not direct water away from the foundation, and landscaping and drainage corrections are recommended to prevent moisture intrusion.",
+        "page_number": [22, 58],
+        "estimated_cost": "$1,000–$4,000",
+        "duration": "1–3 days"
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "Signs of unknown biological growth are present on the soffit at the front of the home, and the inspector did not determine whether the growth is a health hazard, recommending evaluation by an Industrial Hygienist or water intrusion specialist.",
+        "page_number": [22, 58],
+        "estimated_cost": "$500–$2,500",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "5. Interiors",
+        "finding": "Floors are sloping in various areas of the home, and further evaluation by a qualified contractor is recommended to determine cause and required repairs.",
+        "page_number": [28, 59],
+        "estimated_cost": "$1,500–$10,000",
+        "duration": "1–5 days"
+      },
+      {
+        "system": "6. Structural Components",
+        "finding": "At least one additional support has been added in the crawlspace and appears to be a temporary support rather than a permanent structural repair, and further evaluation and correction by a qualified contractor is recommended.",
+        "page_number": [31, 59],
+        "estimated_cost": "$1,000–$5,000",
+        "duration": "1–3 days"
+      },
+      {
+        "system": "6. Structural Components",
+        "finding": "Signs of rafter spread are present along the attic ridge in several areas, and further evaluation and repair by a qualified contractor is recommended.",
+        "page_number": [32, 59],
+        "estimated_cost": "$2,000–$10,000",
+        "duration": "2–7 days"
+      },
+      {
+        "system": "7. Plumbing System",
+        "finding": "At least two plumbing waste lines in the crawlspace appear to have an improper slope, and further evaluation and repair by a qualified plumbing specialist is recommended.",
+        "page_number": [37, 59],
+        "estimated_cost": "$800–$4,000",
+        "duration": "1–3 days"
+      },
+      {
+        "system": "8. Electrical System",
+        "finding": "Service entrance conductors are running through or very close to tree limbs, and further inspection and correction by a licensed electrician is recommended due to potential damage risk.",
+        "page_number": [41, 55],
+        "estimated_cost": "$500–$2,000",
+        "duration": "1 day"
+      },
+      {
+        "system": "8. Electrical System",
+        "finding": "Multiple deficiencies were observed inside the electrical panel and sub-panel, including sharp cover screws, missing Romex connectors, and labeling issues, and further evaluation and correction by a licensed electrician is recommended.",
+        "page_number": [41, 42, 55],
+        "estimated_cost": "$800–$3,000",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "8. Electrical System",
+        "finding": "Branch circuit wiring issues were observed, including missing junction boxes and junction boxes without proper covers, and further evaluation and correction by a licensed electrician is recommended.",
+        "page_number": [42, 55],
+        "estimated_cost": "$500–$2,500",
+        "duration": "1 day"
+      },
+      {
+        "system": "10. Insulation and Ventilation",
+        "finding": "The vapor barrier on the crawlspace ground is missing in areas, which can allow moisture intrusion, and further evaluation and repair by a qualified contractor is recommended.",
+        "page_number": [51, 60],
+        "estimated_cost": "$1,000–$3,000",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "10. Insulation and Ventilation",
+        "finding": "The exhaust ducts for bathroom fans do not vent to the exterior and instead terminate in the attic, and further evaluation and correction by a qualified contractor is recommended.",
+        "page_number": [51, 60],
+        "estimated_cost": "$800–$2,500",
+        "duration": "1–2 days"
+      }
+    ],
+    "Minor Concerns": [
+      {
+        "system": "2. Roofing",
+        "finding": "Drip edge flashing is not installed in areas of the home, and repair or replacement by a qualified contractor is recommended.",
+        "page_number": [7, 57],
+        "estimated_cost": "$400–$1,200",
+        "duration": "4–8 hours"
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "Exterior light fixtures are not sealed against the home, which can allow moisture intrusion, and sealing by a qualified contractor is recommended.",
+        "page_number": [16, 17, 62],
+        "estimated_cost": "$150–$400",
+        "duration": "1–3 hours"
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "The brick veneer shows signs of light cracking in exterior areas, and repair or monitoring by a qualified contractor is recommended.",
+        "page_number": [17, 18, 58],
+        "estimated_cost": "$500–$2,000",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "The concrete porch at the front of the home shows signs of light cracking in at least one location, and repair or replacement by a qualified contractor is recommended.",
+        "page_number": [19, 58],
+        "estimated_cost": "$500–$1,500",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "The concrete pad at the rear entry garage door is cracked, and repair or replacement by a qualified contractor is recommended.",
+        "page_number": [19, 58],
+        "estimated_cost": "$600–$1,800",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "The asphalt driveway has several small cracks and areas of deterioration, and repair or replacement by a qualified contractor is recommended.",
+        "page_number": [20, 58],
+        "estimated_cost": "$1,000–$4,000",
+        "duration": "1–3 days"
+      },
+      {
+        "system": "4. Garage",
+        "finding": "The garage ceiling does not appear to provide proper air separation from the attic, and repair or replacement by a qualified contractor is recommended.",
+        "page_number": [24, 58],
+        "estimated_cost": "$500–$2,000",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "4. Garage",
+        "finding": "The garage floor has several small cracks, and repair or replacement by a qualified contractor is recommended.",
+        "page_number": [24, 25, 58],
+        "estimated_cost": "$400–$1,500",
+        "duration": "1 day"
+      },
+      {
+        "system": "4. Garage",
+        "finding": "The rear entry garage door allows daylight to be visible when closed, indicating improper sealing or alignment, and repair or replacement is recommended.",
+        "page_number": [25, 59],
+        "estimated_cost": "$300–$1,200",
+        "duration": "2–6 hours"
+      },
+      {
+        "system": "5. Interiors",
+        "finding": "Grout is cracked or deteriorated in areas of the tile wall in the hall bathroom, and repair or replacement by a qualified contractor is recommended.",
+        "page_number": [27, 62],
+        "estimated_cost": "$300–$800",
+        "duration": "4–8 hours"
+      },
+      {
+        "system": "5. Interiors",
+        "finding": "Flooring shows signs of delamination and separation in various areas throughout the home, and repair or replacement by a qualified contractor is recommended.",
+        "page_number": [27, 28, 59],
+        "estimated_cost": "$1,000–$5,000",
+        "duration": "1–3 days"
+      },
+      {
+        "system": "5. Interiors",
+        "finding": "Silicone caulk is recommended along the floor and threshold of the shower at the owner’s bathroom to prevent moisture intrusion.",
+        "page_number": [28, 59],
+        "estimated_cost": "$50–$200",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "5. Interiors",
+        "finding": "Doors for the owner’s bedroom and owner’s bathroom are missing door stoppers or the installed stoppers do not function properly, and repair or replacement is recommended.",
+        "page_number": [29, 59],
+        "estimated_cost": "$50–$200",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "5. Interiors",
+        "finding": "One set of bedroom closet doors does not close completely, and repair or adjustment by a qualified contractor is recommended.",
+        "page_number": [29, 59],
+        "estimated_cost": "$100–$400",
+        "duration": "2–4 hours"
+      },
+      {
+        "system": "5. Interiors",
+        "finding": "A small gap is present between the window and window sill in the laundry room, and repair or sealing by a qualified contractor is recommended.",
+        "page_number": [29, 59],
+        "estimated_cost": "$100–$300",
+        "duration": "1–3 hours"
+      },
+      {
+        "system": "7. Plumbing System",
+        "finding": "One exterior hose bib at the front of the home is missing a knob and cannot be operated, and repair or replacement by a qualified plumbing specialist is recommended.",
+        "page_number": [35, 55],
+        "estimated_cost": "$100–$300",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "7. Plumbing System",
+        "finding": "Hot water is reversed at the kitchen sink, delivering hot water when the handle is in the cold position, and correction by a qualified plumbing specialist is recommended.",
+        "page_number": [35, 55],
+        "estimated_cost": "$150–$500",
+        "duration": "1–3 hours"
+      },
+      {
+        "system": "7. Plumbing System",
+        "finding": "The tub spout and control lever at the hall bathroom are loose at the wall, and repair or securing by a qualified plumbing specialist is recommended.",
+        "page_number": [35, 59],
+        "estimated_cost": "$150–$400",
+        "duration": "1–3 hours"
+      },
+      {
+        "system": "7. Plumbing System",
+        "finding": "Temporary repairs are present on several plumbing waste lines in the crawlspace, and these areas should be monitored and repaired permanently if leakage develops.",
+        "page_number": [36, 37],
+        "estimated_cost": "$300–$1,500",
+        "duration": "2–6 hours"
+      },
+      {
+        "system": "7. Plumbing System",
+        "finding": "The toilet in the owner’s bathroom is loose at the floor, which may require resetting the toilet with a new wax seal, and repair by a licensed plumber is recommended.",
+        "page_number": [36, 59],
+        "estimated_cost": "$200–$600",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "7. Plumbing System",
+        "finding": "The water heater is old and at or beyond its expected service life, and replacement planning is recommended.",
+        "page_number": [37],
+        "estimated_cost": "$1,200–$2,500",
+        "duration": "1 day"
+      },
+      {
+        "system": "7. Plumbing System",
+        "finding": "The water heater flue is missing required fasteners at several joints, and repair or replacement by a qualified contractor is recommended.",
+        "page_number": [38, 59],
+        "estimated_cost": "$200–$800",
+        "duration": "2–4 hours"
+      },
+      {
+        "system": "8. Electrical System",
+        "finding": "Several three-prong electrical outlets are loose in the wall in various areas of the home, and repair or replacement by a licensed electrician is recommended.",
+        "page_number": [42, 59],
+        "estimated_cost": "$150–$600",
+        "duration": "2–4 hours"
+      },
+      {
+        "system": "9. Heating / Central Air Conditioning",
+        "finding": "No recent service records or labels were observed on the HVAC system, and servicing by a qualified HVAC contractor is recommended.",
+        "page_number": [45, 59],
+        "estimated_cost": "$150–$400",
+        "duration": "2–4 hours"
+      },
+      {
+        "system": "9. Heating / Central Air Conditioning",
+        "finding": "The exterior air conditioning condenser unit is dirty, and cleaning or servicing by a qualified HVAC contractor is recommended.",
+        "page_number": [47, 59],
+        "estimated_cost": "$100–$300",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "9. Heating / Central Air Conditioning",
+        "finding": "One fireplace door handle is loose, and repair or replacement by a qualified contractor is recommended.",
+        "page_number": [46, 63],
+        "estimated_cost": "$150–$400",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "10. Insulation and Ventilation",
+        "finding": "Insulation levels are light throughout most areas of the attic, and repair or replacement by a qualified contractor is recommended.",
+        "page_number": [49, 50, 60],
+        "estimated_cost": "$1,500–$4,000",
+        "duration": "1–2 days"
+      },
+      {
+        "system": "10. Insulation and Ventilation",
+        "finding": "The whole house fan located in the attic does not appear operable and no switch was found, and additional information from the seller or repair by a qualified contractor is recommended.",
+        "page_number": [52],
+        "estimated_cost": "$500–$2,000",
+        "duration": "1 day"
+      }
+    ],
+    "Prepare": [
+      {
+        "system": "1. General Comments",
+        "finding": "The inspection was limited to a visual, non-invasive evaluation and does not include code compliance, manufacturer recalls, or concealed conditions, and further specialized inspections may be warranted.",
+        "page_number": [3, 4],
+        "estimated_cost": "$0–$500",
+        "duration": "Varies by specialist"
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "One or more decks are installed close to grade or have skirting that prevented full evaluation of the deck structure and adjacent areas, and these concealed areas were excluded from inspection.",
+        "page_number": [20],
+        "estimated_cost": "$0–$500",
+        "duration": "Varies by evaluation"
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "Additional buildings on the property were not inspected, only the main structure was evaluated, and deficiencies may exist in these excluded structures.",
+        "page_number": [23],
+        "estimated_cost": "$0–$500",
+        "duration": "Varies by inspection"
+      },
+      {
+        "system": "6. Structural Components",
+        "finding": "The sill plate and rim joist were not visible at the time of inspection due to installed insulation, limiting the ability to assess their condition.",
+        "page_number": [30],
+        "estimated_cost": "$0–$500",
+        "duration": "Varies by evaluation"
+      },
+      {
+        "system": "7. Plumbing System",
+        "finding": "The inspector was unable to locate the main water shut-off valve for the home, and the owner should obtain this information or have a plumber install an accessible shut-off.",
+        "page_number": [39],
+        "estimated_cost": "$0–$500",
+        "duration": "Varies by correction"
+      },
+      {
+        "system": "7. Plumbing System",
+        "finding": "The main fuel shut-off is located at the exterior gas meter, which is provided for informational purposes.",
+        "page_number": [39],
+        "estimated_cost": "$0",
+        "duration": "N/A"
+      },
+      {
+        "system": "8. Electrical System",
+        "finding": "The main electrical panel and one sub-panel are located in the garage, which is provided for informational purposes.",
+        "page_number": [43],
+        "estimated_cost": "$0",
+        "duration": "N/A"
+      },
+      {
+        "system": "8. Electrical System",
+        "finding": "Smoke detectors and available carbon monoxide detectors were tested using the test button only, and detectors should be replaced approximately every 10 years or when no longer responsive.",
+        "page_number": [43],
+        "estimated_cost": "$0–$300",
+        "duration": "1–2 hours"
+      },
+      {
+        "system": "8. Electrical System",
+        "finding": "Smoke detectors should be tested at the common hallway to the bedrooms upon moving into the home.",
+        "page_number": [43],
+        "estimated_cost": "$0",
+        "duration": "15 minutes"
+      },
+      {
+        "system": "9. Heating / Central Air Conditioning",
+        "finding": "A cooling temperature drop test was not performed due to exterior temperatures being below required thresholds, which limited verification of cooling system performance.",
+        "page_number": [47],
+        "estimated_cost": "$0",
+        "duration": "N/A"
+      },
+      {
+        "system": "10. Insulation and Ventilation",
+        "finding": "Dryer vents longer than 10 feet or those venting vertically should be cleaned annually, and only rigid duct and true flexible metal duct should be used for dryer connections.",
+        "page_number": [51],
+        "estimated_cost": "$100–$300",
+        "duration": "1–2 hours"
+      }
+    ]
+  }
+}
