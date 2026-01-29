@@ -5,487 +5,366 @@
     "Safety Issues": [
       {
         "system": "3. Exterior",
-        "finding": "Exterior painted wood surfaces show widespread paint failure with flaking and peeling, creating a potential lead-based paint exposure hazard due to the home’s age.",
-        "page_number": [11, 12, 54],
-        "estimated_cost": "$1,500–$4,000",
-        "duration": "2–5 days"
+        "finding": "Exterior painted surfaces are failing and flaking, creating potential exposure to lead-based paint due to the age of the home.",
+        "page_number": [11, 12, 54]
       },
       {
         "system": "3. Exterior",
-        "finding": "The step from the rear deck to the yard is excessively high and presents a tripping hazard during normal use.",
-        "page_number": [20, 54],
-        "estimated_cost": "$500–$1,500",
-        "duration": "1–2 days"
+        "finding": "The step down from the rear deck into the yard is unusually large and presents a tripping hazard.",
+        "page_number": [20, 54]
       },
       {
         "system": "4. Garage",
-        "finding": "The occupant door between the garage and the interior living space is not fire rated, reducing required fire separation protection.",
-        "page_number": [25, 55],
-        "estimated_cost": "$400–$900",
-        "duration": "3–5 hours"
+        "finding": "The occupant door between the garage and the interior living space is not fire-rated, reducing required fire separation protection.",
+        "page_number": [25, 55]
+      },
+      {
+        "system": "6. Structural Components",
+        "finding": "Animal feces were observed in multiple areas of the attic, creating a potential health hazard.",
+        "page_number": [32, 33, 55]
       },
       {
         "system": "7. Plumbing System",
-        "finding": "PEX water supply lines are installed within close proximity to the water heater flue, creating a potential heat damage and safety concern.",
-        "page_number": [35, 59],
-        "estimated_cost": "$300–$800",
-        "duration": "2–4 hours"
+        "finding": "PEX water supply lines are installed within close proximity to the water heater flue, creating an unsafe clearance condition.",
+        "page_number": [35, 59]
       },
       {
         "system": "7. Plumbing System",
-        "finding": "The toilet at the owner’s bathroom is loose at the floor and not securely mounted.",
-        "page_number": [36, 59],
-        "estimated_cost": "$200–$600",
-        "duration": "1–2 hours"
+        "finding": "The water heater flue is missing required fasteners at multiple joints, creating an improper and potentially unsafe vent connection.",
+        "page_number": [38, 60]
       },
       {
         "system": "8. Electrical System",
-        "finding": "Service entrance conductors run through or in close proximity to tree limbs, creating a risk of damage and electrical hazard.",
-        "page_number": [41, 55],
-        "estimated_cost": "$500–$1,500",
-        "duration": "2–4 hours"
+        "finding": "Service entrance conductors run through or very close to tree limbs, creating a potential electrical hazard.",
+        "page_number": [41, 55]
       },
       {
         "system": "8. Electrical System",
-        "finding": "One exterior electrical outlet tested ungrounded and did not trip when tested, indicating a shock hazard.",
-        "page_number": [43, 55],
-        "estimated_cost": "$200–$600",
-        "duration": "1–2 hours"
+        "finding": "Sharp panel cover screws, missing romex connectors, and other unsafe conditions were observed inside the electrical panel.",
+        "page_number": [41, 42, 55]
+      },
+      {
+        "system": "8. Electrical System",
+        "finding": "Branch circuit wiring issues were observed, including missing junction boxes and improperly covered connections.",
+        "page_number": [42, 55]
+      },
+      {
+        "system": "8. Electrical System",
+        "finding": "One electrical receptacle at the front of the home tested ungrounded and did not trip when tested.",
+        "page_number": [43, 55]
       },
       {
         "system": "9. Heating / Central Air Conditioning",
-        "finding": "The furnace flue is missing required fasteners at multiple joints, increasing the risk of exhaust gas leakage.",
-        "page_number": [45, 60],
-        "estimated_cost": "$200–$600",
-        "duration": "1–2 hours"
+        "finding": "The furnace flue is missing required fasteners at multiple joints, creating an improper and potentially unsafe vent connection.",
+        "page_number": [45, 56]
       },
       {
         "system": "9. Heating / Central Air Conditioning",
-        "finding": "Fireplace firebrick grout is loose, missing, or deteriorated within the burn area, reducing fire containment safety.",
-        "page_number": [46, 56],
-        "estimated_cost": "$400–$1,200",
-        "duration": "1 day"
+        "finding": "Fireplace firebrick grout is loose, missing, or deteriorated in the burn area, which should be fully fireproof.",
+        "page_number": [46, 56]
+      },
+      {
+        "system": "9. Heating / Central Air Conditioning",
+        "finding": "The fireplace damper lid is missing or not installed, preventing proper control of combustion gases.",
+        "page_number": [47, 56]
+      },
+      {
+        "system": "10. Insulation and Ventilation",
+        "finding": "Bathroom exhaust fan ducts terminate inside the attic rather than venting to the exterior, creating a moisture and potential mold hazard.",
+        "page_number": [51, 60]
       }
     ],
     "Infestation": [
       {
         "system": "3. Exterior",
-        "finding": "Cut firewood is stored directly against the exterior wall, which can attract wood-destroying insects and other pests.",
-        "page_number": [21, 58],
-        "estimated_cost": "$0–$200",
-        "duration": "1 hour"
+        "finding": "Firewood is stored immediately adjacent to the exterior wall, which can attract termites or other wood-destroying pests.",
+        "page_number": [21, 58]
       },
       {
         "system": "6. Structural Components",
-        "finding": "Animal feces are present in multiple areas of the attic, indicating current or past pest activity.",
-        "page_number": [32, 33, 55],
-        "estimated_cost": "$500–$2,000",
-        "duration": "1–2 days"
+        "finding": "Evidence of animals is present in the attic, indicated by visible feces in several locations.",
+        "page_number": [32, 33, 55]
       }
     ],
     "Evaluate": [
       {
-        "system": "3. Exterior",
-        "finding": "Brick veneer lacks visible drainage or weep holes in several areas, limiting proper moisture drainage and requiring further evaluation by a qualified contractor.",
-        "page_number": [14, 58],
-        "estimated_cost": "$800–$2,500",
-        "duration": "1–3 days"
+        "system": "1. General Comments",
+        "finding": "Furniture, stored items, and household belongings limited visibility in multiple areas, preventing a full inspection of concealed surfaces and components.",
+        "page_number": [5]
+      },
+      {
+        "system": "2. Roofing",
+        "finding": "Gutters were filled with debris, preventing determination of concealed rust, deterioration, or leaks until cleaning is performed.",
+        "page_number": [8]
       },
       {
         "system": "3. Exterior",
-        "finding": "One or more decks are installed close to grade or enclosed with skirting, preventing full inspection of deck structure and underlying conditions.",
-        "page_number": [20],
-        "estimated_cost": "$0–$500",
-        "duration": "1–2 hours"
+        "finding": "Deck structures could not be fully inspected because close proximity to grade and installed skirting obstructed access to structural components.",
+        "page_number": [20]
       },
       {
         "system": "3. Exterior",
-        "finding": "Unknown biological growth is present on the front soffit, and further evaluation is needed to determine moisture source and potential health impact.",
-        "page_number": [22, 58],
-        "estimated_cost": "$500–$1,500",
-        "duration": "2–4 hours"
-      },
-      {
-        "system": "5. Interiors",
-        "finding": "Interior floors slope in multiple areas of the home, requiring further evaluation to determine cause and structural significance.",
-        "page_number": [28, 59],
-        "estimated_cost": "$800–$3,000",
-        "duration": "2–4 hours"
+        "finding": "Additional detached structures on the property were not inspected and their condition was not evaluated.",
+        "page_number": [23]
       },
       {
         "system": "6. Structural Components",
-        "finding": "Signs of rafter spread are visible along the attic ridge in several locations and require further structural evaluation.",
-        "page_number": [32, 59],
-        "estimated_cost": "$1,000–$4,000",
-        "duration": "1–2 days"
+        "finding": "The sill plate and rim joist were not visible because insulation obstructed the view during the crawlspace inspection.",
+        "page_number": [30]
       },
       {
-        "system": "7. Plumbing System",
-        "finding": "Multiple plumbing waste lines in the crawlspace have improper slope and require further evaluation for proper drainage.",
-        "page_number": [36, 37, 59],
-        "estimated_cost": "$800–$3,000",
-        "duration": "1–2 days"
+        "system": "6. Structural Components",
+        "finding": "Interior structural walls were not visible at the time of inspection and could not be evaluated.",
+        "page_number": [31]
       },
       {
-        "system": "8. Electrical System",
-        "finding": "Multiple deficiencies are present inside the electrical panel, including sharp cover screws and missing connectors, requiring licensed electrician evaluation.",
-        "page_number": [41, 42, 55],
-        "estimated_cost": "$500–$2,000",
-        "duration": "3–6 hours"
+        "system": "6. Structural Components",
+        "finding": "Structural ceilings were not visible and could not be evaluated at the time of inspection.",
+        "page_number": [31]
       },
       {
-        "system": "8. Electrical System",
-        "finding": "Branch circuit wiring deficiencies are present, including missing junction boxes and improperly covered connections, requiring further evaluation.",
-        "page_number": [42, 55],
-        "estimated_cost": "$600–$2,500",
-        "duration": "1 day"
-      },
-      {
-        "system": "10. Insulation and Ventilation",
-        "finding": "Attic insulation is light in most areas and requires further evaluation to determine adequacy and coverage.",
-        "page_number": [49, 50, 60],
-        "estimated_cost": "$1,500–$4,000",
-        "duration": "1–2 days"
-      },
-      {
-        "system": "10. Insulation and Ventilation",
-        "finding": "The crawlspace vapor barrier is missing in multiple areas, requiring further evaluation due to potential moisture migration concerns.",
-        "page_number": [51, 60],
-        "estimated_cost": "$800–$2,500",
-        "duration": "1–2 days"
-      },
-      {
-        "system": "10. Insulation and Ventilation",
-        "finding": "Bathroom exhaust ducts terminate in the attic instead of venting to the exterior, requiring further evaluation for moisture accumulation risk.",
-        "page_number": [51, 60],
-        "estimated_cost": "$600–$2,000",
-        "duration": "1 day"
+        "system": "9. Heating / Central Air Conditioning",
+        "finding": "Cooling system temperature drop testing could not be performed due to exterior air temperatures being below testing thresholds.",
+        "page_number": [47]
       }
     ],
     "Minor Concerns": [
       {
         "system": "2. Roofing",
-        "finding": "Drip edge flashing is not installed in multiple roof areas, indicating improper roof edge protection and incomplete flashing installation.",
-        "page_number": [7, 57],
-        "estimated_cost": "$300–$900",
-        "duration": "2–4 hours"
+        "finding": "Drip edge flashing was not installed in multiple roof areas, representing an observed improper installation condition.",
+        "page_number": [7, 8, 57]
       },
       {
         "system": "2. Roofing",
-        "finding": "At least one plumbing vent does not meet required clearance height standards for the area and is improperly terminated through the roof.",
-        "page_number": [8, 57],
-        "estimated_cost": "$200–$600",
-        "duration": "1–2 hours"
+        "finding": "At least one plumbing vent did not meet required clearance distances for the area.",
+        "page_number": [8, 57]
+      },
+      {
+        "system": "2. Roofing",
+        "finding": "Gutters contained significant debris accumulation and require cleaning to maintain proper drainage performance.",
+        "page_number": [8, 9, 57]
       },
       {
         "system": "3. Exterior",
-        "finding": "Brick veneer is in direct contact with soil or landscaping in multiple areas around the exterior perimeter.",
-        "page_number": [13, 58],
-        "estimated_cost": "$500–$1,500",
-        "duration": "1–2 days"
+        "finding": "Finish paint on exterior wall cladding, wood trim, and soffits is deteriorated and peeling in multiple areas.",
+        "page_number": [11, 12]
       },
       {
         "system": "3. Exterior",
-        "finding": "Brick veneer exhibits light cracking in multiple locations, indicating minor masonry movement or mortar deterioration.",
-        "page_number": [17, 18, 58],
-        "estimated_cost": "$400–$1,200",
-        "duration": "1–2 days"
+        "finding": "Brick veneer is in direct contact with soil or landscaping materials in multiple exterior locations.",
+        "page_number": [13, 14, 15, 58]
       },
       {
         "system": "3. Exterior",
-        "finding": "The front concrete porch slab shows light cracking in at least one area.",
-        "page_number": [19, 58],
-        "estimated_cost": "$300–$1,000",
-        "duration": "1 day"
+        "finding": "Brick veneer is missing visible drainage holes or drainage openings are obstructed along the base and below window areas.",
+        "page_number": [14, 15, 58]
       },
       {
         "system": "3. Exterior",
-        "finding": "A concrete pad at the rear entry garage door is cracked and shows signs of surface deterioration.",
-        "page_number": [19, 58],
-        "estimated_cost": "$400–$1,200",
-        "duration": "1–2 days"
+        "finding": "Exterior light fixtures are not sealed tightly against the wall surfaces.",
+        "page_number": [16, 17, 62]
       },
       {
         "system": "3. Exterior",
-        "finding": "The asphalt driveway contains multiple small cracks and areas of surface deterioration.",
-        "page_number": [20, 58],
-        "estimated_cost": "$500–$2,000",
-        "duration": "1–2 days"
+        "finding": "Brick veneer shows signs of light cracking in multiple exterior wall areas.",
+        "page_number": [17, 18, 58]
       },
       {
         "system": "3. Exterior",
-        "finding": "The rear yard grading slopes toward the home, preventing proper drainage away from the foundation.",
-        "page_number": [22, 58],
-        "estimated_cost": "$800–$3,000",
-        "duration": "1–3 days"
+        "finding": "The front concrete porch shows light cracking in at least one location.",
+        "page_number": [19, 58]
       },
       {
         "system": "3. Exterior",
-        "finding": "One rake board at the rear of the home shows visible deterioration and material damage.",
-        "page_number": [22, 58],
-        "estimated_cost": "$300–$800",
-        "duration": "3–6 hours"
+        "finding": "A concrete pad at the rear entry garage door is cracked.",
+        "page_number": [19, 58]
       },
       {
         "system": "3. Exterior",
-        "finding": "Moisture staining is visible on the rear soffit, indicating prior moisture exposure at this location.",
-        "page_number": [23],
-        "estimated_cost": "$200–$600",
-        "duration": "2–4 hours"
+        "finding": "The asphalt driveway contains several small cracks and areas of surface deterioration.",
+        "page_number": [20, 21, 58]
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "The rear yard grading slopes toward the home and does not direct water away from the foundation.",
+        "page_number": [22, 58]
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "Biological growth is visible on the front soffit surfaces in at least one location.",
+        "page_number": [22, 58]
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "A rear soffit rake board shows visible deterioration.",
+        "page_number": [22, 58]
+      },
+      {
+        "system": "3. Exterior",
+        "finding": "Moisture staining is present on the rear soffit, indicating prior moisture exposure.",
+        "page_number": [23]
       },
       {
         "system": "4. Garage",
-        "finding": "The garage ceiling does not provide proper air separation between the garage and attic space.",
-        "page_number": [24, 58],
-        "estimated_cost": "$600–$1,500",
-        "duration": "1 day"
+        "finding": "The garage ceiling does not provide proper air separation from the attic space.",
+        "page_number": [24, 58]
       },
       {
         "system": "4. Garage",
-        "finding": "The garage floor contains multiple small cracks across the concrete surface.",
-        "page_number": [24, 25, 58],
-        "estimated_cost": "$300–$1,000",
-        "duration": "1 day"
+        "finding": "The garage floor contains multiple small cracks throughout the slab surface.",
+        "page_number": [24, 25, 58]
       },
       {
         "system": "4. Garage",
-        "finding": "The rear garage entry door allows visible daylight when closed, indicating poor sealing or alignment.",
-        "page_number": [25, 59],
-        "estimated_cost": "$200–$600",
-        "duration": "2–4 hours"
+        "finding": "The rear entry garage door allows visible daylight through when closed.",
+        "page_number": [25, 58]
       },
       {
         "system": "5. Interiors",
-        "finding": "Grout is cracked or deteriorated in areas of the hall bathroom tiled wall surfaces.",
-        "page_number": [27, 62],
-        "estimated_cost": "$300–$800",
-        "duration": "4–6 hours"
+        "finding": "Cracked or deteriorated grout is present on tiled walls in the hall bathroom.",
+        "page_number": [27, 62]
       },
       {
         "system": "5. Interiors",
-        "finding": "Flooring materials show delamination and separation in multiple areas throughout the home.",
-        "page_number": [27, 28, 59],
-        "estimated_cost": "$1,500–$5,000",
-        "duration": "2–5 days"
+        "finding": "Interior flooring shows delamination and separation in multiple locations.",
+        "page_number": [27, 28, 59]
       },
       {
         "system": "5. Interiors",
-        "finding": "Silicone caulk is missing or insufficient at the shower floor and threshold in the owner’s bathroom.",
-        "page_number": [28, 59],
-        "estimated_cost": "$100–$300",
-        "duration": "1–2 hours"
+        "finding": "Interior floors slope noticeably in several areas of the home.",
+        "page_number": [28, 59]
       },
       {
         "system": "5. Interiors",
-        "finding": "Bedroom and bathroom doors are missing door stops or installed stops do not function properly.",
-        "page_number": [29, 59],
-        "estimated_cost": "$50–$200",
-        "duration": "1–2 hours"
+        "finding": "Sealant is missing or inadequate along the shower floor and threshold in the owner’s bathroom.",
+        "page_number": [28, 59]
       },
       {
         "system": "5. Interiors",
-        "finding": "One set of bedroom closet doors does not close completely due to misalignment or hardware issues.",
-        "page_number": [29, 59],
-        "estimated_cost": "$100–$300",
-        "duration": "1–2 hours"
+        "finding": "Bedroom and bathroom doors are missing functional door stoppers or installed stoppers do not operate properly.",
+        "page_number": [29, 59]
       },
       {
         "system": "5. Interiors",
-        "finding": "A visible gap exists between the laundry room window frame and sill.",
-        "page_number": [29, 59],
-        "estimated_cost": "$150–$400",
-        "duration": "2–3 hours"
+        "finding": "One set of bedroom closet doors does not close completely.",
+        "page_number": [29, 59]
+      },
+      {
+        "system": "5. Interiors",
+        "finding": "A visible gap is present between the window frame and sill in the laundry room.",
+        "page_number": [29, 59]
       },
       {
         "system": "6. Structural Components",
-        "finding": "An added support post in the crawlspace appears temporary and is not installed as a permanent structural support.",
-        "page_number": [31, 59],
-        "estimated_cost": "$600–$2,000",
-        "duration": "1 day"
+        "finding": "An additional support post was installed in the crawlspace and appears to be a temporary support rather than a permanent installation.",
+        "page_number": [31, 59]
       },
       {
         "system": "6. Structural Components",
-        "finding": "Moisture staining is visible on attic framing members in multiple locations.",
-        "page_number": [31],
-        "estimated_cost": "$200–$600",
-        "duration": "2–4 hours"
+        "finding": "Moisture staining is present on attic framing members in multiple locations.",
+        "page_number": [31]
+      },
+      {
+        "system": "6. Structural Components",
+        "finding": "Signs of rafter spread are visible along the attic ridge in several areas.",
+        "page_number": [32, 59]
       },
       {
         "system": "7. Plumbing System",
-        "finding": "The exterior hose bib at the front of the home is missing an operating handle and cannot be used as intended.",
-        "page_number": [35, 59],
-        "estimated_cost": "$100–$300",
-        "duration": "1–2 hours"
+        "finding": "An exterior hose bib at the front of the home is missing its operating knob and is not functional.",
+        "page_number": [35, 55]
       },
       {
         "system": "7. Plumbing System",
-        "finding": "Hot water flow at the kitchen sink is reversed, indicating improper faucet orientation or connection.",
-        "page_number": [35, 59],
-        "estimated_cost": "$150–$400",
-        "duration": "1–2 hours"
+        "finding": "Hot water temperature at the kitchen sink is reversed, with hot water operating when the lever is down.",
+        "page_number": [35, 55]
       },
       {
         "system": "7. Plumbing System",
-        "finding": "The tub spout and control handle at the hall bathroom are loose at the wall surface.",
-        "page_number": [35, 59],
-        "estimated_cost": "$150–$400",
-        "duration": "1–2 hours"
+        "finding": "The tub spout and control handle at the hall bathroom are loose at the wall.",
+        "page_number": [35, 59]
       },
       {
         "system": "7. Plumbing System",
-        "finding": "Several plumbing supply lines in the crawlspace are connected using mixed materials and fittings.",
-        "page_number": [36],
-        "estimated_cost": "$300–$800",
-        "duration": "2–4 hours"
+        "finding": "Multiple plumbing supply line materials are connected together in the crawlspace, requiring periodic monitoring.",
+        "page_number": [36]
       },
       {
         "system": "7. Plumbing System",
-        "finding": "Temporary repairs are present on multiple plumbing waste lines in the crawlspace.",
-        "page_number": [36, 37],
-        "estimated_cost": "$400–$1,200",
-        "duration": "1 day"
+        "finding": "The toilet at the owner’s bathroom is loose at the floor and may require reseating.",
+        "page_number": [36, 59]
       },
       {
         "system": "7. Plumbing System",
-        "finding": "The water heater flue is missing required fasteners at multiple joints.",
-        "page_number": [38, 60],
-        "estimated_cost": "$200–$600",
-        "duration": "1–2 hours"
+        "finding": "Temporary repair couplings are present on several plumbing waste lines in the crawlspace.",
+        "page_number": [36, 37]
+      },
+      {
+        "system": "7. Plumbing System",
+        "finding": "At least two plumbing waste lines in the crawlspace appear to have an improper slope.",
+        "page_number": [37, 59]
+      },
+      {
+        "system": "7. Plumbing System",
+        "finding": "The main water shutoff valve location could not be identified during the inspection.",
+        "page_number": [39]
       },
       {
         "system": "8. Electrical System",
-        "finding": "Several three-prong electrical outlets are loose within the wall at various interior locations.",
-        "page_number": [42, 60],
-        "estimated_cost": "$150–$400",
-        "duration": "1–2 hours"
+        "finding": "Several three-prong electrical outlets are loose within the wall in various interior locations.",
+        "page_number": [42, 60]
+      },
+      {
+        "system": "8. Electrical System",
+        "finding": "Smoke detectors should be tested at common hallway locations upon moving into the home.",
+        "page_number": [43]
       },
       {
         "system": "9. Heating / Central Air Conditioning",
-        "finding": "No recent service documentation or labels were observed on the HVAC system components.",
-        "page_number": [45, 60],
-        "estimated_cost": "$150–$400",
-        "duration": "1–2 hours"
+        "finding": "No recent service records or service labels were observed on the furnace system.",
+        "page_number": [45, 60]
       },
       {
         "system": "9. Heating / Central Air Conditioning",
-        "finding": "One handle on the living room fireplace doors is loose and does not operate securely.",
-        "page_number": [46, 63],
-        "estimated_cost": "$100–$300",
-        "duration": "1–2 hours"
+        "finding": "The exterior air conditioning condenser unit is dirty and requires cleaning.",
+        "page_number": [47, 60]
       },
       {
         "system": "9. Heating / Central Air Conditioning",
-        "finding": "The fireplace damper lid is missing or not installed in the living room fireplace.",
-        "page_number": [47, 60],
-        "estimated_cost": "$300–$800",
-        "duration": "3–5 hours"
-      },
-      {
-        "system": "9. Heating / Central Air Conditioning",
-        "finding": "The exterior air conditioning condenser unit is dirty and obstructed by debris.",
-        "page_number": [47, 60],
-        "estimated_cost": "$150–$400",
-        "duration": "1–2 hours"
+        "finding": "One handle on the fireplace doors is loose and does not operate securely.",
+        "page_number": [46, 63]
       },
       {
         "system": "10. Insulation and Ventilation",
-        "finding": "A whole-house attic fan does not appear operable and lacks a clearly identified control switch.",
-        "page_number": [52],
-        "estimated_cost": "$300–$1,000",
-        "duration": "2–4 hours"
+        "finding": "Attic insulation levels are light and inconsistent in most areas throughout the attic.",
+        "page_number": [49, 50, 60]
+      },
+      {
+        "system": "10. Insulation and Ventilation",
+        "finding": "The crawlspace vapor barrier is missing in multiple areas, reducing protection against ground moisture intrusion.",
+        "page_number": [51, 60]
+      },
+      {
+        "system": "10. Insulation and Ventilation",
+        "finding": "Dryer vent maintenance is recommended periodically to reduce lint accumulation and improve airflow efficiency.",
+        "page_number": [51]
+      },
+      {
+        "system": "10. Insulation and Ventilation",
+        "finding": "The whole-house attic fan is inoperable and no controlling switch was identified during the inspection.",
+        "page_number": [52]
       }
     ],
     "Prepare": [
       {
-        "system": "1. General Comments",
-        "finding": "Furnishings and stored household items limited visibility in several areas and may have restricted access to components during the inspection.",
-        "page_number": [5],
-        "estimated_cost": "$0–$200",
-        "duration": "1–2 hours"
-      },
-      {
-        "system": "2. Roofing",
-        "finding": "Gutters contain accumulated debris in multiple sections, preventing full visual evaluation of gutter condition and drainage performance.",
-        "page_number": [8, 9, 57],
-        "estimated_cost": "$100–$300",
-        "duration": "1–2 hours"
-      },
-      {
-        "system": "3. Exterior",
-        "finding": "Exterior light fixtures are not sealed to the wall surface, allowing potential moisture entry behind the fixtures.",
-        "page_number": [16, 17, 62],
-        "estimated_cost": "$100–$300",
-        "duration": "1–2 hours"
-      },
-      {
-        "system": "6. Structural Components",
-        "finding": "The sill plate and rim joist were not visible due to insulation coverage, limiting inspection of these components.",
-        "page_number": [30],
-        "estimated_cost": "$0–$300",
-        "duration": "1–2 hours"
-      },
-      {
-        "system": "3. Exterior",
-        "finding": "Additional detached structures on the property were not inspected and were excluded from the inspection scope.",
-        "page_number": [23],
-        "estimated_cost": "$0–$300",
-        "duration": "1–2 hours"
-      },
-      {
         "system": "7. Plumbing System",
         "finding": "The water heater is old and at or beyond its expected service life.",
-        "page_number": [37],
-        "estimated_cost": "$1,200–$2,500",
-        "duration": "3–5 hours"
-      },
-      {
-        "system": "7. Plumbing System",
-        "finding": "The main water shut-off valve location could not be identified during the inspection.",
-        "page_number": [39],
-        "estimated_cost": "$0–$300",
-        "duration": "1–2 hours"
-      },
-      {
-        "system": "7. Plumbing System",
-        "finding": "The main fuel shut-off valve is located at the exterior gas meter.",
-        "page_number": [39],
-        "estimated_cost": "$0–$100",
-        "duration": "Less than 1 hour"
-      },
-      {
-        "system": "8. Electrical System",
-        "finding": "The main electrical panel and one subpanel are located within the garage area.",
-        "page_number": [43],
-        "estimated_cost": "$0–$100",
-        "duration": "Less than 1 hour"
-      },
-      {
-        "system": "8. Electrical System",
-        "finding": "Smoke detectors and available carbon monoxide detectors were tested using the test buttons during the inspection.",
-        "page_number": [43],
-        "estimated_cost": "$0–$200",
-        "duration": "Less than 1 hour"
-      },
-      {
-        "system": "8. Electrical System",
-        "finding": "Smoke detectors should be tested at common hallway locations after moving into the home.",
-        "page_number": [43],
-        "estimated_cost": "$0–$100",
-        "duration": "Less than 1 hour"
+        "page_number": [37]
       },
       {
         "system": "9. Heating / Central Air Conditioning",
-        "finding": "Cooling performance temperature differential testing was not performed due to low exterior air temperatures.",
-        "page_number": [47],
-        "estimated_cost": "$0–$200",
-        "duration": "Less than 1 hour"
-      },
-      {
-        "system": "10. Insulation and Ventilation",
-        "finding": "Dryer vent cleaning is recommended periodically to maintain proper airflow and reduce lint accumulation risk.",
-        "page_number": [51],
-        "estimated_cost": "$100–$300",
-        "duration": "1–2 hours"
+        "finding": "The furnace is at or near the manufacturer’s estimated end of service life.",
+        "page_number": [45]
       }
     ]
   }
