@@ -2270,7 +2270,7 @@ async function sendCanvaViaEDDM() {
     return;
   }
 
-  const mode = context.envMode || getCurrentMode();
+  let mode = context.envMode || getCurrentMode();
   const btn = document.getElementById("eddmSendBtn");
   const originalText = btn.innerHTML;
 
@@ -2278,16 +2278,11 @@ async function sendCanvaViaEDDM() {
     btn.disabled = true;
     btn.innerHTML = '<span class="loading"></span> Sending...';
 
-    const confirmSend = confirm(
-      `You are about to send the RES OCC brochure in ${mode.toUpperCase()} mode.\n\nDo you want to proceed?`
+    const isProduction = confirm(
+      "Do you want to send this letter in PRODUCTION mode?\n\nClick OK for Production\nClick Cancel for Testing"
     );
 
-    if (!confirmSend) {
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-      return;
-    }
-
+    mode = isProduction ? "production" : "testing";
     const todayObj = new Date();
     const todayISO = todayObj.toISOString().split("T")[0];
 
@@ -2393,7 +2388,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.currentEditingTemplateId = null;
   localStorage.removeItem("Restored template");
 
-  if (path.includes("templategallery")) {
+  if (path.includes("templateGallery")) {
     console.log("🔍 templateGallery page load detected");
 
     const context = getContextFromStorage();

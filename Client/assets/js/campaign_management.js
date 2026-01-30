@@ -842,13 +842,12 @@ async function sendLetterViaEDDM() {
 
 async function proceedWithEDDMOrder(templateId, button, mode) {
   try {
-    const confirmSend = confirm(
-      `You are about to send the RES OCC letter in ${mode.toUpperCase()} mode.\n\nDo you want to proceed?`
+    
+    const isProduction = confirm(
+      "Do you want to send this letter in PRODUCTION mode?\n\nClick OK for Production\nClick Cancel for Testing"
     );
 
-    if (!confirmSend) {
-      return false;
-    }
+    mode = isProduction ? "production" : "testing";
 
     const todayObj = new Date();
     const todayISO = todayObj.toISOString().split("T")[0];
@@ -1772,21 +1771,24 @@ function viewAudienceDetails(audienceList, audienceName) {
   const detailsHTML = audienceList
     .map(
       (item, idx) => `
-    <tr>
-      <td>${idx + 1}</td>
-      <td>${item.firstName} ${item.lastName}</td>
-      <td>${item.address}</td>
-      <td>${item.city}</td>
-      <td>${item.state}</td>
-      <td>${item.zipCode}</td>
-    </tr>
-  `
+      <tr>
+        <td>${idx + 1}</td>
+        <td>${item.firstName} ${item.lastName}</td>
+        <td>${item.address}</td>
+        <td>${item.city}</td>
+        <td>${item.state}</td>
+        <td>${item.zipCode}</td>
+      </tr>
+    `
     )
     .join("");
 
   modal.innerHTML = `
     <div class="modal-content">
+      <button class="close-modal-btn" onclick="this.closest('.audience-modal').remove()">✖</button>
+
       <h2>${audienceName} — ${audienceList.length} recipients</h2>
+
       <table class="audience-table">
         <thead>
           <tr>
@@ -1800,12 +1802,12 @@ function viewAudienceDetails(audienceList, audienceName) {
         </thead>
         <tbody>${detailsHTML}</tbody>
       </table>
-      <button class="close-modal-btn" onclick="this.closest('.audience-modal').remove()">✖ Close</button>
     </div>
   `;
 
   document.body.appendChild(modal);
 }
+
 
 async function selectAudience(audienceId) {
   try {
@@ -3777,17 +3779,14 @@ async function orderDesign(templateId, button) {
   button.disabled = true;
 
   try {
-    const mode = getCurrentMode();
+    let mode = getCurrentMode();
 
-    const confirmSend = confirm(
-      `You are about to send the letter in ${mode.toUpperCase()} mode.\n\nDo you want to proceed?`
+    // Ask user which mode to use
+    const isProduction = confirm(
+      "Do you want to send this letter in PRODUCTION mode?\n\nClick OK for Production\nClick Cancel for Testing"
     );
 
-    if (!confirmSend) {
-      button.textContent = originalText;
-      button.disabled = false;
-      return false;
-    }
+    mode = isProduction ? "production" : "testing";
 
     // Reset button state before showing modal
     button.textContent = originalText;
@@ -4367,7 +4366,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.currentEditingTemplateId = null;
   sessionStorage.removeItem("Restored template");
 
-  if (path.includes("templategallery")) {
+  if (path.includes("templateGallery")) {
     loadGalleryTemplates();
   } else if (path.includes("campaign_builder")) {
     await loadTemplates();

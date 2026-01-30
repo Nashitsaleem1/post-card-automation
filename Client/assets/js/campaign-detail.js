@@ -1401,18 +1401,14 @@ async function sendMailer(mailerId, button) {
   button.disabled = true;
 
   try {
-    const mode = getCurrentMode();
+    let mode = getCurrentMode();
 
-    const confirmSend = confirm(
-      `You are about to send the letter in ${mode.toUpperCase()} mode.\n\nDo you want to proceed?`
+    const isProduction = confirm(
+      "Do you want to send this letter in PRODUCTION mode?\n\nClick OK for Production\nClick Cancel for Testing"
     );
 
-    if (!confirmSend) {
-      button.textContent = originalText;
-      button.disabled = false;
-      return false;
-    }
-
+    mode = isProduction ? "production" : "testing";
+    
     const mailer = allMailers.find((m) => m.id === mailerId);
     if (!mailer) throw new Error("Mailer not found");
 
