@@ -69,7 +69,7 @@ if not origins:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://physical-mail-automation.netlify.app"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
