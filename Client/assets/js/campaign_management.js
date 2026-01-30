@@ -842,7 +842,7 @@ async function sendLetterViaEDDM() {
 
 async function proceedWithEDDMOrder(templateId, button, mode) {
   try {
-    
+
     const isProduction = confirm(
       "Do you want to send this letter in PRODUCTION mode?\n\nClick OK for Production\nClick Cancel for Testing"
     );
@@ -4366,7 +4366,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.currentEditingTemplateId = null;
   sessionStorage.removeItem("Restored template");
 
-  if (path.includes("templateGallery")) {
+  if (path.includes("templategallery")) {
     loadGalleryTemplates();
   } else if (path.includes("campaign_builder")) {
     await loadTemplates();

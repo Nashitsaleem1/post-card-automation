@@ -2388,7 +2388,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.currentEditingTemplateId = null;
   localStorage.removeItem("Restored template");
 
-  if (path.includes("templateGallery")) {
+  if (path.includes("templategallery")) {
     console.log("🔍 templateGallery page load detected");
 
     const context = getContextFromStorage();
