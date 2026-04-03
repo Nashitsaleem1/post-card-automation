@@ -560,9 +560,6 @@ function closeBrochurePreviewModal() {
 
 async function orderDesignWithContext(pdfUrl, designTitle, context) {
   try {
-    console.log("📌 Starting order with context:", context);
-    console.log("🔍 Context sourceType:", context.sourceType);
-    console.log("🔍 Context mode:", context.mode);
 
     // Validate context
     if (!context) {

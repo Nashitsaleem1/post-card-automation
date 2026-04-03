@@ -86,6 +86,23 @@ async function getToken(env = null) {
 // ============================================
 // FETCH RECIPIENTS FROM AUDIENCE
 // ============================================
+function sanitizeRecipients(list) {
+  if (!Array.isArray(list)) return [];
+
+  return list
+    // 1. Filter out rows where address is null, undefined, or an empty string
+    .filter((row) => row.address && String(row.address).trim() !== "")
+    
+    // 2. Sanitize the remaining valid rows
+    .map((row) => ({
+      firstName: String(row.firstname || row.firstName || ""),
+      lastName: String(row.lastname || row.lastName || ""),
+      address: String(row.address), // We know this exists now because of the filter
+      city: String(row.city || ""),
+      state: String(row.state || ""),
+      zipCode: String(row.zipcode || row.zipCode || ""),
+    }));
+}
 
 async function getRecipientsFromAudience(audienceId) {
   if (!audienceId) return [];
@@ -1437,6 +1454,8 @@ async function sendMailer(mailerId, button) {
     } else if (mailer.address_list) {
       mailerRecipients = JSON.parse(mailer.address_list || "[]");
     }
+
+    mailerRecipients = sanitizeRecipients(mailerRecipients);
 
     const optionsConfirmed = await showLetterOptionsModalAsync(
       window.currentEditingTemplateId,

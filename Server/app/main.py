@@ -615,8 +615,7 @@ async def upload_pdf(file: UploadFile = File(...)):
 
         with open(file_path, "wb") as f:
             f.write(content)
-
-        # file_url = f"https://pcm-app-h8mn8.ondigitalocean.app/uploads/pdfs/{unique_filename}"
+            
         file_url = f"https://pcm-app.duckdns.org/uploads/pdfs/{unique_filename}"
 
         return {

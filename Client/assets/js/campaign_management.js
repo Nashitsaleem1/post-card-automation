@@ -54,8 +54,8 @@ const API_KEYS = {
     apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
   },
   production: {
-    apiKey: "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy",
-    apiSecret: "ZDFjNmUwM2MtOTcwNi00MjBiLWE4NDItM2Y5MjAzMDJiMTVh",
+  apiKey: "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy",
+  apiSecret: "ZDFjNmUwM2MtOTcwNi00MjBiLWE4NDItM2Y5MjAzMDJiMTVh",
   },
 };
 
@@ -859,7 +859,7 @@ async function proceedWithEDDMOrder(templateId, button, mode) {
 
     let finalHtml = "";
 
-    // FIX: Check uploadedPdfUrl first (similar to orderDesign)
+    //  Check uploadedPdfUrl first (similar to orderDesign)
     if (uploadedPdfUrl) {
       finalHtml = uploadedPdfUrl;
       console.log("Using uploaded PDF for EDDM order:", uploadedPdfUrl);
@@ -3323,49 +3323,91 @@ function saveAudience() {
 // CSV UPLOAD & PARSING
 // ============================================
 
+function sanitizeRecipients(list) {
+  if (!Array.isArray(list)) return [];
+
+  return list
+    // 1. Filter out rows where address is null, undefined, or an empty string
+    .filter((row) => row.address && String(row.address).trim() !== "")
+    
+    // 2. Sanitize the remaining valid rows
+    .map((row) => ({
+      firstName: String(row.firstname || row.firstName || ""),
+      lastName: String(row.lastname || row.lastName || ""),
+      address: String(row.address), // We know this exists now because of the filter
+      city: String(row.city || ""),
+      state: String(row.state || ""),
+      zipCode: String(row.zipcode || row.zipCode || ""),
+    }));
+}
+
+
 async function parseCSV(file) {
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
-    complete: (results) => {
-      const recipients = results.data.map((r) => {
-        const row = Object.fromEntries(
-          Object.entries(r).map(([k, v]) => [k.toLowerCase(), v])
-        );
+    complete: async (results) => { // Added async here
+      // 1. Sanitize and Filter (Skipping rows with no address)
+      const recipients = results.data
+        .map((r) => {
+          const row = Object.fromEntries(
+            Object.entries(r).map(([k, v]) => [k.toLowerCase(), v])
+          );
+          return {
+            firstName: String(row.firstname || ""),
+            lastName: String(row.lastname || ""),
+            address: String(row.address || ""),
+            city: String(row.city || ""),
+            state: String(row.state || ""),
+            zipCode: String(row.zipcode || ""),
+          };
+        })
+        .filter((r) => r.address.trim() !== ""); // Skip missing addresses
 
-        return {
-          firstName: row.firstname || "Test",
-          lastName: row.lastname || "Name",
-          address: row.address || "",
-          city: row.city || "",
-          state: row.state || "",
-          zipCode: row.zipcode || "",
-        };
-      });
       console.log(recipients);
       recipientsList = recipients;
 
       const uploadBox = document.getElementById("uploadBox");
+      
+      // Initial "Success / Saving" State
       uploadBox.innerHTML = `
         <div class="upload-icon" style="color: #28a745;">✓</div>
-        <div class="upload-main-text" style="color: #28a745;">File uploaded successfully!</div>
-        <div class="upload-sub-text">${recipients.length} recipients loaded from ${file.name}</div>
-        <div class="upload-sub-text" style="color: #ff6b6b; font-weight: 600; margin-top: 1rem;">Saving Audience...</div>
+        <div class="upload-main-text" style="color: #28a745;">File parsed successfully!</div>
+        <div class="upload-sub-text">${recipients.length} recipients loaded</div>
+        <div id="saveStatus" class="upload-sub-text" style="color: #ff6b6b; font-weight: 600; margin-top: 1rem;">
+          Waiting for Audience Name...
+        </div>
       `;
 
       saveState();
 
-      // Automatically call save audience modal with a slight delay
-      setTimeout(() => {
-        showAudienceNameModal();
-      }, 500);
+      // 2. Trigger the modal and wait for it to finish
+      // Assuming showAudienceNameModal is an async function or returns a promise
+      try {
+        await showAudienceNameModal(); 
+        
+        // 3. Update UI to "Saved" state
+        const saveStatus = document.getElementById("saveStatus");
+        if (saveStatus) {
+          saveStatus.innerText = "Audience Saved!";
+          saveStatus.style.color = "#28a745";
+        }
+      } catch (err) {
+        // If they cancel the modal or it fails
+        const saveStatus = document.getElementById("saveStatus");
+        if (saveStatus) {
+          saveStatus.innerText = "Upload Complete (Not Saved to Audience)";
+          saveStatus.style.color = "#666";
+        }
+      }
     },
     error: (error) => {
       console.error("CSV parsing error:", error);
-      showAlert("Error parsing CSV file. Please check the format.");
+      showAlert("Error parsing CSV file.");
     },
   });
 }
+
 
 function setupDragAndDrop() {
   const uploadBox = document.getElementById("uploadBox");
@@ -3816,7 +3858,7 @@ async function orderDesign(templateId, button) {
 
     let finalHtml = "";
 
-    // FIX: Check uploadedPdfUrl first since it's a full URL/content
+    //  Check uploadedPdfUrl first since it's a full URL/content
     if (uploadedPdfUrl) {
       finalHtml = uploadedPdfUrl;
       console.log("Using uploaded PDF:", uploadedPdfUrl);
@@ -3842,7 +3884,8 @@ async function orderDesign(templateId, button) {
         : JSON.parse(currentAudienceData.audience_list);
       finalRecipientsList = audienceList;
     }
-
+    // 2. RUN THE SANITIZER
+    finalRecipientsList = sanitizeRecipients(finalRecipientsList);
     if (finalRecipientsList.length === 0) {
       throw new Error("No recipients available");
     }
