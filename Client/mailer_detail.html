@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -15,7 +15,8 @@
         margin: 0;
         padding: 0;
         box-sizing: border-box;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
           "Helvetica Neue", Arial, sans-serif;
       }
       body {
@@ -678,6 +679,19 @@
     <div class="top-nav">
       <div class="top-nav-content">
         <div>
+          <button
+            onclick="window.history.back()"
+            style="
+              margin-bottom: 15px;
+              padding: 6px 12px;
+              cursor: pointer;
+              border: 1px solid #ccc;
+              font-size: 15px;
+              border-radius: 10px;
+            "
+          >
+            ← Back
+          </button>
           <div class="mailer-label">One-Off Mailer</div>
           <div class="mailer-title">
             <span id="mailerName">Loading...</span>
@@ -746,7 +760,12 @@
         <button class="close-btn" onclick="closeScheduleModal()">✖</button>
         <h2>📅 Schedule Mailer</h2>
 
-        <form onsubmit="confirmSchedule(); return false;">
+        <form
+          onsubmit="
+            confirmSchedule();
+            return false;
+          "
+        >
           <label for="scheduleDate">Select Date</label>
           <input type="date" id="scheduleDate" required />
 
@@ -933,7 +952,7 @@
               method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(payload),
-            }
+            },
           );
 
           if (!res.ok) throw new Error("Failed to schedule mailer");
@@ -980,15 +999,15 @@
       }
 
       function showPdfPreview(pdfLink) {
-  console.log("📄 Opening PDF preview:", pdfLink);
+        console.log("📄 Opening PDF preview:", pdfLink);
 
-  // Close any existing modals first
-  closeAllDynamicModals();
+        // Close any existing modals first
+        closeAllDynamicModals();
 
-  const previewModal = document.createElement("div");
-  previewModal.className = "template-preview-modal";
-  previewModal.style.zIndex = "9999";
-  previewModal.innerHTML = `
+        const previewModal = document.createElement("div");
+        previewModal.className = "template-preview-modal";
+        previewModal.style.zIndex = "9999";
+        previewModal.innerHTML = `
     <div class="template-preview-overlay" onclick="this.closest('.template-preview-modal').remove(); closeAllDynamicModals();"></div>
     <div class="template-preview-content">
       <div class="template-preview-header">
@@ -1001,18 +1020,18 @@
       </iframe>
     </div>
   `;
-  document.body.appendChild(previewModal);
+        document.body.appendChild(previewModal);
 
-  // Handle Escape key to close modal
-  const handleEscape = (e) => {
-    if (e.key === "Escape") {
-      previewModal.remove();
-      closeAllDynamicModals();
-      document.removeEventListener("keydown", handleEscape);
-    }
-  };
-  document.addEventListener("keydown", handleEscape);
-}
+        // Handle Escape key to close modal
+        const handleEscape = (e) => {
+          if (e.key === "Escape") {
+            previewModal.remove();
+            closeAllDynamicModals();
+            document.removeEventListener("keydown", handleEscape);
+          }
+        };
+        document.addEventListener("keydown", handleEscape);
+      }
 
       function closeAllDynamicModals() {
         // Remove all dynamically created preview modals
@@ -1060,7 +1079,7 @@
       async function openTemplatePreview(templateId) {
         try {
           const res = await fetch(
-            `https://pcm-app.duckdns.org/templates/${templateId}`
+            `https://pcm-app.duckdns.org/templates/${templateId}`,
           );
           if (!res.ok) {
             throw new Error("Failed to fetch template");
@@ -1146,7 +1165,7 @@
 
         if (!res.ok)
           throw new Error(
-            `Auth failed for ${selectedEnv.toUpperCase()} environment`
+            `Auth failed for ${selectedEnv.toUpperCase()} environment`,
           );
         const data = await res.json();
         return data.token;
@@ -1246,7 +1265,7 @@
           let mode = getCurrentMode();
 
           const isProduction = confirm(
-            "Do you want to send this letter in PRODUCTION mode?\n\nClick OK for Production\nClick Cancel for Testing"
+            "Do you want to send this letter in PRODUCTION mode?\n\nClick OK for Production\nClick Cancel for Testing",
           );
 
           mode = isProduction ? "production" : "testing";
@@ -1260,19 +1279,19 @@
           });
 
           const tplRes = await fetch(
-            `https://pcm-app.duckdns.org/templates/${templateId}`
+            `https://pcm-app.duckdns.org/templates/${templateId}`,
           );
           if (!tplRes.ok) throw new Error("Failed to load template content");
           const tpl = await tplRes.json();
           const finalHtml = (tpl.html_content || "").replace(
             /DATE/g,
-            formattedDate
+            formattedDate,
           );
 
           // Show letter options modal and wait for user input
           const optionsConfirmed = await showLetterOptionsModalAsync(
             templateId,
-            button
+            button,
           );
 
           if (!optionsConfirmed) {
@@ -1316,7 +1335,7 @@
                 Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify(pcmPayload),
-            }
+            },
           );
 
           const data = await res.json().catch(() => ({}));
@@ -1337,7 +1356,7 @@
               method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(updatePayload),
-            }
+            },
           );
 
           if (!updateRes.ok) {
@@ -1372,7 +1391,7 @@
 
         if (mailerEnvMode === "production" && mailerStatus === "sent") {
           alert(
-            `Cannot delete sent mailers created in PRODUCTION mode.\n\nMailer was created in: ${mailerEnvMode.toUpperCase()} mode\nCurrent status: ${mailerStatus}\n\nOnly 'pending' or 'scheduled' mailers can be deleted in production.`
+            `Cannot delete sent mailers created in PRODUCTION mode.\n\nMailer was created in: ${mailerEnvMode.toUpperCase()} mode\nCurrent status: ${mailerStatus}\n\nOnly 'pending' or 'scheduled' mailers can be deleted in production.`,
           );
           return;
         }
@@ -1389,7 +1408,7 @@
             {
               method: "DELETE",
               headers: { "Content-Type": "application/json" },
-            }
+            },
           );
 
           if (!res.ok) {
@@ -1401,7 +1420,7 @@
           alert(
             `✅ Mailer deleted successfully!\n\nCreated in: ${result.env_mode.toUpperCase()} mode\nStatus was: ${
               result.status
-            }`
+            }`,
           );
           window.close();
 
@@ -1413,7 +1432,6 @@
           alert("Error deleting mailer: " + err.message);
         }
       }
-
 
       function attachMailerActions(mailer) {
         const actions = document.getElementById("actionButtons");
@@ -1451,7 +1469,6 @@
         deleteBtn.onclick = () => deleteMailer(mailer.id);
         actions.appendChild(deleteBtn);
       }
-
 
       function formatSchedule(dateString) {
         if (!dateString) return "No schedule set";
@@ -1539,8 +1556,8 @@
             mailer.status === "pending"
               ? "status-pending"
               : mailer.status === "scheduled"
-              ? "status-scheduled"
-              : "status-sent";
+                ? "status-scheduled"
+                : "status-sent";
 
           const card = document.createElement("div");
           card.className = "mailer-card";
@@ -1606,8 +1623,8 @@
                 </div>
                 <div style="text-align:right">
                   <div class="status-badge ${statusClass}">${(
-            mailer.status || "pending"
-          ).toUpperCase()}</div>
+                    mailer.status || "pending"
+                  ).toUpperCase()}</div>
                 </div>
               </div>
               <div style="margin-top:10px;color:#64748b;font-size:13px">Expected delivery: ${expectedText}</div>
@@ -1621,7 +1638,6 @@
         });
       }
 
-      
       // renderMailerInfo function
       function renderMailerInfo(mailer) {
         currentMailer = mailer;
@@ -1655,7 +1671,7 @@
 
           // Hide estimated recipients for direct mail
           const estContainer = document.getElementById(
-            "estimatedRecipientsContainer"
+            "estimatedRecipientsContainer",
           );
           if (estContainer) {
             estContainer.style.display = "none";
@@ -1664,12 +1680,12 @@
         // Handle RES OCC - Show Estimated Recipients
         else {
           const estContainer = document.getElementById(
-            "estimatedRecipientsContainer"
+            "estimatedRecipientsContainer",
           );
           if (estContainer) {
             estContainer.style.display = "block";
             const estRecipientsEl = document.getElementById(
-              "estimatedRecipients"
+              "estimatedRecipients",
             );
             if (estRecipientsEl) {
               estRecipientsEl.textContent = mailer.res_recipients
@@ -1705,7 +1721,6 @@
         statusEl.className = "status-badge status-pending";
         handlePendingMailer(mailer);
       }
-
 
       function handleScheduledMailer(mailer) {
         const isDirectMail = isDirectMailOrder(mailer.res_recipients);
@@ -1770,8 +1785,8 @@
           viewBtn.innerHTML = mailer.pdf_link
             ? "📄 View Selected PDF"
             : mailer.canva_link
-            ? "🎨 View Canva Template"
-            : "📄 View Selected Template";
+              ? "🎨 View Canva Template"
+              : "📄 View Selected Template";
           viewBtn.onclick = () => viewSelectedContent();
           actions.appendChild(viewBtn);
         }
@@ -1802,7 +1817,7 @@
 
         console.log(
           "📌 Preparing to navigate to Canva with mailer context:",
-          currentMailer
+          currentMailer,
         );
 
         if (currentMailer.status !== "pending") {
@@ -1989,7 +2004,7 @@
                 Accept: "application/json",
                 Authorization: `Bearer ${token}`,
               },
-            }
+            },
           );
 
           if (!res.ok) return [];
@@ -2075,8 +2090,8 @@
           viewBtn.innerHTML = mailer.pdf_link
             ? "📄 View Selected PDF"
             : mailer.canva_link
-            ? "🎨 View Canva Template"
-            : "📄 View Selected Template";
+              ? "🎨 View Canva Template"
+              : "📄 View Selected Template";
           viewBtn.onclick = () => viewSelectedContent();
           actions.appendChild(viewBtn);
         }
@@ -2110,7 +2125,6 @@
           document.getElementById("filterBar").style.display = "flex";
         }
       }
-
 
       async function loadTemplates(selectedTemplateId = null) {
         const templatesGrid = document.getElementById("templatesGrid");
@@ -2183,7 +2197,6 @@
         }
       }
 
-
       function openFullPreview(event, encodedHtml) {
         event.preventDefault();
         event.stopPropagation();
@@ -2201,7 +2214,6 @@
         overlay.style.display = "flex";
       }
 
-
       function closePreview() {
         document.getElementById("previewOverlay").style.display = "none";
         document.getElementById("previewBody").innerHTML = "";
@@ -2211,7 +2223,7 @@
         if (!templateId) return null;
         try {
           const res = await fetch(
-            `https://pcm-app.duckdns.org/templates/${templateId}`
+            `https://pcm-app.duckdns.org/templates/${templateId}`,
           );
           if (!res.ok) throw new Error("Failed to fetch template for QR code");
           const template = await res.json();
@@ -2225,7 +2237,7 @@
       async function renderRecipients(
         list,
         templateId = null,
-        mailerStatus = "pending"
+        mailerStatus = "pending",
       ) {
         let qrCodeId = null;
 
@@ -2241,7 +2253,7 @@
                   (s) =>
                     s.firstName === r.firstName &&
                     s.lastName === r.lastName &&
-                    s.address === r.address
+                    s.address === r.address,
                 );
                 return { ...r, scanned: !!matched };
               });
@@ -2268,8 +2280,8 @@
     <div class="recipient-item">
       <div class="recipient-name">${r.firstName || ""} ${r.lastName || ""}</div>
       <div class="recipient-address">${r.address || ""}, ${r.city || ""} ${
-              r.state || ""
-            } ${r.zipcode || ""}</div>
+        r.state || ""
+      } ${r.zipcode || ""}</div>
       ${
         showScannedStatus && r.scanned !== undefined
           ? `<span class="recipient-status ${
@@ -2278,7 +2290,7 @@
           : ""
       }
     </div>
-  `
+  `,
           )
           .join("");
       }
@@ -2293,7 +2305,7 @@
         await renderRecipients(
           filter ? originalList.filter((r) => r.scanned) : originalList,
           currentMailer.template_id,
-          currentMailer.status || "pending"
+          currentMailer.status || "pending",
         );
       }
 
@@ -2306,7 +2318,7 @@
 
         try {
           const res = await fetch(
-            `https://pcm-app.duckdns.org/mailer-one-off/${mailerId}`
+            `https://pcm-app.duckdns.org/mailer-one-off/${mailerId}`,
           );
           if (!res.ok) throw new Error("Failed to fetch mailer details");
 

@@ -580,7 +580,8 @@ function attachTableEventListeners(data) {
         url = `./mailer_detail.html?id=${id}`;
       }
 
-      window.open(url, "_blank");
+      // This updates the current tab's URL
+      window.location.href = url;
     });
   });
 }

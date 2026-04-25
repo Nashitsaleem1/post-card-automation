@@ -1711,7 +1711,6 @@ async function loadExistingAudiences() {
     audiencesGrid.innerHTML = "";
 
     audiences.forEach((audience) => {
-      // audience_list comes as array from API (already parsed by backend)
       const audienceList = Array.isArray(audience.audience_list)
         ? audience.audience_list
         : JSON.parse(audience.audience_list);
@@ -1724,8 +1723,34 @@ async function loadExistingAudiences() {
       audienceCard.dataset.audienceId = audience.id;
 
       audienceCard.innerHTML = `
-        <div class="audience-card-header">
-          <h3 class="audience-name">${audience.audience_name}</h3>
+        <div class="audience-card-header" style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem;">
+          <h3 class="audience-name" style="margin: 0; flex: 1;">${audience.audience_name}</h3>
+          <button
+            class="delete-audience-btn"
+            title="Delete audience"
+            style="
+              background: none;
+              border: none;
+              cursor: pointer;
+              padding: 0.25rem;
+              border-radius: 4px;
+              color: #aaa;
+              font-size: 1rem;
+              line-height: 1;
+              flex-shrink: 0;
+              transition: color 0.2s, background 0.2s;
+            "
+            onmouseover="this.style.color='#dc3545'; this.style.background='#fff0f0';"
+            onmouseout="this.style.color='#aaa'; this.style.background='none';"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+              <path d="M10 11v6"></path>
+              <path d="M14 11v6"></path>
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+            </svg>
+          </button>
         </div>
         <div class="audience-info">
           <span class="info-item">${recipientCount} recipients</span>
@@ -1749,6 +1774,10 @@ async function loadExistingAudiences() {
             : JSON.parse(audience.audience_list);
           viewAudienceDetails(list, audience.audience_name);
         });
+
+      audienceCard
+        .querySelector(".delete-audience-btn")
+        .addEventListener("click", (e) => deleteAudience(audience.id, e));
 
       audiencesGrid.appendChild(audienceCard);
     });
@@ -1790,7 +1819,7 @@ function viewAudienceDetails(audienceList, audienceName) {
       <h2>${audienceName} — ${audienceList.length} recipients</h2>
 
       <table class="audience-table">
-        <thead>
+        <thead style="color: #000;">
           <tr>
             <th>#</th>
             <th>Name</th>
@@ -1891,79 +1920,178 @@ async function deleteAudience(audienceId, event) {
   }
 }
 
+
 // ============================================
 // AUDIENCE NAME MODAL FUNCTIONS
 // ============================================
 
+// 1. showAudienceNameModal — now returns a Promise so parseCSV can await it
 function showAudienceNameModal() {
-  const modal = document.getElementById("audienceNameModal");
-  const input = document.getElementById("audienceNameInput");
-
-  if (modal && input) {
-    input.value = "";
-    modal.style.display = "flex";
-    input.focus();
-  }
+  return new Promise((resolve, reject) => {
+    const modal = document.getElementById("audienceNameModal");
+    const input = document.getElementById("audienceNameInput");
+ 
+    if (modal && input) {
+      input.value = "";
+      modal.style.display = "flex";
+      input.focus();
+ 
+      // Store both resolve and reject so the confirm/cancel buttons can call them
+      window._audienceModalResolve = resolve;
+      window._audienceModalReject = reject;
+    } else {
+      reject(new Error("Modal not found"));
+    }
+  });
 }
-
+ 
+// 2. closeAudienceNameModal — now rejects the promise (user cancelled)
 function closeAudienceNameModal() {
   const modal = document.getElementById("audienceNameModal");
-  if (modal) {
-    modal.style.display = "none";
+  if (modal) modal.style.display = "none";
+ 
+  if (window._audienceModalReject) {
+    window._audienceModalReject(new Error("User cancelled"));
+    window._audienceModalReject = null;
+    window._audienceModalResolve = null;
   }
 }
 
+// 3. confirmSaveAudience — now resolves the promise on success
 async function confirmSaveAudience() {
-  const audienceName = document
-    .getElementById("audienceNameInput")
-    .value.trim();
-
+  const audienceName = document.getElementById("audienceNameInput").value.trim();
+ 
   if (!audienceName) {
     showAlert("Please enter an audience name");
     return;
   }
-
+ 
   if (recipientsList.length === 0) {
     showAlert("No recipients to save");
     closeAudienceNameModal();
     return;
   }
-  // console.log(recipientsList)
+ 
   try {
-    // Backend expects audience_list as array of Address objects
     const payload = {
       audience_name: audienceName,
-      audience_list: recipientsList, // Send as array - backend will serialize to JSON
+      audience_list: recipientsList,
     };
-
+ 
     const response = await fetch("https://pcm-app.duckdns.org/audiences", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-
+ 
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || "Failed to save audience");
     }
-
+ 
     const savedAudience = await response.json();
-
     selectedAudienceId = savedAudience.id;
     currentAudienceData = savedAudience;
-
-    showAlert(
-      `✅ Audience "${audienceName}" saved successfully with ${recipientsList.length} recipients`
-    );
-
-    closeAudienceNameModal();
+ 
+    // Close modal
+    const modal = document.getElementById("audienceNameModal");
+    if (modal) modal.style.display = "none";
+ 
+    // Resolve the promise with the saved audience name
+    if (window._audienceModalResolve) {
+      window._audienceModalResolve(audienceName);
+      window._audienceModalResolve = null;
+      window._audienceModalReject = null;
+    }
+ 
     saveState();
   } catch (error) {
     console.error("Error saving audience:", error);
     showAlert("Error saving audience: " + error.message);
   }
+}
+ 
+// 4. showUploadSuccessState — renders the "saved" UI with a re-upload option
+function showUploadSuccessState(audienceName, recipientCount) {
+  const uploadBox = document.getElementById("uploadBox");
+  if (!uploadBox) return;
+ 
+  uploadBox.innerHTML = `
+    <div style="
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.5rem;
+      text-align: center;
+    ">
+      <div style="
+        width: 56px; height: 56px;
+        border-radius: 50%;
+        background: #d4edda;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.6rem;
+        flex-shrink: 0;
+      ">✓</div>
+ 
+      <div>
+        <div style="font-size: 1.15rem; font-weight: 700; color: #155724; margin-bottom: 0.25rem;">
+          Audience Saved Successfully
+        </div>
+        <div style="font-size: 0.95rem; color: #555;">
+          <strong>${audienceName}</strong> — ${recipientCount.toLocaleString()} recipient${recipientCount !== 1 ? "s" : ""} loaded
+        </div>
+      </div>
+ 
+      <div style="
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 0.5rem;
+      ">
+        <button
+          type="button"
+          onclick="resetUpload()"
+          style="
+            padding: 0.55rem 1.25rem;
+            background: white;
+            color: #333;
+            border: 1.5px solid #ccc;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+          "
+          onmouseover="this.style.borderColor='#888'; this.style.background='#f5f5f5';"
+          onmouseout="this.style.borderColor='#ccc'; this.style.background='white';"
+        >
+          Upload a Different File
+        </button>
+ 
+        <button
+          type="button"
+          onclick="viewAudienceDetails(recipientsList, '${audienceName.replace(/'/g, "\\'")}')"
+          style="
+            padding: 0.8rem 1.25rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+          "
+          onmouseover="this.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%);';"
+          onmouseout="this.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%);';"
+        >
+          View Recipients
+        </button>
+      </div>
+    </div>
+  `;
 }
 
 // ============================================
@@ -3342,12 +3470,11 @@ function sanitizeRecipients(list) {
 }
 
 
-async function parseCSV(file) {
+function parseCSV(file) {
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
-    complete: async (results) => { // Added async here
-      // 1. Sanitize and Filter (Skipping rows with no address)
+    complete: async (results) => {
       const recipients = results.data
         .map((r) => {
           const row = Object.fromEntries(
@@ -3362,42 +3489,95 @@ async function parseCSV(file) {
             zipCode: String(row.zipcode || ""),
           };
         })
-        .filter((r) => r.address.trim() !== ""); // Skip missing addresses
-
-      console.log(recipients);
+        .filter((r) => r.address.trim() !== "");
+ 
       recipientsList = recipients;
-
+ 
+      // Show "pending" state while user names the audience
       const uploadBox = document.getElementById("uploadBox");
-      
-      // Initial "Success / Saving" State
-      uploadBox.innerHTML = `
-        <div class="upload-icon" style="color: #28a745;">✓</div>
-        <div class="upload-main-text" style="color: #28a745;">File parsed successfully!</div>
-        <div class="upload-sub-text">${recipients.length} recipients loaded</div>
-        <div id="saveStatus" class="upload-sub-text" style="color: #ff6b6b; font-weight: 600; margin-top: 1rem;">
-          Waiting for Audience Name...
-        </div>
-      `;
-
+      if (uploadBox) {
+        uploadBox.innerHTML = `
+          <div style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+          ">
+            <div style="font-size: 2rem;">📋</div>
+            <div style="font-size: 1rem; font-weight: 600; color: #333;">
+              ${recipients.length.toLocaleString()} recipients parsed
+            </div>
+            <div style="font-size: 0.9rem; color: #666;">
+              Name your audience to save it…
+            </div>
+          </div>
+        `;
+      }
+  
       saveState();
-
-      // 2. Trigger the modal and wait for it to finish
-      // Assuming showAudienceNameModal is an async function or returns a promise
+ 
       try {
-        await showAudienceNameModal(); 
-        
-        // 3. Update UI to "Saved" state
-        const saveStatus = document.getElementById("saveStatus");
-        if (saveStatus) {
-          saveStatus.innerText = "Audience Saved!";
-          saveStatus.style.color = "#28a745";
-        }
-      } catch (err) {
-        // If they cancel the modal or it fails
-        const saveStatus = document.getElementById("saveStatus");
-        if (saveStatus) {
-          saveStatus.innerText = "Upload Complete (Not Saved to Audience)";
-          saveStatus.style.color = "#666";
+        // Wait for user to name + confirm the audience
+        const savedName = await showAudienceNameModal();
+ 
+        // On success, show the persistent success state
+        showUploadSuccessState(savedName, recipients.length);
+        updateButtonStates();
+      } catch (_cancelled) {
+        // User hit Cancel — show a neutral state with an option to try again
+        if (uploadBox) {
+          uploadBox.innerHTML = `
+            <div style="
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 0.75rem;
+              padding: 1.5rem;
+              text-align: center;
+            ">
+              <div style="font-size: 1rem; color: #666;">
+                File parsed but not saved as an audience.
+                <br>
+                ${recipients.length.toLocaleString()} recipients are still loaded.
+              </div>
+              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; margin-top: 0.5rem;">
+                <button
+                  type="button"
+                  onclick="showAudienceNameModal().then(name => showUploadSuccessState(name, recipientsList.length)).catch(() => {})"
+                  style="
+                    padding: 0.55rem 1.25rem;
+                    background: #28a745;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                  "
+                >
+                  Save Audience
+                </button>
+                <button
+                  type="button"
+                  onclick="resetUpload()"
+                  style="
+                    padding: 0.55rem 1.25rem;
+                    background: white;
+                    color: #333;
+                    border: 1.5px solid #ccc;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                  "
+                >
+                  Upload Different File
+                </button>
+              </div>
+            </div>
+          `;
         }
       }
     },
@@ -3470,6 +3650,7 @@ function resetUpload() {
   saveState();
   setupDragAndDrop();
 }
+
 
 // ============================================
 // TEMPLATE MANAGEMENT

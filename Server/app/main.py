@@ -1391,7 +1391,7 @@ def create_audience(audience: schemas.AudienceCreate, db: Session = Depends(get_
         .first()
     )
     if existing:
-        raise HTTPException(status_code=400, detail="Audience name already exists")
+        raise HTTPException(status_code=400, detail="Audience name already exists. Please enter another name!")
 
     # Convert list of address objects to JSON string for DB storage
     db_audience = Audience(
