@@ -184,7 +184,7 @@ function closePreview() {
  */
 async function getPcmToken() {
   const payload = {
-    apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
+    apiKey: "OWU1YTI5Y2UtNzk1Yy00NzQ0LTliM2EtNGE0Y2Y1ZjhhYzJl",
     apiSecret: "MmZlMzIwMzItMTlhZS00Mjk0LWE1NWYtYmI5NTg5MDUxYTM0",
     childRefNbr: "myAccountReference",
   };

@@ -25,8 +25,8 @@ let letterOptions = {
 
 const API_KEYS = {
   testing: {
-    apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
-    apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
+    apiKey: "OWU1YTI5Y2UtNzk1Yy00NzQ0LTliM2EtNGE0Y2Y1ZjhhYzJl",
+    apiSecret: "YzU1NGZhNTYtODBmNy00MTc0LTkyODMtOTA0MDljN2VmOGJm",
   },
   production: {
     apiKey: "ZDczYjA4OGEtOTA0ZS00YmIxLWFmYWItNzkzYzQzOWM5ZDIy",
@@ -135,8 +135,8 @@ async function getToken(env = null) {
 
   const credentials = {
     testing: {
-      apiKey: "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0",
-      apiSecret: "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl",
+      apiKey: "OWU1YTI5Y2UtNzk1Yy00NzQ0LTliM2EtNGE0Y2Y1ZjhhYzJl",
+      apiSecret: "YzU1NGZhNTYtODBmNy00MTc0LTkyODMtOTA0MDljN2VmOGJm",
       childRefNbr: "myAccountReference",
       url: "https://v3.pcmintegrations.com/auth/login",
     },

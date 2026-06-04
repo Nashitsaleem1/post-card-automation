@@ -1,0 +1,7 @@
+# Ignore environment variable files
+.env
+Server/.env
+**/__pycache__/
+
+# Ignore sensitive token files
+Server/app/canva_tokens.json

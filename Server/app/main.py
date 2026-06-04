@@ -22,18 +22,24 @@ import uuid
 import time
 from pathlib import Path
 import pytz
+from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, HTTPException
 
-API_URL = "https://v3.pcmintegrations.com/auth/login"
-API_KEY = "Mzk2N2YyZTktZmNkNy00YjcwLWJhMjUtMTM4ZWFlZDhmNWU0"
-API_SECRET = "YzU0NTRiMjgtOTE3Mi00YTRmLWE3YjQtYTc0ODE1N2FmOGNl"
-CHILD_REF_NBR = "myAccountReference"
+load_dotenv()
 
+API_URL = "https://v3.pcmintegrations.com/auth/login"
+
+# Access the variables
+api_key = os.getenv("API_KEY")
+api_secret = os.getenv("API_SECRET")
+client_id = os.getenv("CLIENT_ID")
+client_secret = os.getenv("CLIENT_SECRET")
+
+CHILD_REF_NBR = "myAccountReference"
 STATIC_DIR = Path("uploads/pdfs")
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
-CLIENT_ID = "OC-AZn4e_GgzZAp"
-CLIENT_SECRET = "cnvcaQ5z-PNqcsxXWKVvJ1G_ocl159sYRDGvunfWsY2xcrIk80f1e095"
+
 TOKEN_URL = "https://api.canva.com/rest/v1/oauth/token"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TOKENS_FILE = os.path.join(BASE_DIR, "canva_tokens.json")
@@ -92,7 +98,7 @@ def is_token_expired(token_data):
 
 
 def refresh_access_token(refresh_token):
-    auth_str = f"{CLIENT_ID}:{CLIENT_SECRET}"
+    auth_str = f"{client_id}:{client_secret}"
     b64_auth = base64.b64encode(auth_str.encode()).decode()
 
     headers = {
@@ -126,8 +132,8 @@ def get_canva_token():
 # ---------- Utility: Token Fetch ----------
 def get_pcm_token():
     payload = {
-        "apiKey": API_KEY,
-        "apiSecret": API_SECRET,
+        "apiKey": api_key,
+        "apiSecret": api_secret,
         "childRefNbr": CHILD_REF_NBR,
     }
     resp = requests.post(
