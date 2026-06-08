@@ -1674,13 +1674,14 @@ function renderDemographics() {
             Please select a List Type first to view available demographics filters.
           </p>
         </div>`;
-    } else {
-      container.innerHTML = `
-        <div class="demographics-empty-state">
-          <p style="color: #999; padding: 1rem; text-align: center;">
-            No demographics available for ${getListTypeLabel(currentListType)}
-          </p>
-        </div>`;
+        } else {
+      const emptyState = document.createElement("div");
+      emptyState.className = "demographics-empty-state";
+      const p = document.createElement("p");
+      p.style.cssText = "color:#999; padding:1rem; text-align:center;";
+      p.textContent = `No demographics available for ${getListTypeLabel(currentListType)}`;
+      emptyState.appendChild(p);
+      container.appendChild(emptyState);
     }
     return;
   }
@@ -1943,33 +1944,48 @@ function populateCarrierRoutesForEDDM(routes) {
   divider.style.cssText = "border-top: 1px solid #e0e0e0; margin: 0.5rem 0;";
   list.appendChild(divider);
 
-  // Add individual routes
   routes.forEach((route) => {
     const option = document.createElement("div");
     option.className = "multiselect-option";
 
-    // Format label as "ROUTE CODE - CITY, STATE (Total: X)"
     const routeLabel = `${route.code} - ${route.text} (${route.total})`;
     const sanitizedCode = route.code.replace(/:/g, "_").replace(/\s+/g, "_");
 
-    option.innerHTML = `
-      <input 
-        type="checkbox" 
-        id="route_${sanitizedCode}" 
-        value="${route.code}"
-        class="route-checkbox"
-        onchange="handleCheckboxChange('${route.code}', '${routeLabel.replace(
-      /'/g,
-      "\\'"
-    )}', this.checked)"
-      />
-      <label for="route_${sanitizedCode}">
-        <strong>${route.code}</strong> - ${route.text}
-        <span style="color: #999; font-size: 0.85rem; margin-left: 0.5rem;">(${
-          route.total
-        })</span>
-      </label>
-    `;
+    // Build checkbox safely — store values in data-* attributes, never in JS string
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = `route_${sanitizedCode}`;
+    checkbox.value = route.code;
+    checkbox.className = "route-checkbox";
+    checkbox.dataset.routeCode = route.code;
+    checkbox.dataset.routeLabel = routeLabel;
+    checkbox.addEventListener("change", function () {
+      handleCheckboxChange(
+        this.dataset.routeCode,
+        this.dataset.routeLabel,
+        this.checked
+      );
+    });
+
+    // Build label safely — textContent for user-supplied values
+    const label = document.createElement("label");
+    label.htmlFor = `route_${sanitizedCode}`;
+
+    const codeStrong = document.createElement("strong");
+    codeStrong.textContent = route.code;
+
+    const separator = document.createTextNode(` - ${route.text} `);
+
+    const countSpan = document.createElement("span");
+    countSpan.style.cssText = "color:#999; font-size:0.85rem; margin-left:0.5rem;";
+    countSpan.textContent = `(${route.total})`;
+
+    label.appendChild(codeStrong);
+    label.appendChild(separator);
+    label.appendChild(countSpan);
+
+    option.appendChild(checkbox);
+    option.appendChild(label);
     list.appendChild(option);
   });
 }
@@ -2011,14 +2027,13 @@ function updateSelectAllCheckbox() {
 function handleSelectAllRoutes(checkbox) {
   const routeCheckboxes = document.querySelectorAll(".route-checkbox");
   const isChecked = checkbox.checked;
-
   routeCheckboxes.forEach((cb) => {
     cb.checked = isChecked;
-
-    // Trigger the change handler for each checkbox
-    const routeCode = cb.value;
-    const label = cb.nextElementSibling.textContent.trim();
-    handleCheckboxChange(routeCode, label, isChecked);
+    handleCheckboxChange(
+      cb.dataset.routeCode,
+      cb.dataset.routeLabel,
+      isChecked
+    );
   });
 }
 

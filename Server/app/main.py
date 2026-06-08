@@ -638,10 +638,22 @@ async def upload_pdf(file: UploadFile = File(...)):
 @app.delete("/delete-pdf/{filename}")
 async def delete_pdf(filename: str):
     """
-    Delete a PDF file from static folder
+    Delete a PDF file from static folder.
+    FIX: Resolves the path and checks it is within STATIC_DIR
+    to prevent path traversal (py/path-injection).
     """
     try:
-        file_path = STATIC_DIR / filename
+        # Reject any filename containing path separators or traversal sequences
+        # before even touching the filesystem
+        if "/" in filename or "\\" in filename or ".." in filename:
+            raise HTTPException(status_code=400, detail="Invalid filename")
+
+        file_path = (STATIC_DIR / filename).resolve()
+
+        # Ensure the resolved path is still inside STATIC_DIR
+        # This is the core guard against path traversal
+        if not str(file_path).startswith(str(STATIC_DIR.resolve())):
+            raise HTTPException(status_code=400, detail="Invalid filename")
 
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="File not found")
@@ -650,10 +662,12 @@ async def delete_pdf(filename: str):
 
         return {"success": True, "message": f"File {filename} deleted successfully"}
 
+    except HTTPException:
+        raise  # re-raise known errors without wrapping
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
-
-
+    
+    
 # ---------- Start Campaign Watcher ----------
 scheduler.add_job(
     campaign_watcher_job,

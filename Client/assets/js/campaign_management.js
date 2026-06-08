@@ -665,28 +665,43 @@ function populateCarrierRoutes(routes) {
     const option = document.createElement("div");
     option.className = "multiselect-option";
 
-    // Format label as "ROUTE CODE - CITY, STATE (Total: X)"
     const routeLabel = `${route.code} - ${route.text} (${route.total})`;
     const sanitizedCode = route.code.replace(/:/g, "_").replace(/\s+/g, "_");
 
-    option.innerHTML = `
-      <input 
-        type="checkbox" 
-        id="route_${sanitizedCode}" 
-        value="${route.code}"
-        class="route-checkbox"
-        onchange="handleCheckboxChange('${route.code}', '${routeLabel.replace(
-      /'/g,
-      "\\'"
-    )}', this.checked)"
-      />
-      <label for="route_${sanitizedCode}">
-        <strong>${route.code}</strong> - ${route.text}
-        <span style="color: #999; font-size: 0.85rem; margin-left: 0.5rem;">(${
-          route.total
-        })</span>
-      </label>
-    `;
+    // FIX: Use data-* attributes — routeCode/routeLabel never interpolated into JS string
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = `route_${sanitizedCode}`;
+    checkbox.value = route.code;
+    checkbox.className = "route-checkbox";
+    checkbox.dataset.routeCode = route.code;
+    checkbox.dataset.routeLabel = routeLabel;
+    checkbox.addEventListener("change", function () {
+      handleCheckboxChange(
+        this.dataset.routeCode,
+        this.dataset.routeLabel,
+        this.checked
+      );
+    });
+
+    const label = document.createElement("label");
+    label.htmlFor = `route_${sanitizedCode}`;
+
+    const codeStrong = document.createElement("strong");
+    codeStrong.textContent = route.code;
+
+    const separator = document.createTextNode(` - ${route.text} `);
+
+    const countSpan = document.createElement("span");
+    countSpan.style.cssText = "color:#999; font-size:0.85rem; margin-left:0.5rem;";
+    countSpan.textContent = `(${route.total})`;
+
+    label.appendChild(codeStrong);
+    label.appendChild(separator);
+    label.appendChild(countSpan);
+
+    option.appendChild(checkbox);
+    option.appendChild(label);
     list.appendChild(option);
   });
 }
@@ -698,11 +713,11 @@ function handleSelectAllRoutes(checkbox) {
 
   routeCheckboxes.forEach((cb) => {
     cb.checked = isChecked;
-
-    // Trigger the change handler for each checkbox
-    const routeCode = cb.value;
-    const label = cb.nextElementSibling.textContent.trim();
-    handleCheckboxChange(routeCode, label, isChecked);
+    handleCheckboxChange(
+      cb.dataset.routeCode,
+      cb.dataset.routeLabel,
+      isChecked
+    );
   });
 }
 
@@ -1049,12 +1064,13 @@ function renderDemographics() {
           </p>
         </div>`;
     } else {
-      container.innerHTML = `
-        <div class="demographics-empty-state">
-          <p style="color: #999; padding: 1rem; text-align: center;">
-            No demographics available for ${getListTypeLabel(currentListType)}
-          </p>
-        </div>`;
+      const emptyState = document.createElement("div");
+      emptyState.className = "demographics-empty-state";
+      const p = document.createElement("p");
+      p.style.cssText = "color:#999; padding:1rem; text-align:center;";
+      p.textContent = `No demographics available for ${getListTypeLabel(currentListType)}`;
+      emptyState.appendChild(p);
+      container.appendChild(emptyState);
     }
     return;
   }
@@ -1062,11 +1078,19 @@ function renderDemographics() {
   // Add info message about current list type
   const infoDiv = document.createElement("div");
   infoDiv.className = "demographics-info";
-  infoDiv.innerHTML = `
-    <div style="background: #e3f2fd; padding: 0.75rem; border-radius: 5px; margin-bottom: 1rem; border-left: 4px solid #2196f3;">
-      <strong>📊 Demographics for:</strong> ${getListTypeLabel(currentListType)}
-    </div>
-  `;
+
+  const infoInner = document.createElement("div");
+  infoInner.style.cssText =
+    "background:#e3f2fd; padding:0.75rem; border-radius:5px; margin-bottom:1rem; border-left:4px solid #2196f3;";
+
+  const infoStrong = document.createElement("strong");
+  infoStrong.textContent = "📊 Demographics for: ";
+
+  const infoLabel = document.createTextNode(getListTypeLabel(currentListType));
+
+  infoInner.appendChild(infoStrong);
+  infoInner.appendChild(infoLabel);
+  infoDiv.appendChild(infoInner);
   container.appendChild(infoDiv);
 
   demographicsData.forEach((demographic) => {
@@ -2298,14 +2322,26 @@ async function uploadPdfFile(file) {
   // ⭐ FIX: Set isUploading flag to prevent page reload
   isUploading = true;
 
-  // Show loading state
-  pdfUploadBox.innerHTML = `
-    <div style="padding: 2rem; text-align: center;">
-      <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
-      <div style="font-size: 1.1rem; color: #666;">Uploading PDF...</div>
-      <div style="font-size: 0.9rem; color: #999; margin-top: 0.5rem;">${file.name}</div>
-    </div>
-  `;
+    // Show loading state
+  const loadingWrapper = document.createElement("div");
+  loadingWrapper.style.cssText = "padding:2rem; text-align:center;";
+
+  const spinner = document.createElement("div");
+  spinner.style.cssText = "font-size:2rem; margin-bottom:1rem;";
+  spinner.textContent = "⏳";
+
+  const uploadingText = document.createElement("div");
+  uploadingText.style.cssText = "font-size:1.1rem; color:#666;";
+  uploadingText.textContent = "Uploading PDF...";
+
+  const fileNameText = document.createElement("div");
+  fileNameText.style.cssText = "font-size:0.9rem; color:#999; margin-top:0.5rem;";
+  fileNameText.textContent = file.name; // safe: textContent, never parsed as HTML
+
+  loadingWrapper.appendChild(spinner);
+  loadingWrapper.appendChild(uploadingText);
+  loadingWrapper.appendChild(fileNameText);
+  pdfUploadBox.replaceChildren(loadingWrapper);
 
   try {
     const formData = new FormData();
