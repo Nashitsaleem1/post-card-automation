@@ -1696,9 +1696,11 @@ function renderDemographics() {
     margin-bottom: 1rem;
     border-left: 4px solid #2196f3;
   `;
-  infoDiv.innerHTML = `<strong>📊 Demographics for:</strong> ${getListTypeLabel(
-    currentListType
-  )}`;
+  const infoStrong = document.createElement("strong");
+  infoStrong.textContent = "📊 Demographics for: ";
+  const infoLabel = document.createTextNode(getListTypeLabel(currentListType));
+  infoDiv.appendChild(infoStrong);
+  infoDiv.appendChild(infoLabel);
   container.appendChild(infoDiv);
 
   demographicsData.forEach((demographic, index) => {

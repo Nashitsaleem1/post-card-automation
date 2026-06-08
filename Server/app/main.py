@@ -639,35 +639,40 @@ async def upload_pdf(file: UploadFile = File(...)):
 async def delete_pdf(filename: str):
     """
     Delete a PDF file from static folder.
-    FIX: Resolves the path and checks it is within STATIC_DIR
-    to prevent path traversal (py/path-injection).
+    FIX: Never constructs a path from user input directly.
+    Validates the filename against the actual directory listing,
+    so the filesystem path is always derived from trusted data.
     """
     try:
-        # Reject any filename containing path separators or traversal sequences
-        # before even touching the filesystem
-        if "/" in filename or "\\" in filename or ".." in filename:
+        # Step 1: Validate filename format — must be a plain filename only,
+        # no slashes, no dots that could indicate traversal
+        if not filename or "/" in filename or "\\" in filename or ".." in filename:
             raise HTTPException(status_code=400, detail="Invalid filename")
 
-        file_path = (STATIC_DIR / filename).resolve()
+        # Step 2: Look up the file by scanning the trusted directory,
+        # then match by name — path is always derived from STATIC_DIR,
+        # never from the user-supplied string directly
+        matched_path = None
+        for entry in STATIC_DIR.iterdir():
+            if entry.is_file() and entry.name == filename:
+                matched_path = entry
+                break
 
-        # Ensure the resolved path is still inside STATIC_DIR
-        # This is the core guard against path traversal
-        if not str(file_path).startswith(str(STATIC_DIR.resolve())):
-            raise HTTPException(status_code=400, detail="Invalid filename")
-
-        if not file_path.exists():
+        if matched_path is None:
             raise HTTPException(status_code=404, detail="File not found")
 
-        os.remove(file_path)
+        # Step 3: Delete using the path we found from the directory scan,
+        # not the one constructed from user input
+        matched_path.unlink()
 
         return {"success": True, "message": f"File {filename} deleted successfully"}
 
     except HTTPException:
-        raise  # re-raise known errors without wrapping
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
     
-    
+     
 # ---------- Start Campaign Watcher ----------
 scheduler.add_job(
     campaign_watcher_job,
