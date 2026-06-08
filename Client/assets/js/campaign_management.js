@@ -146,6 +146,7 @@ function handlePdfSectionFileSelect(file) {
 
 /**
  * Display PDF File Information in Upload Section
+ * FIX: Uses DOM methods instead of innerHTML to prevent XSS from file.name
  */
 function displayPdfSectionFileInfo(file) {
   const statusDiv = document.getElementById("pdfUploadStatus");
@@ -154,55 +155,92 @@ function displayPdfSectionFileInfo(file) {
   if (!statusDiv || !statusContent) return;
 
   const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
-  const fileDate = new Date(file.lastModified).toLocaleDateString();
 
-  statusContent.innerHTML = `
-    <div style="display: flex; align-items: flex-start; gap: 1rem;">
-      <div style="font-size: 1.5rem; color: #28a745; flex-shrink: 0;">✓</div>
-      <div style="flex: 1;">
-        <div style="font-weight: 600; color: #28a745; margin-bottom: 0.75rem;">
-          PDF File Selected Successfully
-        </div>
-        <div style="
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 1rem;
-          margin-bottom: 1rem;
-          color: #666;
-          font-size: 0.9rem;
-        ">
-          <div>
-            <strong>File Name:</strong>
-            <div style="word-break: break-all; margin-top: 0.25rem;">${file.name}</div>
-          </div>
-          <div>
-            <strong>File Size:</strong>
-            <div style="margin-top: 0.25rem;">${fileSizeMB} MB</div>
-          </div>
-        </div>
-        <button
-          type="button"
-          onclick="removePdfSectionFile()"
-          style="
-            padding: 0.5rem 1rem;
-            background: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-          "
-          onmouseover="this.style.background='#c82333'; this.style.transform='translateY(-2px)'"
-          onmouseout="this.style.background='#dc3545'; this.style.transform=''"
-        >
-          Remove PDF
-        </button>
-      </div>
-    </div>
+  // --- Wrapper ---
+  const wrapper = document.createElement("div");
+  wrapper.style.cssText = "display:flex; align-items:flex-start; gap:1rem;";
+
+  // --- Checkmark icon ---
+  const icon = document.createElement("div");
+  icon.style.cssText = "font-size:1.5rem; color:#28a745; flex-shrink:0;";
+  icon.textContent = "✓";
+
+  // --- Content column ---
+  const content = document.createElement("div");
+  content.style.flex = "1";
+
+  // Title
+  const title = document.createElement("div");
+  title.style.cssText = "font-weight:600; color:#28a745; margin-bottom:0.75rem;";
+  title.textContent = "PDF File Selected Successfully";
+
+  // Grid
+  const grid = document.createElement("div");
+  grid.style.cssText = `
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+    gap:1rem;
+    margin-bottom:1rem;
+    color:#666;
+    font-size:0.9rem;
   `;
 
+  // File Name cell — textContent prevents XSS
+  const nameCell = document.createElement("div");
+  const nameLabel = document.createElement("strong");
+  nameLabel.textContent = "File Name:";
+  const nameVal = document.createElement("div");
+  nameVal.style.cssText = "word-break:break-all; margin-top:0.25rem;";
+  nameVal.textContent = file.name; // safe: textContent never parsed as HTML
+  nameCell.appendChild(nameLabel);
+  nameCell.appendChild(nameVal);
+
+  // File Size cell
+  const sizeCell = document.createElement("div");
+  const sizeLabel = document.createElement("strong");
+  sizeLabel.textContent = "File Size:";
+  const sizeVal = document.createElement("div");
+  sizeVal.style.marginTop = "0.25rem";
+  sizeVal.textContent = `${fileSizeMB} MB`;
+  sizeCell.appendChild(sizeLabel);
+  sizeCell.appendChild(sizeVal);
+
+  grid.appendChild(nameCell);
+  grid.appendChild(sizeCell);
+
+  // Remove button — addEventListener instead of inline onclick
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.textContent = "Remove PDF";
+  removeBtn.style.cssText = `
+    padding:0.5rem 1rem;
+    background:#dc3545;
+    color:white;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+    font-weight:600;
+    font-size:0.9rem;
+    transition:all 0.3s ease;
+  `;
+  removeBtn.addEventListener("mouseover", () => {
+    removeBtn.style.background = "#c82333";
+    removeBtn.style.transform = "translateY(-2px)";
+  });
+  removeBtn.addEventListener("mouseout", () => {
+    removeBtn.style.background = "#dc3545";
+    removeBtn.style.transform = "";
+  });
+  removeBtn.addEventListener("click", () => removePdfSectionFile());
+
+  // Assemble
+  content.appendChild(title);
+  content.appendChild(grid);
+  content.appendChild(removeBtn);
+  wrapper.appendChild(icon);
+  wrapper.appendChild(content);
+
+  statusContent.replaceChildren(wrapper);
   statusDiv.style.display = "block";
 
   console.log("✅ PDF file info displayed");
@@ -2011,87 +2049,122 @@ async function confirmSaveAudience() {
   }
 }
  
-// 4. showUploadSuccessState — renders the "saved" UI with a re-upload option
+/**
+ * Display Upload Success State
+ * FIX: Uses DOM methods instead of innerHTML to prevent XSS from audienceName
+ */
 function showUploadSuccessState(audienceName, recipientCount) {
   const uploadBox = document.getElementById("uploadBox");
   if (!uploadBox) return;
- 
-  uploadBox.innerHTML = `
-    <div style="
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1rem;
-      padding: 1.5rem;
-      text-align: center;
-    ">
-      <div style="
-        width: 56px; height: 56px;
-        border-radius: 50%;
-        background: #d4edda;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 1.6rem;
-        flex-shrink: 0;
-      ">✓</div>
- 
-      <div>
-        <div style="font-size: 1.15rem; font-weight: 700; color: #155724; margin-bottom: 0.25rem;">
-          Audience Saved Successfully
-        </div>
-        <div style="font-size: 0.95rem; color: #555;">
-          <strong>${audienceName}</strong> — ${recipientCount.toLocaleString()} recipient${recipientCount !== 1 ? "s" : ""} loaded
-        </div>
-      </div>
- 
-      <div style="
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-        justify-content: center;
-        margin-top: 0.5rem;
-      ">
-        <button
-          type="button"
-          onclick="resetUpload()"
-          style="
-            padding: 0.55rem 1.25rem;
-            background: white;
-            color: #333;
-            border: 1.5px solid #ccc;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 600;
-            transition: all 0.2s ease;
-          "
-          onmouseover="this.style.borderColor='#888'; this.style.background='#f5f5f5';"
-          onmouseout="this.style.borderColor='#ccc'; this.style.background='white';"
-        >
-          Upload a Different File
-        </button>
- 
-        <button
-          type="button"
-          onclick="viewAudienceDetails(recipientsList, '${audienceName.replace(/'/g, "\\'")}')"
-          style="
-            padding: 0.8rem 1.25rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 600;
-            transition: all 0.2s ease;
-          "
-          onmouseover="this.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%);';"
-          onmouseout="this.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%);';"
-        >
-          View Recipients
-        </button>
-      </div>
-    </div>
+
+  // --- Outer wrapper ---
+  const outer = document.createElement("div");
+  outer.style.cssText = `
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:1rem;
+    padding:1.5rem;
+    text-align:center;
   `;
+
+  // --- Green circle with checkmark ---
+  const circle = document.createElement("div");
+  circle.style.cssText = `
+    width:56px; height:56px;
+    border-radius:50%;
+    background:#d4edda;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.6rem;
+    flex-shrink:0;
+  `;
+  circle.textContent = "✓";
+
+  // --- Title + subtitle ---
+  const textBlock = document.createElement("div");
+
+  const titleEl = document.createElement("div");
+  titleEl.style.cssText = "font-size:1.15rem; font-weight:700; color:#155724; margin-bottom:0.25rem;";
+  titleEl.textContent = "Audience Saved Successfully";
+
+  const subtitleEl = document.createElement("div");
+  subtitleEl.style.cssText = "font-size:0.95rem; color:#555;";
+
+  const boldName = document.createElement("strong");
+  boldName.textContent = audienceName; // safe: textContent never parsed as HTML
+  subtitleEl.appendChild(boldName);
+  subtitleEl.appendChild(
+    document.createTextNode(
+      ` — ${recipientCount.toLocaleString()} recipient${recipientCount !== 1 ? "s" : ""} loaded`
+    )
+  );
+
+  textBlock.appendChild(titleEl);
+  textBlock.appendChild(subtitleEl);
+
+  // --- Button row ---
+  const btnRow = document.createElement("div");
+  btnRow.style.cssText = `
+    display:flex;
+    gap:0.75rem;
+    flex-wrap:wrap;
+    justify-content:center;
+    margin-top:0.5rem;
+  `;
+
+  // "Upload a Different File" button
+  const resetBtn = document.createElement("button");
+  resetBtn.type = "button";
+  resetBtn.textContent = "Upload a Different File";
+  resetBtn.style.cssText = `
+    padding:0.55rem 1.25rem;
+    background:white;
+    color:#333;
+    border:1.5px solid #ccc;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:0.9rem;
+    font-weight:600;
+    transition:all 0.2s ease;
+  `;
+  resetBtn.addEventListener("mouseover", () => {
+    resetBtn.style.borderColor = "#888";
+    resetBtn.style.background = "#f5f5f5";
+  });
+  resetBtn.addEventListener("mouseout", () => {
+    resetBtn.style.borderColor = "#ccc";
+    resetBtn.style.background = "white";
+  });
+  resetBtn.addEventListener("click", () => resetUpload());
+
+  // "View Recipients" button — closure captures audienceName safely
+  const viewBtn = document.createElement("button");
+  viewBtn.type = "button";
+  viewBtn.textContent = "View Recipients";
+  viewBtn.style.cssText = `
+    padding:0.8rem 1.25rem;
+    background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color:white;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:0.9rem;
+    font-weight:600;
+    transition:all 0.2s ease;
+  `;
+  viewBtn.addEventListener("click", () =>
+    viewAudienceDetails(recipientsList, audienceName)
+  );
+
+  btnRow.appendChild(resetBtn);
+  btnRow.appendChild(viewBtn);
+
+  // Assemble
+  outer.appendChild(circle);
+  outer.appendChild(textBlock);
+  outer.appendChild(btnRow);
+
+  uploadBox.replaceChildren(outer);
 }
 
 // ============================================
@@ -2293,6 +2366,7 @@ async function uploadPdfFile(file) {
 
 /**
  * Display PDF Upload Success
+ * FIX: Uses DOM methods instead of innerHTML to prevent XSS from file.name and filename
  */
 function displayPdfUploadSuccess(file, filename) {
   const pdfUploadBox = document.getElementById("pdfUploadBox");
@@ -2301,56 +2375,102 @@ function displayPdfUploadSuccess(file, filename) {
   const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
   const fileDate = new Date(file.lastModified).toLocaleDateString();
 
-  pdfUploadBox.innerHTML = `
-    <div style="display: flex; align-items: flex-start; gap: 1rem;">
-      <div style="font-size: 1.5rem; color: #28a745; flex-shrink: 0;">✓</div>
-      <div style="flex: 1;">
-        <div style="font-weight: 600; color: #28a745; margin-bottom: 0.75rem;">
-          ✅ PDF File Uploaded Successfully
-        </div>
-        <div style="
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 1rem;
-          margin-bottom: 1rem;
-          color: #666;
-          font-size: 0.9rem;
-        ">
-          <div>
-            <strong>📄 File Name:</strong>
-            <div style="word-break: break-all; margin-top: 0.25rem;">${file.name}</div>
-          </div>
-          <div>
-            <strong>💾 File Size:</strong>
-            <div style="margin-top: 0.25rem;">${fileSizeMB} MB</div>
-          </div>
-          <div>
-            <strong>📅 Modified:</strong>
-            <div style="margin-top: 0.25rem;">${fileDate}</div>
-          </div>
-        </div>
-        <button
-          type="button"
-          onclick="removePdf('${filename}')"
-          style="
-            padding: 0.5rem 1rem;
-            background: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-          "
-          onmouseover="this.style.background='#c82333'; this.style.transform='translateY(-2px)'"
-          onmouseout="this.style.background='#dc3545'; this.style.transform=''"
-        >
-          🗑️ Remove PDF
-        </button>
-      </div>
-    </div>
+  // --- Wrapper ---
+  const wrapper = document.createElement("div");
+  wrapper.style.cssText = "display:flex; align-items:flex-start; gap:1rem;";
+
+  // --- Checkmark icon ---
+  const icon = document.createElement("div");
+  icon.style.cssText = "font-size:1.5rem; color:#28a745; flex-shrink:0;";
+  icon.textContent = "✓";
+
+  // --- Content column ---
+  const content = document.createElement("div");
+  content.style.flex = "1";
+
+  // Title
+  const title = document.createElement("div");
+  title.style.cssText = "font-weight:600; color:#28a745; margin-bottom:0.75rem;";
+  title.textContent = "✅ PDF File Uploaded Successfully";
+
+  // Grid
+  const grid = document.createElement("div");
+  grid.style.cssText = `
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+    gap:1rem;
+    margin-bottom:1rem;
+    color:#666;
+    font-size:0.9rem;
   `;
+
+  // File Name cell — textContent prevents XSS from file.name
+  const nameCell = document.createElement("div");
+  const nameLabel = document.createElement("strong");
+  nameLabel.textContent = "📄 File Name:";
+  const nameVal = document.createElement("div");
+  nameVal.style.cssText = "word-break:break-all; margin-top:0.25rem;";
+  nameVal.textContent = file.name; // safe: textContent never parsed as HTML
+  nameCell.appendChild(nameLabel);
+  nameCell.appendChild(nameVal);
+
+  // File Size cell
+  const sizeCell = document.createElement("div");
+  const sizeLabel = document.createElement("strong");
+  sizeLabel.textContent = "💾 File Size:";
+  const sizeVal = document.createElement("div");
+  sizeVal.style.marginTop = "0.25rem";
+  sizeVal.textContent = `${fileSizeMB} MB`;
+  sizeCell.appendChild(sizeLabel);
+  sizeCell.appendChild(sizeVal);
+
+  // Modified date cell
+  const dateCell = document.createElement("div");
+  const dateLabel = document.createElement("strong");
+  dateLabel.textContent = "📅 Modified:";
+  const dateVal = document.createElement("div");
+  dateVal.style.marginTop = "0.25rem";
+  dateVal.textContent = fileDate;
+  dateCell.appendChild(dateLabel);
+  dateCell.appendChild(dateVal);
+
+  grid.appendChild(nameCell);
+  grid.appendChild(sizeCell);
+  grid.appendChild(dateCell);
+
+  // Remove button — addEventListener + closure captures filename safely
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.textContent = "🗑️ Remove PDF";
+  removeBtn.style.cssText = `
+    padding:0.5rem 1rem;
+    background:#dc3545;
+    color:white;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+    font-weight:600;
+    font-size:0.9rem;
+    transition:all 0.3s ease;
+  `;
+  removeBtn.addEventListener("mouseover", () => {
+    removeBtn.style.background = "#c82333";
+    removeBtn.style.transform = "translateY(-2px)";
+  });
+  removeBtn.addEventListener("mouseout", () => {
+    removeBtn.style.background = "#dc3545";
+    removeBtn.style.transform = "";
+  });
+  removeBtn.addEventListener("click", () => removePdf(filename)); // filename in closure, never in HTML
+
+  // Assemble
+  content.appendChild(title);
+  content.appendChild(grid);
+  content.appendChild(removeBtn);
+  wrapper.appendChild(icon);
+  wrapper.appendChild(content);
+
+  pdfUploadBox.replaceChildren(wrapper);
 
   console.log("✅ PDF success UI displayed");
 }
